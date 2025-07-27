@@ -61,7 +61,19 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				trail: {
+					DEFAULT: 'hsl(var(--trail-color))',
+					active: 'hsl(var(--trail-active))',
+					glow: 'hsl(var(--trail-glow))'
 				}
+			},
+			backgroundImage: {
+				'gradient-trail': 'var(--gradient-trail)',
+				'gradient-elevation': 'var(--gradient-elevation)'
+			},
+			transitionProperty: {
+				'smooth': 'var(--transition-smooth)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
