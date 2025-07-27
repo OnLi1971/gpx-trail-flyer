@@ -1,49 +1,33 @@
-import React, { useEffect, useRef, useState } from 'react';
-import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { GPXData, GPXPoint } from '@/types/gpx';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card } from '@/components/ui/card';
+import React, { useEffect, useRef } from 'react';
+import { Map, NavigationControl, Marker, LngLatBounds } from 'maplibre-gl';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { GPXData } from '@/types/gpx';
 
 interface TrailMapProps {
   gpxData: GPXData | null;
   currentPosition: number;
-  onMapTokenChange?: (token: string) => void;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({ 
   gpxData, 
-  currentPosition, 
-  onMapTokenChange 
+  currentPosition
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
-  const map = useRef<mapboxgl.Map | null>(null);
-  const markerRef = useRef<mapboxgl.Marker | null>(null);
-  const [mapboxToken, setMapboxToken] = useState('');
-  const [isTokenSet, setIsTokenSet] = useState(false);
-
-  const handleTokenSubmit = () => {
-    if (mapboxToken.trim()) {
-      setIsTokenSet(true);
-      onMapTokenChange?.(mapboxToken);
-    }
-  };
+  const map = useRef<Map | null>(null);
+  const markerRef = useRef<Marker | null>(null);
 
   useEffect(() => {
-    if (!mapContainer.current || !isTokenSet || !mapboxToken) return;
+    if (!mapContainer.current) return;
 
-    mapboxgl.accessToken = mapboxToken;
-    
-    map.current = new mapboxgl.Map({
+    map.current = new Map({
       container: mapContainer.current,
-      style: 'mapbox://styles/mapbox/outdoors-v12',
+      style: 'https://demotiles.maplibre.org/style.json',
       zoom: 10,
       center: [14.4, 50.1], // Prague default
     });
 
     map.current.addControl(
-      new mapboxgl.NavigationControl({
+      new NavigationControl({
         visualizePitch: true,
       }),
       'top-right'
@@ -52,7 +36,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     return () => {
       map.current?.remove();
     };
-  }, [isTokenSet, mapboxToken]);
+  }, []);
 
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
@@ -118,7 +102,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       }, 'trail-line');
 
       // Fit map to trail bounds
-      const bounds = new mapboxgl.LngLatBounds();
+      const bounds = new LngLatBounds();
       track.points.forEach(point => {
         bounds.extend([point.lon, point.lat]);
       });
@@ -169,7 +153,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         }
       });
 
-      const bounds = new mapboxgl.LngLatBounds();
+      const bounds = new LngLatBounds();
       track.points.forEach(point => {
         bounds.extend([point.lon, point.lat]);
       });
@@ -195,42 +179,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     const markerElement = document.createElement('div');
     markerElement.className = 'w-4 h-4 bg-trail-active rounded-full border-2 border-white shadow-lg animate-pulse';
     
-    markerRef.current = new mapboxgl.Marker(markerElement)
+    markerRef.current = new Marker(markerElement)
       .setLngLat([point.lon, point.lat])
       .addTo(map.current);
 
   }, [currentPosition, gpxData]);
-
-  if (!isTokenSet) {
-    return (
-      <Card className="p-6 space-y-4">
-        <div>
-          <Label htmlFor="mapbox-token" className="text-sm font-medium">
-            Mapbox Public Token
-          </Label>
-          <p className="text-xs text-muted-foreground mt-1">
-            Jdi na <a href="https://mapbox.com/" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">mapbox.com</a> a zkopíruj svůj public token
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Input
-            id="mapbox-token"
-            type="text"
-            placeholder="pk.eyJ1IjoieW91cnVzZXJuYW1lIiwiYSI6ImNsZjdmODh5bzBhd..."
-            value={mapboxToken}
-            onChange={(e) => setMapboxToken(e.target.value)}
-            className="flex-1"
-          />
-          <button
-            onClick={handleTokenSubmit}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-          >
-            Použít
-          </button>
-        </div>
-      </Card>
-    );
-  }
 
   return (
     <div className="relative w-full h-96 rounded-lg overflow-hidden shadow-lg">
