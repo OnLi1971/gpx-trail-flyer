@@ -29,10 +29,30 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
     const file = e.target.files?.[0];
     if (file) {
       setPhotoFile(file);
+      
+      // Compress image before creating preview
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.onload = () => {
+        // Calculate new dimensions (max 800px width)
+        const maxWidth = 800;
+        const ratio = Math.min(maxWidth / img.width, maxWidth / img.height);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        
+        // Draw compressed image
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Convert to base64 with 70% quality
+        const compressedImage = canvas.toDataURL('image/jpeg', 0.7);
+        setPhotoPreview(compressedImage);
+      };
+      
       const reader = new FileReader();
       reader.onload = (e) => {
-        const result = e.target?.result as string;
-        setPhotoPreview(result);
+        img.src = e.target?.result as string;
       };
       reader.readAsDataURL(file);
     }
