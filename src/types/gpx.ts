@@ -14,6 +14,15 @@ export interface GPXTrack {
   duration?: number;
 }
 
+export interface PhotoPoint {
+  id: string;
+  lat: number;
+  lon: number;
+  photo: string; // base64 nebo URL
+  description: string;
+  timestamp: number;
+}
+
 export interface GPXData {
   tracks: GPXTrack[];
   bounds: {
@@ -22,4 +31,5 @@ export interface GPXData {
     minLon: number;
     maxLon: number;
   };
+  photos?: PhotoPoint[];
 }

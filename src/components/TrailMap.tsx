@@ -1,20 +1,29 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Map, NavigationControl, Marker, LngLatBounds } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { GPXData } from '@/types/gpx';
+import { GPXData, PhotoPoint } from '@/types/gpx';
+import { PhotoUploadModal } from './PhotoUploadModal';
+import { Camera } from 'lucide-react';
 
 interface TrailMapProps {
   gpxData: GPXData | null;
   currentPosition: number;
+  onPhotosUpdate?: (photos: PhotoPoint[]) => void;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({ 
   gpxData, 
-  currentPosition
+  currentPosition,
+  onPhotosUpdate
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
+  const photoMarkersRef = useRef<Marker[]>([]);
+  
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [clickedPosition, setClickedPosition] = useState<{lat: number, lon: number} | null>(null);
+  const [photos, setPhotos] = useState<PhotoPoint[]>(gpxData?.photos || []);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -55,6 +64,15 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       }),
       'top-right'
     );
+
+    // Add click listener for adding photos
+    map.current.on('click', (e) => {
+      setClickedPosition({
+        lat: e.lngLat.lat,
+        lon: e.lngLat.lng
+      });
+      setIsModalOpen(true);
+    });
 
     return () => {
       map.current?.remove();
@@ -208,9 +226,74 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   }, [currentPosition, gpxData]);
 
+  // Effect for photo markers
+  useEffect(() => {
+    if (!map.current || !photos.length) return;
+
+    // Clear existing photo markers
+    photoMarkersRef.current.forEach(marker => marker.remove());
+    photoMarkersRef.current = [];
+
+    // Add photo markers
+    photos.forEach(photo => {
+      const photoElement = document.createElement('div');
+      photoElement.className = 'w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform flex items-center justify-center';
+      photoElement.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M9 2C8.44772 2 8 2.44772 8 3V4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 18 19.1046 18 18V6C18 4.89543 17.1046 4 16 4H14V3C14 2.44772 13.5523 2 13 2H9ZM11 8C12.6569 8 14 9.34315 14 11C14 12.6569 12.6569 14 11 14C9.34315 14 8 12.6569 8 11C8 9.34315 9.34315 8 11 8Z"/></svg>`;
+
+      photoElement.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Show photo popup
+        const popup = document.createElement('div');
+        popup.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+        popup.innerHTML = `
+          <div class="bg-white rounded-lg p-4 max-w-md max-h-96 overflow-auto">
+            <img src="${photo.photo}" alt="${photo.description}" class="w-full h-48 object-cover rounded mb-2">
+            <p class="text-sm text-gray-700">${photo.description}</p>
+            <button class="mt-2 px-3 py-1 bg-gray-200 rounded text-sm">Zavřít</button>
+          </div>
+        `;
+        popup.addEventListener('click', () => popup.remove());
+        document.body.appendChild(popup);
+      });
+
+      const marker = new Marker(photoElement)
+        .setLngLat([photo.lon, photo.lat])
+        .addTo(map.current!);
+
+      photoMarkersRef.current.push(marker);
+    });
+  }, [photos]);
+
+  const handlePhotoSave = (photoData: Omit<PhotoPoint, 'id' | 'timestamp'>) => {
+    const newPhoto: PhotoPoint = {
+      ...photoData,
+      id: Date.now().toString(),
+      timestamp: Date.now()
+    };
+    
+    const updatedPhotos = [...photos, newPhoto];
+    setPhotos(updatedPhotos);
+    onPhotosUpdate?.(updatedPhotos);
+  };
+
   return (
-    <div className="relative w-full h-96 rounded-lg overflow-hidden shadow-lg">
-      <div ref={mapContainer} className="absolute inset-0" />
-    </div>
+    <>
+      <div className="relative w-full h-96 rounded-lg overflow-hidden shadow-lg">
+        <div ref={mapContainer} className="absolute inset-0" />
+        <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs text-gray-600">
+          Klikněte na mapu pro přidání fotky
+        </div>
+      </div>
+      
+      {clickedPosition && (
+        <PhotoUploadModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSave={handlePhotoSave}
+          lat={clickedPosition.lat}
+          lon={clickedPosition.lon}
+        />
+      )}
+    </>
   );
 };

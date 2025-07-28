@@ -155,10 +155,16 @@ const Index = () => {
             {/* Map and Chart Layout */}
             <div className="grid grid-cols-1 xl:grid-cols-1 gap-6">
               {/* Trail Map */}
-              <TrailMap 
-                gpxData={gpxData} 
-                currentPosition={currentPosition}
-              />
+          <TrailMap 
+            gpxData={gpxData} 
+            currentPosition={currentPosition}
+            onPhotosUpdate={(photos) => {
+              // Update GPX data with photos
+              if (gpxData) {
+                setGpxData({ ...gpxData, photos });
+              }
+            }}
+          />
               
               {/* Elevation Chart */}
               <ElevationChart 
