@@ -36,12 +36,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           'raster-tiles': {
             type: 'raster',
             tiles: [
-              'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
-              'https://b.tile.opentopomap.org/{z}/{x}/{y}.png',
-              'https://c.tile.opentopomap.org/{z}/{x}/{y}.png'
+              'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
             ],
             tileSize: 256,
-            attribution: '© OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
+            attribution: '© OpenStreetMap contributors'
           }
         },
         layers: [
