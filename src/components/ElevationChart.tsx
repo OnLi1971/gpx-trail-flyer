@@ -42,9 +42,9 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, current
     );
   }
 
-  // Prepare chart data
+  // Prepare chart data with distance in kilometers
   const chartData = pointsWithElevation.map((point, index) => ({
-    distance: (index / (pointsWithElevation.length - 1)) * 100,
+    distance: (index / (pointsWithElevation.length - 1)) * (track.totalDistance / 1000),
     elevation: point.ele!,
     originalIndex: track.points.indexOf(point)
   }));
@@ -60,7 +60,7 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, current
   const maxElevation = Math.max(...elevations);
 
   const formatElevation = (value: number) => `${Math.round(value)}m`;
-  const formatDistance = (value: number) => `${Math.round(value)}%`;
+  const formatDistance = (value: number) => `${value.toFixed(1)}km`;
 
   return (
     <Card>
