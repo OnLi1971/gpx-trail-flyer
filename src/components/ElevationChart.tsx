@@ -52,7 +52,7 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, current
   // Calculate current position in chart data
   const totalPoints = track.points.length;
   const currentPointIndex = Math.floor((currentPosition / 100) * (totalPoints - 1));
-  const currentChartPoint = chartData.find(data => data.originalIndex <= currentPointIndex);
+  const currentChartPoint = chartData.find(data => data.originalIndex >= currentPointIndex) || chartData[chartData.length - 1];
 
   // Calculate statistics
   const elevations = pointsWithElevation.map(p => p.ele!);
