@@ -67,10 +67,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     // Add click listener for adding photos
     map.current.on('click', (e) => {
+      console.log('Map clicked at:', e.lngLat.lat, e.lngLat.lng);
       setClickedPosition({
         lat: e.lngLat.lat,
         lon: e.lngLat.lng
       });
+      console.log('Opening modal');
       setIsModalOpen(true);
     });
 

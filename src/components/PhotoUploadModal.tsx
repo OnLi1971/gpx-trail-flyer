@@ -39,8 +39,10 @@ export const PhotoUploadModal: React.FC<PhotoUploadModalProps> = ({
   };
 
   const handleSave = () => {
+    console.log('HandleSave called, photoPreview:', !!photoPreview);
     if (!photoPreview) return;
     
+    console.log('Saving photo at:', lat, lon);
     onSave({
       lat,
       lon,
