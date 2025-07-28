@@ -21,7 +21,26 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     map.current = new Map({
       container: mapContainer.current,
-      style: 'https://demotiles.maplibre.org/style.json',
+      style: {
+        version: 8,
+        sources: {
+          'raster-tiles': {
+            type: 'raster',
+            tiles: ['https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png'],
+            tileSize: 256,
+            attribution: '© OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)'
+          }
+        },
+        layers: [
+          {
+            id: 'simple-tiles',
+            type: 'raster',
+            source: 'raster-tiles',
+            minzoom: 0,
+            maxzoom: 22
+          }
+        ]
+      },
       zoom: 10,
       center: [14.4, 50.1], // Prague default
     });
