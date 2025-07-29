@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { PhotoViewModal } from './PhotoViewModal';
-import { Bike, Mountain, Map as MapIcon } from 'lucide-react';
+import { Bike } from 'lucide-react';
 
 interface TrailMapProps {
   gpxData: GPXData | null;
@@ -27,7 +27,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [photos, setPhotos] = useState<PhotoPoint[]>([]);
   const [viewPhoto, setViewPhoto] = useState<PhotoPoint | null>(null);
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
-  const [showTopoMap, setShowTopoMap] = useState(false);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -37,40 +36,22 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       style: {
         version: 8,
         sources: {
-          'osm-tiles': {
-            type: 'raster',
-            tiles: [
-              'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
-            ],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors'
-          },
           'topo-tiles': {
             type: 'raster',
             tiles: [
-              'https://tile.opentopomap.org/{z}/{x}/{y}.png'
+              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
             ],
             tileSize: 256,
-            attribution: '© OpenTopoMap contributors'
+            attribution: '© Esri'
           }
         },
         layers: [
-          {
-            id: 'osm-layer',
-            type: 'raster',
-            source: 'osm-tiles',
-            minzoom: 0,
-            maxzoom: 22
-          },
           {
             id: 'topo-layer',
             type: 'raster',
             source: 'topo-tiles',
             minzoom: 0,
-            maxzoom: 17,
-            layout: {
-              visibility: 'none'
-            }
+            maxzoom: 22
           }
         ]
       },
@@ -350,21 +331,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     onPhotosUpdate?.(updatedPhotos);
   };
 
-  // Toggle between map types
-  const toggleMapType = () => {
-    if (!map.current) return;
-    
-    const newShowTopo = !showTopoMap;
-    setShowTopoMap(newShowTopo);
-    
-    if (newShowTopo) {
-      map.current.setLayoutProperty('osm-layer', 'visibility', 'none');
-      map.current.setLayoutProperty('topo-layer', 'visibility', 'visible');
-    } else {
-      map.current.setLayoutProperty('topo-layer', 'visibility', 'none');
-      map.current.setLayoutProperty('osm-layer', 'visibility', 'visible');
-    }
-  };
 
   return (
     <>
@@ -373,13 +339,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs text-gray-600">
           Klikněte na mapu pro přidání fotky
         </div>
-        <button
-          onClick={toggleMapType}
-          className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-md p-2 shadow-sm hover:bg-white transition-colors"
-          title={showTopoMap ? "Přepnout na základní mapu" : "Přepnout na topografickou mapu"}
-        >
-          {showTopoMap ? <MapIcon size={16} /> : <Mountain size={16} />}
-        </button>
       </div>
       
       {clickedPosition && (

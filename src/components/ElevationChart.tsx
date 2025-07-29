@@ -167,7 +167,7 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, current
               className="absolute pointer-events-none"
               style={{
                 left: `${((currentChartPoint.distance / (track.totalDistance / 1000)) * 100)}%`,
-                top: '50%',
+                top: `${100 - ((currentChartPoint.elevation - (minElevation - 10)) / ((maxElevation + 10) - (minElevation - 10))) * 100}%`,
                 transform: 'translate(-50%, -50%)',
                 zIndex: 10
               }}
