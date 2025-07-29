@@ -261,13 +261,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     photos.forEach(photo => {
       const photoElement = document.createElement('div');
       photoElement.className = 'w-8 h-8 bg-camera-marker rounded-full border-3 border-white shadow-xl cursor-pointer hover:scale-125 transition-all duration-200 flex items-center justify-center z-10 relative';
+      photoElement.setAttribute('data-photo-marker', 'true');
       photoElement.style.cssText = `
         background: linear-gradient(135deg, #3b82f6, #1d4ed8);
         box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4), 0 0 0 2px white;
+        position: relative;
+        z-index: 1000;
       `;
       
       // Add camera icon
-      photoElement.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>`;
+      photoElement.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" data-photo-marker="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>`;
 
       // Add hover tooltip
       photoElement.title = photo.description || 'Klikněte pro zobrazení fotky';
