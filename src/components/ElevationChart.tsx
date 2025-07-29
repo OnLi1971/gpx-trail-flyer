@@ -1,14 +1,16 @@
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceDot } from 'recharts';
-import { GPXData } from '@/types/gpx';
+import { GPXData, PhotoPoint } from '@/types/gpx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 interface ElevationChartProps {
   gpxData: GPXData | null;
   currentPosition: number;
+  photos?: PhotoPoint[];
+  onPhotoClick?: (photo: PhotoPoint) => void;
 }
 
-export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, currentPosition }) => {
+export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, currentPosition, photos = [], onPhotoClick }) => {
   if (!gpxData || gpxData.tracks.length === 0) {
     return (
       <Card>
@@ -54,6 +56,32 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, current
   const currentPointIndex = Math.floor((currentPosition / 100) * (totalPoints - 1));
   const currentChartPoint = chartData.find(data => data.originalIndex >= currentPointIndex) || chartData[chartData.length - 1];
 
+  // Calculate photo positions on the chart
+  const photosOnChart = photos.map(photo => {
+    // Find closest track point to photo
+    let closestPoint = track.points[0];
+    let minDistance = Number.MAX_VALUE;
+    
+    track.points.forEach(point => {
+      const distance = Math.sqrt(
+        Math.pow(point.lat - photo.lat, 2) + Math.pow(point.lon - photo.lon, 2)
+      );
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestPoint = point;
+      }
+    });
+
+    const pointIndex = track.points.indexOf(closestPoint);
+    const chartPoint = chartData.find(data => data.originalIndex === pointIndex);
+    
+    return {
+      ...photo,
+      chartDistance: chartPoint?.distance || 0,
+      chartElevation: chartPoint?.elevation || closestPoint.ele || 0
+    };
+  });
+
   // Calculate statistics
   const elevations = pointsWithElevation.map(p => p.ele!);
   const minElevation = Math.min(...elevations);
@@ -76,7 +104,7 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, current
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-64">
+        <div className="h-64 relative">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
@@ -105,13 +133,29 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, current
                 fill="url(#elevationGradient)"
                 fillOpacity={0.3}
               />
+              {/* Photo markers */}
+              {photosOnChart.map(photo => (
+                <ReferenceDot 
+                  key={photo.id}
+                  x={photo.chartDistance} 
+                  y={photo.chartElevation}
+                  r={8}
+                  fill="#3b82f6"
+                  stroke="white"
+                  strokeWidth={2}
+                  onClick={() => onPhotoClick?.(photo)}
+                  style={{ cursor: 'pointer' }}
+                />
+              ))}
+              
+              {/* Current position with bike icon */}
               {currentChartPoint && (
                 <ReferenceDot 
                   x={currentChartPoint.distance} 
                   y={currentChartPoint.elevation}
-                  r={6}
-                  fill="hsl(var(--trail-active))"
-                  stroke="white"
+                  r={12}
+                  fill="white"
+                  stroke="hsl(var(--trail-active))"
                   strokeWidth={2}
                 />
               )}

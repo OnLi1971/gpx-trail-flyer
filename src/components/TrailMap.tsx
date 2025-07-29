@@ -235,18 +235,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       markerRef.current.remove();
     }
 
-    // Create new marker with bicycle icon
+    // Create new marker
     const markerElement = document.createElement('div');
-    markerElement.className = 'flex items-center justify-center w-8 h-8 bg-white rounded-full border-2 border-trail-active shadow-lg';
-    markerElement.innerHTML = `
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-trail-active">
-        <circle cx="18.5" cy="17.5" r="3.5"/>
-        <circle cx="5.5" cy="17.5" r="3.5"/>
-        <circle cx="15" cy="5" r="1"/>
-        <path d="m14 17 6-6"/>
-        <path d="M6 17h6l4-8 2 2h2"/>
-      </svg>
-    `;
+    markerElement.className = 'w-4 h-4 bg-trail-active rounded-full border-2 border-white shadow-lg';
     
     markerRef.current = new Marker(markerElement)
       .setLngLat([point.lon, point.lat])
@@ -303,21 +294,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     photoMarkersRef.current.forEach(marker => marker.remove());
     photoMarkersRef.current = [];
 
-    // Create custom HTML markers for photo previews
+    // Create simple blue markers for photos
     photos.forEach(photo => {
       const markerElement = document.createElement('div');
-      markerElement.className = 'w-12 h-12 rounded-full border-3 border-white shadow-lg overflow-hidden cursor-pointer hover:scale-110 transition-transform duration-200';
+      markerElement.className = 'w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform duration-200';
       markerElement.setAttribute('data-photo-marker', 'true');
-      
-      const img = document.createElement('img');
-      img.src = photo.photo;
-      img.className = 'w-full h-full object-cover';
-      img.alt = photo.description || 'Fotka z trasy';
-      img.onerror = () => {
-        img.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="%23cccccc"/><text x="24" y="24" text-anchor="middle" dy=".3em" font-size="12">📷</text></svg>';
-      };
-      
-      markerElement.appendChild(img);
       
       const marker = new Marker(markerElement)
         .setLngLat([photo.lon, photo.lat])

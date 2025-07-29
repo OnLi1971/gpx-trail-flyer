@@ -241,7 +241,12 @@ const Index = () => {
               {/* Elevation Chart */}
               <ElevationChart 
                 gpxData={gpxData} 
-                currentPosition={currentPosition} 
+                currentPosition={currentPosition}
+                photos={gpxData?.photos || []}
+                onPhotoClick={(photo) => {
+                  setAutoPhotoView(photo);
+                  setIsAutoPhotoOpen(true);
+                }}
               />
             </div>
 
