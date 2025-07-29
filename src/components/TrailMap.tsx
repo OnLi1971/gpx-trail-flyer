@@ -245,57 +245,116 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   }, [currentPosition, gpxData]);
 
-  // Effect for photo markers
+  // Effect for photo markers using GeoJSON
   useEffect(() => {
     if (!map.current) return;
 
-    // Clear existing photo markers
-    photoMarkersRef.current.forEach(marker => marker.remove());
-    photoMarkersRef.current = [];
+    if (!photos.length) {
+      // Remove photo layers if no photos
+      if (map.current.getLayer('photo-markers')) {
+        map.current.removeLayer('photo-markers');
+      }
+      if (map.current.getSource('photo-markers')) {
+        map.current.removeSource('photo-markers');
+      }
+      return;
+    }
 
-    if (!photos.length) return;
+    console.log('Adding photo markers via GeoJSON:', photos.length);
 
-    console.log('Adding photo markers:', photos.length);
+    // Create GeoJSON for photos
+    const photoGeoJSON: GeoJSON.FeatureCollection = {
+      type: 'FeatureCollection',
+      features: photos.map(photo => ({
+        type: 'Feature',
+        properties: {
+          id: photo.id,
+          description: photo.description,
+          photo: photo.photo
+        },
+        geometry: {
+          type: 'Point',
+          coordinates: [photo.lon, photo.lat]
+        }
+      }))
+    };
 
-    // Add photo markers
-    photos.forEach(photo => {
-      const photoElement = document.createElement('div');
-      photoElement.className = 'w-8 h-8 bg-camera-marker rounded-full border-3 border-white shadow-xl cursor-pointer hover:scale-125 transition-all duration-200 flex items-center justify-center z-10 relative';
-      photoElement.setAttribute('data-photo-marker', 'true');
-      photoElement.style.cssText = `
-        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
-        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4), 0 0 0 2px white;
-        position: relative;
-        z-index: 1000;
-      `;
-      
-      // Add camera icon
-      photoElement.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2" data-photo-marker="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>`;
+    // Remove existing photo layers
+    if (map.current.getLayer('photo-markers')) {
+      map.current.removeLayer('photo-markers');
+    }
+    if (map.current.getSource('photo-markers')) {
+      map.current.removeSource('photo-markers');
+    }
 
-      // Add hover tooltip
-      photoElement.title = photo.description || 'Klikněte pro zobrazení fotky';
-
-      photoElement.addEventListener('click', (e) => {
-        console.log('Photo marker clicked:', photo.id);
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        
-        setViewPhoto(photo);
-        setIsPhotoViewOpen(true);
-      });
-
-      // Prevent map click when hovering over photo marker
-      photoElement.addEventListener('mousedown', (e) => {
-        e.stopPropagation();
-      });
-
-      const marker = new Marker(photoElement)
-        .setLngLat([photo.lon, photo.lat])
-        .addTo(map.current!);
-
-      photoMarkersRef.current.push(marker);
+    // Add photo source
+    map.current.addSource('photo-markers', {
+      type: 'geojson',
+      data: photoGeoJSON
     });
+
+    // Add photo markers layer
+    map.current.addLayer({
+      id: 'photo-markers',
+      type: 'circle',
+      source: 'photo-markers',
+      paint: {
+        'circle-radius': 12,
+        'circle-color': '#3b82f6',
+        'circle-stroke-width': 3,
+        'circle-stroke-color': '#ffffff',
+        'circle-opacity': 0.9
+      }
+    });
+
+    // Add camera icon layer
+    map.current.addLayer({
+      id: 'photo-icons',
+      type: 'symbol',
+      source: 'photo-markers',
+      layout: {
+        'icon-image': 'camera-15',
+        'icon-size': 1,
+        'icon-allow-overlap': true,
+        'text-field': '📷',
+        'text-size': 14,
+        'text-allow-overlap': true
+      },
+      paint: {
+        'text-color': '#ffffff'
+      }
+    });
+
+    // Add click handler for photo markers
+    map.current.on('click', 'photo-markers', (e) => {
+      console.log('Photo marker clicked via GeoJSON');
+      if (e.features && e.features[0]) {
+        const feature = e.features[0];
+        const photoId = feature.properties?.id;
+        const photo = photos.find(p => p.id === photoId);
+        
+        if (photo) {
+          console.log('Opening photo view for:', photo.id);
+          setViewPhoto(photo);
+          setIsPhotoViewOpen(true);
+        }
+      }
+      e.preventDefault();
+    });
+
+    // Add hover effect
+    map.current.on('mouseenter', 'photo-markers', () => {
+      if (map.current) {
+        map.current.getCanvas().style.cursor = 'pointer';
+      }
+    });
+
+    map.current.on('mouseleave', 'photo-markers', () => {
+      if (map.current) {
+        map.current.getCanvas().style.cursor = '';
+      }
+    });
+
   }, [photos]);
 
 
