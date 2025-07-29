@@ -236,9 +236,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       markerRef.current.remove();
     }
 
-    // Create new marker
+    // Create new marker (just the moving point without location symbol)
     const markerElement = document.createElement('div');
-    markerElement.className = 'w-4 h-4 bg-trail-active rounded-full border-2 border-white shadow-lg';
+    markerElement.className = 'w-3 h-3 bg-trail-active rounded-full shadow-lg';
     
     markerRef.current = new Marker(markerElement)
       .setLngLat([point.lon, point.lat])
@@ -420,12 +420,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         
         {/* Integrated elevation chart overlay */}
         {gpxData && chartData.length > 0 && (
-          <div className="w-full h-32 bg-white/95 backdrop-blur-sm border-t">
-            <div className="h-full p-2">
-              <div className="text-xs font-medium text-gray-700 mb-1">Profil nadmořské výšky</div>
-              <div className="h-24 relative">
+          <div className="w-full h-40 bg-white/95 backdrop-blur-sm border-t-2 border-trail-color/30">
+            <div className="h-full p-3">
+              <div className="text-sm font-medium text-gray-700 mb-2">Profil nadmořské výšky</div>
+              <div className="h-32 relative">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 5, right: 10, left: 20, bottom: 5 }}>
+                  <LineChart data={chartData} margin={{ top: 5, right: 15, left: 40, bottom: 15 }}>
                     <defs>
                       <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#059669" stopOpacity={0.8} />
@@ -445,6 +445,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                       className="text-xs"
                       axisLine={false}
                       tickLine={false}
+                      orientation="left"
+                      width={35}
                     />
                     <Line 
                       type="monotone" 
@@ -480,26 +482,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                         stroke="white"
                         strokeWidth={2}
                       />
-                    )}
+                     )}
                   </LineChart>
                 </ResponsiveContainer>
-                
-                {/* Bike icon overlay for current position */}
-                {currentChartPoint && gpxData && (
-                  <div 
-                    className="absolute pointer-events-none"
-                    style={{
-                      left: `${((currentChartPoint.distance / (gpxData.tracks[0].totalDistance / 1000)) * 100)}%`,
-                      top: '50%',
-                      transform: 'translate(-50%, -50%)',
-                      zIndex: 10
-                    }}
-                  >
-                    <div className="bg-white rounded-full p-1 shadow-lg border-2 border-red-500">
-                      <Bike size={12} className="text-red-500" />
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
