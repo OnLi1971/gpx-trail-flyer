@@ -2,6 +2,7 @@ import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, ReferenceDot } from 'recharts';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Bike } from 'lucide-react';
 
 interface ElevationChartProps {
   gpxData: GPXData | null;
@@ -153,14 +154,29 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, current
                 <ReferenceDot 
                   x={currentChartPoint.distance} 
                   y={currentChartPoint.elevation}
-                  r={12}
-                  fill="white"
-                  stroke="hsl(var(--trail-active))"
-                  strokeWidth={2}
+                  r={0}
+                  fill="transparent"
                 />
               )}
             </LineChart>
           </ResponsiveContainer>
+          
+          {/* Bike icon overlay */}
+          {currentChartPoint && (
+            <div 
+              className="absolute pointer-events-none"
+              style={{
+                left: `${((currentChartPoint.distance / (track.totalDistance / 1000)) * 100)}%`,
+                top: '50%',
+                transform: 'translate(-50%, -50%)',
+                zIndex: 10
+              }}
+            >
+              <div className="bg-white rounded-full p-1 shadow-lg border-2 border-trail-active">
+                <Bike size={16} className="text-trail-active" />
+              </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
