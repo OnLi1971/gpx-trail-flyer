@@ -97,16 +97,8 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, current
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span>Profil nadmořské výšky</span>
-          <div className="text-sm text-muted-foreground space-x-4">
-            <span>Min: {formatElevation(minElevation)}</span>
-            <span>Max: {formatElevation(maxElevation)}</span>
-            <span>↗ {Math.round(track.elevationGain)}m</span>
-            <span>↘ {Math.round(track.elevationLoss)}m</span>
-          </div>
-        </CardTitle>
+      <CardHeader className="pb-2">
+        <CardTitle>Profil nadmořské výšky</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="h-64 relative">
@@ -181,6 +173,14 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, current
               </div>
             </div>
           )}
+        </div>
+        
+        {/* Statistics */}
+        <div className="flex justify-center items-center gap-6 text-sm text-muted-foreground mt-4 pt-4 border-t">
+          <span>Min: {formatElevation(minElevation)}</span>
+          <span>Max: {formatElevation(maxElevation)}</span>
+          <span>↗ {Math.round(track.elevationGain)}m</span>
+          <span>↘ {Math.round(track.elevationLoss)}m</span>
         </div>
       </CardContent>
     </Card>
