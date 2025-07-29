@@ -115,11 +115,13 @@ const Index = () => {
       setShownPhotosInSession(prev => new Set([...prev, photoToShow.photo.id]));
       setAutoPhotoView(photoToShow.photo);
       setIsAutoPhotoOpen(true);
+      setIsPlaying(false); // Pause animation
       
-      // Auto-close after 2 seconds
+      // Auto-close after 2 seconds and resume animation
       setTimeout(() => {
         setIsAutoPhotoOpen(false);
         setAutoPhotoView(null);
+        setIsPlaying(true); // Resume animation
       }, 2000);
     }
   }, [currentPosition, photoPositions, isPlaying, shownPhotosInSession]);

@@ -19,12 +19,12 @@ export const PhotoViewModal: React.FC<PhotoViewModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-auto" aria-describedby="photo-description">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-auto animate-scale-in" aria-describedby="photo-description">
         <div className="space-y-4">
           <img 
             src={photo.photo} 
             alt={photo.description || 'Fotka z trasy'} 
-            className="w-full h-64 object-cover rounded-lg"
+            className="w-full h-64 object-cover rounded-lg animate-scale-in"
             onError={(e) => {
               console.error('Image failed to load:', photo.photo);
               e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23cccccc"/><text x="50" y="50" text-anchor="middle" dy=".3em">Chyba</text></svg>';
