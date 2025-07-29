@@ -62,31 +62,58 @@ const Index = () => {
     }
   }, [isPlaying, animationDuration]);
 
-  // Check for nearby photos during animation
+  // Calculate photo positions on track when GPX data changes
+  const [photoPositions, setPhotoPositions] = useState<Array<{photo: PhotoPoint, position: number}>>([]);
+
   useEffect(() => {
-    if (!gpxData?.photos?.length || !gpxData.tracks.length || !isPlaying) return;
+    if (!gpxData?.photos?.length || !gpxData.tracks.length) {
+      setPhotoPositions([]);
+      return;
+    }
 
     const track = gpxData.tracks[0];
-    const currentPointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
-    const currentPoint = track.points[currentPointIndex];
-    
-    if (!currentPoint) return;
+    const positions = gpxData.photos.map(photo => {
+      let minDistance = Infinity;
+      let closestIndex = 0;
 
-    // Find photos within 50 meters of current position
-    const nearbyPhoto = gpxData.photos.find(photo => {
-      if (shownPhotosInSession.has(photo.id)) return false;
-      
-      // Simple distance calculation (approximate)
-      const latDiff = Math.abs(photo.lat - currentPoint.lat);
-      const lonDiff = Math.abs(photo.lon - currentPoint.lon);
-      const distance = Math.sqrt(latDiff * latDiff + lonDiff * lonDiff) * 111000; // rough conversion to meters
-      
-      return distance < 50; // 50 meters threshold
+      // Find closest point on track to photo
+      track.points.forEach((point, index) => {
+        const latDiff = photo.lat - point.lat;
+        const lonDiff = photo.lon - point.lon;
+        const distance = Math.sqrt(latDiff * latDiff + lonDiff * lonDiff);
+        
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestIndex = index;
+        }
+      });
+
+      // Convert index to percentage position
+      const position = (closestIndex / (track.points.length - 1)) * 100;
+      return { photo, position };
     });
 
-    if (nearbyPhoto) {
-      setShownPhotosInSession(prev => new Set([...prev, nearbyPhoto.id]));
-      setAutoPhotoView(nearbyPhoto);
+    // Sort by position on track
+    positions.sort((a, b) => a.position - b.position);
+    setPhotoPositions(positions);
+  }, [gpxData]);
+
+  // Check for photos at current position during animation
+  useEffect(() => {
+    if (!isPlaying || !photoPositions.length) return;
+
+    const tolerance = 1; // 1% tolerance for triggering photo
+    const photoToShow = photoPositions.find(item => {
+      const isAtPosition = Math.abs(currentPosition - item.position) <= tolerance;
+      const notShownYet = !shownPhotosInSession.has(item.photo.id);
+      const isMovingForward = currentPosition >= item.position - tolerance;
+      
+      return isAtPosition && notShownYet && isMovingForward;
+    });
+
+    if (photoToShow) {
+      setShownPhotosInSession(prev => new Set([...prev, photoToShow.photo.id]));
+      setAutoPhotoView(photoToShow.photo);
       setIsAutoPhotoOpen(true);
       
       // Auto-close after 2 seconds
@@ -95,7 +122,7 @@ const Index = () => {
         setAutoPhotoView(null);
       }, 2000);
     }
-  }, [currentPosition, gpxData, isPlaying, shownPhotosInSession]);
+  }, [currentPosition, photoPositions, isPlaying, shownPhotosInSession]);
 
   // Animation loop
   useEffect(() => {
