@@ -55,7 +55,11 @@ export const ElevationChart: React.FC<ElevationChartProps> = ({ gpxData, current
   // Calculate current position in chart data
   const totalPoints = track.points.length;
   const currentPointIndex = Math.floor((currentPosition / 100) * (totalPoints - 1));
-  const currentChartPoint = chartData.find(data => data.originalIndex >= currentPointIndex) || chartData[chartData.length - 1];
+  const currentPoint = track.points[currentPointIndex];
+  
+  // Find the closest chart point to current position
+  const currentChartIndex = Math.floor((currentPosition / 100) * (chartData.length - 1));
+  const currentChartPoint = chartData[currentChartIndex];
 
   // Calculate photo positions on the chart
   const photosOnChart = photos.map(photo => {

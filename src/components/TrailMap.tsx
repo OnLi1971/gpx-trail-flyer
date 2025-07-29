@@ -39,10 +39,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           'topo-tiles': {
             type: 'raster',
             tiles: [
-              'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}'
+              'https://tile.opentopomap.org/{z}/{x}/{y}.png'
             ],
             tileSize: 256,
-            attribution: '© Esri'
+            attribution: '© OpenTopoMap contributors'
           }
         },
         layers: [
@@ -51,7 +51,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             type: 'raster',
             source: 'topo-tiles',
             minzoom: 0,
-            maxzoom: 22
+            maxzoom: 17
           }
         ]
       },
