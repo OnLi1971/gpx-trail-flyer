@@ -116,13 +116,16 @@ const Index = () => {
       setAutoPhotoView(photoToShow.photo);
       setIsAutoPhotoOpen(true);
       setIsPlaying(false); // Pause animation
+      setStartTime(null); // Clear start time to fully stop animation
       
-      // Auto-close after 2 seconds and resume animation
+      // Auto-close after 3 seconds and resume animation
       setTimeout(() => {
         setIsAutoPhotoOpen(false);
         setAutoPhotoView(null);
-        setIsPlaying(true); // Resume animation
-      }, 2000);
+        // Resume animation from current position
+        setStartTime(Date.now() - (currentPosition / 100) * animationDuration);
+        setIsPlaying(true);
+      }, 3000);
     }
   }, [currentPosition, photoPositions, isPlaying, shownPhotosInSession]);
 
