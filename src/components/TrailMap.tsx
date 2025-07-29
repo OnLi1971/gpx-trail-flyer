@@ -24,7 +24,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [clickedPosition, setClickedPosition] = useState<{lat: number, lon: number} | null>(null);
-  const [photos, setPhotos] = useState<PhotoPoint[]>(gpxData?.photos || []);
+  const [photos, setPhotos] = useState<PhotoPoint[]>([]);
   const [viewPhoto, setViewPhoto] = useState<PhotoPoint | null>(null);
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
 
@@ -69,11 +69,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     // Add click listener for adding photos
     map.current.on('click', (e) => {
       console.log('Map clicked at:', e.lngLat.lat, e.lngLat.lng);
+      
+      // Check if click target is a photo marker
+      const target = e.originalEvent.target as HTMLElement;
+      if (target && target.closest('[data-photo-marker]')) {
+        console.log('Click on photo marker detected, ignoring map click');
+        return;
+      }
+      
       setClickedPosition({
         lat: e.lngLat.lat,
         lon: e.lngLat.lng
       });
-      console.log('Opening modal');
+      console.log('Opening upload modal');
       setIsModalOpen(true);
     });
 
@@ -205,6 +213,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
   }, [gpxData]);
 
+  // Initialize photos from GPX data
+  useEffect(() => {
+    if (gpxData?.photos) {
+      console.log('Initializing photos from GPX data:', gpxData.photos);
+      setPhotos(gpxData.photos);
+    }
+  }, [gpxData]);
+
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
 
@@ -231,22 +247,44 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   // Effect for photo markers
   useEffect(() => {
-    if (!map.current || !photos.length) return;
+    if (!map.current) return;
 
     // Clear existing photo markers
     photoMarkersRef.current.forEach(marker => marker.remove());
     photoMarkersRef.current = [];
 
+    if (!photos.length) return;
+
+    console.log('Adding photo markers:', photos.length);
+
     // Add photo markers
     photos.forEach(photo => {
       const photoElement = document.createElement('div');
-      photoElement.className = 'w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform flex items-center justify-center';
-      photoElement.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M9 2C8.44772 2 8 2.44772 8 3V4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 18 19.1046 18 18V6C18 4.89543 17.1046 4 16 4H14V3C14 2.44772 13.5523 2 13 2H9ZM11 8C12.6569 8 14 9.34315 14 11C14 12.6569 12.6569 14 11 14C9.34315 14 8 12.6569 8 11C8 9.34315 9.34315 8 11 8Z"/></svg>`;
+      photoElement.className = 'w-8 h-8 bg-camera-marker rounded-full border-3 border-white shadow-xl cursor-pointer hover:scale-125 transition-all duration-200 flex items-center justify-center z-10 relative';
+      photoElement.style.cssText = `
+        background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4), 0 0 0 2px white;
+      `;
+      
+      // Add camera icon
+      photoElement.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="2"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path><circle cx="12" cy="13" r="3"></circle></svg>`;
+
+      // Add hover tooltip
+      photoElement.title = photo.description || 'Klikněte pro zobrazení fotky';
 
       photoElement.addEventListener('click', (e) => {
+        console.log('Photo marker clicked:', photo.id);
+        e.preventDefault();
         e.stopPropagation();
+        e.stopImmediatePropagation();
+        
         setViewPhoto(photo);
         setIsPhotoViewOpen(true);
+      });
+
+      // Prevent map click when hovering over photo marker
+      photoElement.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
       });
 
       const marker = new Marker(photoElement)
