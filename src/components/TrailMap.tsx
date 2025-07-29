@@ -5,6 +5,7 @@ import { GPXData, PhotoPoint } from '@/types/gpx';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { PhotoViewModal } from './PhotoViewModal';
 import { Bike } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot } from 'recharts';
 
 interface TrailMapProps {
   gpxData: GPXData | null;
@@ -331,14 +332,178 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     onPhotosUpdate?.(updatedPhotos);
   };
 
+  // Prepare elevation chart data
+  const getElevationData = () => {
+    if (!gpxData || gpxData.tracks.length === 0) return { chartData: [], currentChartPoint: null, photosOnChart: [] };
+
+    const track = gpxData.tracks[0];
+    const pointsWithElevation = track.points.filter(point => point.ele !== undefined);
+
+    if (pointsWithElevation.length === 0) return { chartData: [], currentChartPoint: null, photosOnChart: [] };
+
+    // Prepare chart data with distance in kilometers
+    const chartData = pointsWithElevation.map((point, index) => ({
+      distance: (index / (pointsWithElevation.length - 1)) * (track.totalDistance / 1000),
+      elevation: point.ele!,
+      originalIndex: track.points.indexOf(point)
+    }));
+
+    // Calculate current position in chart data based on actual track position
+    const totalPoints = track.points.length;
+    const currentPointIndex = Math.floor((currentPosition / 100) * (totalPoints - 1));
+    const currentPoint = track.points[currentPointIndex];
+    
+    // Find the closest elevation point to current position
+    let currentChartPoint = null;
+    if (currentPoint && currentPoint.ele !== undefined) {
+      // If current point has elevation, use it directly
+      const chartIndex = chartData.findIndex(data => data.originalIndex === currentPointIndex);
+      if (chartIndex >= 0) {
+        currentChartPoint = chartData[chartIndex];
+      }
+    } else {
+      // Find nearest point with elevation
+      let minDistance = Infinity;
+      let nearestPoint = null;
+      
+      pointsWithElevation.forEach((elevPoint, elevIndex) => {
+        const elevOriginalIndex = track.points.indexOf(elevPoint);
+        const distance = Math.abs(elevOriginalIndex - currentPointIndex);
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestPoint = chartData[elevIndex];
+        }
+      });
+      currentChartPoint = nearestPoint;
+    }
+
+    // Calculate photo positions on the chart
+    const photosOnChart = photos.map(photo => {
+      let closestPoint = track.points[0];
+      let minDistance = Number.MAX_VALUE;
+      
+      track.points.forEach(point => {
+        const distance = Math.sqrt(
+          Math.pow(point.lat - photo.lat, 2) + Math.pow(point.lon - photo.lon, 2)
+        );
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestPoint = point;
+        }
+      });
+
+      const pointIndex = track.points.indexOf(closestPoint);
+      const chartPoint = chartData.find(data => data.originalIndex === pointIndex);
+      
+      return {
+        ...photo,
+        chartDistance: chartPoint?.distance || 0,
+        chartElevation: chartPoint?.elevation || closestPoint.ele || 0
+      };
+    });
+
+    return { chartData, currentChartPoint, photosOnChart };
+  };
+
+  const { chartData, currentChartPoint, photosOnChart } = getElevationData();
 
   return (
     <>
-      <div className="relative w-full h-96 rounded-lg overflow-hidden shadow-lg">
-        <div ref={mapContainer} className="absolute inset-0" />
-        <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs text-gray-600">
-          Klikněte na mapu pro přidání fotky
+      <div className="relative w-full rounded-lg overflow-hidden shadow-lg">
+        {/* Main map container */}
+        <div className="relative w-full h-96">
+          <div ref={mapContainer} className="absolute inset-0" />
+          <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs text-gray-600">
+            Klikněte na mapu pro přidání fotky
+          </div>
         </div>
+        
+        {/* Integrated elevation chart overlay */}
+        {gpxData && chartData.length > 0 && (
+          <div className="w-full h-32 bg-white/95 backdrop-blur-sm border-t">
+            <div className="h-full p-2">
+              <div className="text-xs font-medium text-gray-700 mb-1">Profil nadmořské výšky</div>
+              <div className="h-24 relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 5, right: 10, left: 20, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#059669" stopOpacity={0.8} />
+                        <stop offset="100%" stopColor="#059669" stopOpacity={0.1} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis 
+                      dataKey="distance" 
+                      tickFormatter={(value) => `${value.toFixed(1)}km`}
+                      className="text-xs"
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      tickFormatter={(value) => `${Math.round(value)}m`}
+                      domain={['dataMin - 10', 'dataMax + 10']}
+                      className="text-xs"
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="elevation" 
+                      stroke="#059669"
+                      strokeWidth={2}
+                      dot={false}
+                      fill="url(#elevationGradient)"
+                      fillOpacity={0.3}
+                    />
+                    
+                    {/* Photo markers */}
+                    {photosOnChart.map(photo => (
+                      <ReferenceDot 
+                        key={photo.id}
+                        x={photo.chartDistance} 
+                        y={photo.chartElevation}
+                        r={4}
+                        fill="#3b82f6"
+                        stroke="white"
+                        strokeWidth={1}
+                        style={{ cursor: 'pointer' }}
+                      />
+                    ))}
+                    
+                    {/* Current position marker */}
+                    {currentChartPoint && (
+                      <ReferenceDot 
+                        x={currentChartPoint.distance} 
+                        y={currentChartPoint.elevation}
+                        r={6}
+                        fill="#ef4444"
+                        stroke="white"
+                        strokeWidth={2}
+                      />
+                    )}
+                  </LineChart>
+                </ResponsiveContainer>
+                
+                {/* Bike icon overlay for current position */}
+                {currentChartPoint && gpxData && (
+                  <div 
+                    className="absolute pointer-events-none"
+                    style={{
+                      left: `${((currentChartPoint.distance / (gpxData.tracks[0].totalDistance / 1000)) * 100)}%`,
+                      top: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      zIndex: 10
+                    }}
+                  >
+                    <div className="bg-white rounded-full p-1 shadow-lg border-2 border-red-500">
+                      <Bike size={12} className="text-red-500" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       
       {clickedPosition && (

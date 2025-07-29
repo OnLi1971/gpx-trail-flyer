@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FileUpload } from '@/components/FileUpload';
 import { TrailMap } from '@/components/TrailMap';
-import { ElevationChart } from '@/components/ElevationChart';
 import { AnimationControls } from '@/components/AnimationControls';
 import { PhotoViewModal } from '@/components/PhotoViewModal';
 import { GPXParser } from '@/utils/gpxParser';
@@ -224,7 +223,7 @@ const Index = () => {
               onPositionChange={handlePositionChange}
             />
 
-            {/* Trail Map */}
+            {/* Trail Map with Integrated Elevation Chart */}
             <TrailMap 
               gpxData={gpxData} 
               currentPosition={currentPosition}
@@ -233,17 +232,6 @@ const Index = () => {
                 if (gpxData) {
                   setGpxData({ ...gpxData, photos });
                 }
-              }}
-            />
-            
-            {/* Elevation Chart */}
-            <ElevationChart 
-              gpxData={gpxData} 
-              currentPosition={currentPosition}
-              photos={gpxData?.photos || []}
-              onPhotoClick={(photo) => {
-                setAutoPhotoView(photo);
-                setIsAutoPhotoOpen(true);
               }}
             />
 
