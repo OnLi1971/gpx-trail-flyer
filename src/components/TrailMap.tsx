@@ -245,11 +245,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       photoElement.addEventListener('click', (e) => {
         e.stopPropagation();
-        // Show photo popup with proper React modal
-        const event = new CustomEvent('showPhotoModal', { 
-          detail: { photo, description: photo.description }
-        });
-        window.dispatchEvent(event);
+        setViewPhoto(photo);
+        setIsPhotoViewOpen(true);
       });
 
       const marker = new Marker(photoElement)
@@ -260,19 +257,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     });
   }, [photos]);
 
-  // Listen for photo view events
-  useEffect(() => {
-    const handleShowPhotoModal = (event: CustomEvent) => {
-      const { photo } = event.detail;
-      setViewPhoto(photo);
-      setIsPhotoViewOpen(true);
-    };
-
-    window.addEventListener('showPhotoModal', handleShowPhotoModal as EventListener);
-    return () => {
-      window.removeEventListener('showPhotoModal', handleShowPhotoModal as EventListener);
-    };
-  }, []);
 
   const handlePhotoSave = (photoData: Omit<PhotoPoint, 'id' | 'timestamp'>) => {
     const newPhoto: PhotoPoint = {
