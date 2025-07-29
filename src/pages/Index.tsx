@@ -3,8 +3,9 @@ import { FileUpload } from '@/components/FileUpload';
 import { TrailMap } from '@/components/TrailMap';
 import { ElevationChart } from '@/components/ElevationChart';
 import { AnimationControls } from '@/components/AnimationControls';
+import { PhotoViewModal } from '@/components/PhotoViewModal';
 import { GPXParser } from '@/utils/gpxParser';
-import { GPXData } from '@/types/gpx';
+import { GPXData, PhotoPoint } from '@/types/gpx';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mountain, Route, Timer } from 'lucide-react';
@@ -15,6 +16,9 @@ const Index = () => {
   const [currentPosition, setCurrentPosition] = useState(0);
   const [animationDuration] = useState(10000); // 10 seconds
   const [startTime, setStartTime] = useState<number | null>(null);
+  const [autoPhotoView, setAutoPhotoView] = useState<PhotoPoint | null>(null);
+  const [isAutoPhotoOpen, setIsAutoPhotoOpen] = useState(false);
+  const [shownPhotosInSession, setShownPhotosInSession] = useState<Set<string>>(new Set());
 
   const parser = new GPXParser();
 
@@ -48,6 +52,7 @@ const Index = () => {
     setCurrentPosition(0);
     setIsPlaying(false);
     setStartTime(null);
+    setShownPhotosInSession(new Set()); // Reset shown photos
   }, []);
 
   const handlePositionChange = useCallback((position: number) => {
@@ -56,6 +61,41 @@ const Index = () => {
       setStartTime(Date.now() - (position / 100) * animationDuration);
     }
   }, [isPlaying, animationDuration]);
+
+  // Check for nearby photos during animation
+  useEffect(() => {
+    if (!gpxData?.photos?.length || !gpxData.tracks.length || !isPlaying) return;
+
+    const track = gpxData.tracks[0];
+    const currentPointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
+    const currentPoint = track.points[currentPointIndex];
+    
+    if (!currentPoint) return;
+
+    // Find photos within 50 meters of current position
+    const nearbyPhoto = gpxData.photos.find(photo => {
+      if (shownPhotosInSession.has(photo.id)) return false;
+      
+      // Simple distance calculation (approximate)
+      const latDiff = Math.abs(photo.lat - currentPoint.lat);
+      const lonDiff = Math.abs(photo.lon - currentPoint.lon);
+      const distance = Math.sqrt(latDiff * latDiff + lonDiff * lonDiff) * 111000; // rough conversion to meters
+      
+      return distance < 50; // 50 meters threshold
+    });
+
+    if (nearbyPhoto) {
+      setShownPhotosInSession(prev => new Set([...prev, nearbyPhoto.id]));
+      setAutoPhotoView(nearbyPhoto);
+      setIsAutoPhotoOpen(true);
+      
+      // Auto-close after 2 seconds
+      setTimeout(() => {
+        setIsAutoPhotoOpen(false);
+        setAutoPhotoView(null);
+      }, 2000);
+    }
+  }, [currentPosition, gpxData, isPlaying, shownPhotosInSession]);
 
   // Animation loop
   useEffect(() => {
@@ -184,6 +224,16 @@ const Index = () => {
             </Card>
           </div>
         )}
+        
+        {/* Auto Photo View Modal */}
+        <PhotoViewModal
+          photo={autoPhotoView}
+          isOpen={isAutoPhotoOpen}
+          onClose={() => {
+            setIsAutoPhotoOpen(false);
+            setAutoPhotoView(null);
+          }}
+        />
       </div>
     </div>
   );
