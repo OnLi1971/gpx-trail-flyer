@@ -13,24 +13,36 @@ export const PhotoViewModal: React.FC<PhotoViewModalProps> = ({
   isOpen,
   onClose
 }) => {
+  console.log('PhotoViewModal render:', { photo, isOpen });
+  
   if (!photo) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-auto">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-auto" aria-describedby="photo-description">
         <div className="space-y-4">
           <img 
             src={photo.photo} 
             alt={photo.description || 'Fotka z trasy'} 
             className="w-full h-64 object-cover rounded-lg"
+            onError={(e) => {
+              console.error('Image failed to load:', photo.photo);
+              e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23cccccc"/><text x="50" y="50" text-anchor="middle" dy=".3em">Chyba</text></svg>';
+            }}
           />
-          {photo.description && (
-            <p className="text-sm text-muted-foreground">
-              {photo.description}
-            </p>
-          )}
-          <div className="text-xs text-muted-foreground">
-            GPS: {photo.lat.toFixed(6)}, {photo.lon.toFixed(6)}
+          <div id="photo-description">
+            {photo.description ? (
+              <p className="text-sm text-foreground">
+                {photo.description}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground italic">
+                Žádný popis
+              </p>
+            )}
+            <div className="text-xs text-muted-foreground mt-2">
+              GPS: {photo.lat.toFixed(6)}, {photo.lon.toFixed(6)}
+            </div>
           </div>
         </div>
       </DialogContent>
