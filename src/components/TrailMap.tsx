@@ -3,6 +3,7 @@ import { Map, NavigationControl, Marker, LngLatBounds } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { PhotoUploadModal } from './PhotoUploadModal';
+import { PhotoViewModal } from './PhotoViewModal';
 import { Camera } from 'lucide-react';
 
 interface TrailMapProps {
@@ -24,6 +25,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [clickedPosition, setClickedPosition] = useState<{lat: number, lon: number} | null>(null);
   const [photos, setPhotos] = useState<PhotoPoint[]>(gpxData?.photos || []);
+  const [viewPhoto, setViewPhoto] = useState<PhotoPoint | null>(null);
+  const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -242,18 +245,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       photoElement.addEventListener('click', (e) => {
         e.stopPropagation();
-        // Show photo popup
-        const popup = document.createElement('div');
-        popup.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-        popup.innerHTML = `
-          <div class="bg-white rounded-lg p-4 max-w-md max-h-96 overflow-auto">
-            <img src="${photo.photo}" alt="${photo.description}" class="w-full h-48 object-cover rounded mb-2">
-            <p class="text-sm text-gray-700">${photo.description}</p>
-            <button class="mt-2 px-3 py-1 bg-gray-200 rounded text-sm">Zavřít</button>
-          </div>
-        `;
-        popup.addEventListener('click', () => popup.remove());
-        document.body.appendChild(popup);
+        // Show photo popup with proper React modal
+        const event = new CustomEvent('showPhotoModal', { 
+          detail: { photo, description: photo.description }
+        });
+        window.dispatchEvent(event);
       });
 
       const marker = new Marker(photoElement)
@@ -263,6 +259,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       photoMarkersRef.current.push(marker);
     });
   }, [photos]);
+
+  // Listen for photo view events
+  useEffect(() => {
+    const handleShowPhotoModal = (event: CustomEvent) => {
+      const { photo } = event.detail;
+      setViewPhoto(photo);
+      setIsPhotoViewOpen(true);
+    };
+
+    window.addEventListener('showPhotoModal', handleShowPhotoModal as EventListener);
+    return () => {
+      window.removeEventListener('showPhotoModal', handleShowPhotoModal as EventListener);
+    };
+  }, []);
 
   const handlePhotoSave = (photoData: Omit<PhotoPoint, 'id' | 'timestamp'>) => {
     const newPhoto: PhotoPoint = {
@@ -294,6 +304,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           lon={clickedPosition.lon}
         />
       )}
+      
+      <PhotoViewModal
+        photo={viewPhoto}
+        isOpen={isPhotoViewOpen}
+        onClose={() => setIsPhotoViewOpen(false)}
+      />
     </>
   );
 };
