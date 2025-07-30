@@ -18,6 +18,8 @@ const Index = () => {
   const [autoPhotoView, setAutoPhotoView] = useState<PhotoPoint | null>(null);
   const [isAutoPhotoOpen, setIsAutoPhotoOpen] = useState(false);
   const [shownPhotosInSession, setShownPhotosInSession] = useState<Set<string>>(new Set());
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
 
   const parser = new GPXParser();
 
@@ -60,6 +62,95 @@ const Index = () => {
       setStartTime(Date.now() - (position / 100) * animationDuration);
     }
   }, [isPlaying, animationDuration]);
+
+  const handleStartVideoCapture = useCallback(async () => {
+    if (isRecording) {
+      // Stop recording
+      if (mediaRecorder) {
+        mediaRecorder.stop();
+      }
+      return;
+    }
+
+    try {
+      // Use getDisplayMedia for screen capture
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: {
+          width: { ideal: 1920 },
+          height: { ideal: 1080 }
+        },
+        audio: false
+      });
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType: 'video/webm; codecs=vp9'
+      });
+
+      const chunks: BlobPart[] = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        
+        // Auto download
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `trail-video-${Date.now()}.webm`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        
+        URL.revokeObjectURL(url);
+        setIsRecording(false);
+        setMediaRecorder(null);
+        toast.success('Video bylo uloženo!');
+      };
+
+      recorder.onerror = (event) => {
+        console.error('Recording error:', event);
+        toast.error('Chyba při nahrávání videa');
+        setIsRecording(false);
+        setMediaRecorder(null);
+      };
+
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      
+      // Reset to beginning and start animation
+      setCurrentPosition(0);
+      setIsPlaying(false);
+      setShownPhotosInSession(new Set());
+      
+      // Start recording
+      recorder.start(100); // Capture every 100ms
+      
+      toast.success('Nahrávání zahájeno! Spusťte animaci pro záznam 15s videa.');
+      
+      // Auto-start animation after a short delay
+      setTimeout(() => {
+        setStartTime(Date.now());
+        setIsPlaying(true);
+      }, 1000);
+
+      // Auto-stop after 15 seconds
+      setTimeout(() => {
+        if (recorder.state === 'recording') {
+          recorder.stop();
+          stream.getTracks().forEach(track => track.stop());
+        }
+      }, 16000); // 15s + 1s buffer
+
+    } catch (error) {
+      console.error('Error starting video capture:', error);
+      toast.error('Nepodařilo se spustit nahrávání. Zkuste to znovu.');
+    }
+  }, [isRecording, mediaRecorder]);
 
   // Calculate photo positions on track when GPX data changes
   const [photoPositions, setPhotoPositions] = useState<Array<{photo: PhotoPoint, position: number}>>([]);
@@ -167,7 +258,7 @@ const Index = () => {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-6 space-y-6">
+      <div className="container mx-auto px-4 py-6 space-y-6 trail-container">
         {!gpxData ? (
           <div className="max-w-2xl mx-auto space-y-6">
             {/* Welcome Section */}
@@ -221,6 +312,8 @@ const Index = () => {
               onPlayPause={handlePlayPause}
               onReset={handleReset}
               onPositionChange={handlePositionChange}
+              onStartVideoCapture={handleStartVideoCapture}
+              isRecording={isRecording}
             />
 
             {/* Trail Map with Integrated Elevation Chart */}
