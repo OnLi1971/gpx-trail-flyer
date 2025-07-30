@@ -73,14 +73,29 @@ const Index = () => {
     }
 
     try {
-      // Use getDisplayMedia for screen capture
-      const stream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          width: { ideal: 1920 },
-          height: { ideal: 1080 }
-        },
-        audio: false
-      });
+      let stream;
+      
+      // Try getDisplayMedia first (screen capture)
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          },
+          audio: false
+        });
+      } catch (displayError) {
+        console.log('Screen capture not available, trying webcam fallback');
+        // Fallback to getUserMedia (webcam)
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+        toast.info('Používám kameru místo zachycení obrazovky');
+      }
 
       const recorder = new MediaRecorder(stream, {
         mimeType: 'video/webm; codecs=vp9'
