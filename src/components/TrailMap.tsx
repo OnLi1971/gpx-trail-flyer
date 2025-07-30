@@ -425,7 +425,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               <div className="text-sm font-medium text-gray-700 mb-2">Profil nadmořské výšky</div>
               <div className="h-32 relative">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 5, right: 15, left: 40, bottom: 15 }}>
+                  <LineChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 15 }}>
                     <defs>
                       <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#059669" stopOpacity={0.8} />
@@ -440,13 +440,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                       tickLine={false}
                     />
                     <YAxis 
-                      tickFormatter={(value) => `${Math.round(value)}m`}
-                      domain={['dataMin - 10', 'dataMax + 10']}
-                      className="text-xs"
-                      axisLine={false}
-                      tickLine={false}
-                      orientation="left"
-                      width={35}
+                      hide
                     />
                     <Line 
                       type="monotone" 
