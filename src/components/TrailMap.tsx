@@ -5,7 +5,7 @@ import { GPXData, PhotoPoint } from '@/types/gpx';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { PhotoViewModal } from './PhotoViewModal';
 import { Bike } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
 
 interface TrailMapProps {
   gpxData: GPXData | null;
@@ -422,25 +422,33 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         {gpxData && chartData.length > 0 && (
           <div className="w-full h-40 bg-white/95 backdrop-blur-sm border-t-2 border-trail-color/30">
             <div className="h-full p-3">
-              <div className="text-sm font-medium text-gray-700 mb-2">Profil nadmořské výšky</div>
               <div className="h-32 relative">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData} margin={{ top: 5, right: 5, left: 5, bottom: 15 }}>
+                  <LineChart data={chartData} margin={{ top: 5, right: 5, left: 25, bottom: 15 }}>
                     <defs>
                       <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#059669" stopOpacity={0.8} />
                         <stop offset="100%" stopColor="#059669" stopOpacity={0.1} />
                       </linearGradient>
                     </defs>
+                    <CartesianGrid strokeDasharray="1 1" stroke="#e5e7eb" strokeWidth={0.5} />
                     <XAxis 
                       dataKey="distance" 
-                      tickFormatter={(value) => `${value.toFixed(1)}km`}
+                      tickFormatter={(value) => `${Math.round(value)}km`}
                       className="text-xs"
                       axisLine={false}
                       tickLine={false}
+                      interval="preserveStartEnd"
+                      tickCount={4}
                     />
                     <YAxis 
-                      hide
+                      tickFormatter={(value) => `${Math.round(value)}`}
+                      domain={['dataMin - 10', 'dataMax + 10']}
+                      className="text-xs opacity-60"
+                      axisLine={false}
+                      tickLine={false}
+                      width={20}
+                      tickCount={3}
                     />
                     <Line 
                       type="monotone" 
