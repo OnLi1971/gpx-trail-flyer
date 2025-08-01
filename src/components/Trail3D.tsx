@@ -65,7 +65,7 @@ const Trail3DScene: React.FC<Trail3DSceneProps> = ({ gpxData, currentPosition })
     return trailData.points[index] || trailData.points[0];
   }, [trailData, currentPosition]);
   
-  // Camera animation following the trail
+  // Camera animation following the trail (slowed down 10x)
   useFrame(() => {
     if (!trailData || !currentPoint || !cameraRef.current) return;
     
@@ -84,7 +84,8 @@ const Trail3DScene: React.FC<Trail3DSceneProps> = ({ gpxData, currentPosition })
       // Look at a point ahead on the trail
       const lookAtPoint = point.clone().add(direction.clone().multiplyScalar(10));
       
-      camera.position.lerp(cameraPosition, 0.1);
+      // Slowed down interpolation (0.01 instead of 0.1)
+      camera.position.lerp(cameraPosition, 0.01);
       camera.lookAt(lookAtPoint);
     }
   });
@@ -107,10 +108,24 @@ const Trail3DScene: React.FC<Trail3DSceneProps> = ({ gpxData, currentPosition })
         lineWidth={3}
       />
       
-      {/* Ground plane */}
+      {/* Terrain with grid pattern */}
       <mesh position={[0, -5, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[trailData.scale * 1.5, trailData.scale * 1.5]} />
-        <meshLambertMaterial color="#8fbc8f" opacity={0.3} transparent />
+        <planeGeometry args={[trailData.scale * 1.5, trailData.scale * 1.5, 32, 32]} />
+        <meshLambertMaterial 
+          color="#2d5016" 
+          wireframe={false}
+        />
+      </mesh>
+      
+      {/* Grid lines for map feel */}
+      <mesh position={[0, -4.9, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[trailData.scale * 1.5, trailData.scale * 1.5, 20, 20]} />
+        <meshBasicMaterial 
+          color="#4ade80" 
+          wireframe={true}
+          opacity={0.2}
+          transparent
+        />
       </mesh>
       
       {/* Current position marker */}
