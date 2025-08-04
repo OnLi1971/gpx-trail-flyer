@@ -244,13 +244,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       .setLngLat([point.lon, point.lat])
       .addTo(map.current);
 
-    // Smooth camera movement to follow the point without changing zoom
-    map.current.easeTo({
-      center: [point.lon, point.lat],
-      duration: 200,
-      essential: true
-    });
-
   }, [currentPosition, gpxData]);
 
   // Effect for photo markers using GeoJSON

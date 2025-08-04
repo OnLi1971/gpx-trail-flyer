@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, RotateCcw, MapPin, Video } from 'lucide-react';
+import { Play, Pause, RotateCcw, MapPin } from 'lucide-react';
 import { GPXData } from '@/types/gpx';
 
 interface AnimationControlsProps {
@@ -12,8 +12,6 @@ interface AnimationControlsProps {
   onPlayPause: () => void;
   onReset: () => void;
   onPositionChange: (position: number) => void;
-  onStartVideoCapture: () => void;
-  isRecording: boolean;
 }
 
 export const AnimationControls: React.FC<AnimationControlsProps> = ({
@@ -23,8 +21,6 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
   onPlayPause,
   onReset,
   onPositionChange,
-  onStartVideoCapture,
-  isRecording,
 }) => {
   if (!gpxData || gpxData.tracks.length === 0) {
     return null;
@@ -101,7 +97,6 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
               size="sm"
               onClick={onReset}
               className="flex items-center gap-2"
-              disabled={isRecording}
             >
               <RotateCcw className="w-4 h-4" />
               Reset
@@ -109,7 +104,6 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
             <Button
               onClick={onPlayPause}
               className="flex items-center gap-2 bg-primary hover:bg-primary/90"
-              disabled={isRecording}
             >
               {isPlaying ? (
                 <>
@@ -122,15 +116,6 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
                   Přehrát
                 </>
               )}
-            </Button>
-            <Button
-              variant={isRecording ? "destructive" : "secondary"}
-              size="sm"
-              onClick={onStartVideoCapture}
-              className="flex items-center gap-2"
-            >
-              <Video className="w-4 h-4" />
-              {isRecording ? "Nahrávám..." : "Nahrát video"}
             </Button>
           </div>
 
