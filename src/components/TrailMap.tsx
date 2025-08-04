@@ -222,61 +222,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
   }, [gpxData]);
 
-  // Auto photo display logic
-  useEffect(() => {
-    if (!map.current || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) return;
-
-    const track = gpxData.tracks[0];
-    const pointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
-    const currentPoint = track.points[pointIndex];
-
-    if (!currentPoint) return;
-
-    // Find nearby photos (within ~50 meters)
-    const nearbyPhoto = photos.find(photo => {
-      const distance = Math.sqrt(
-        Math.pow((photo.lat - currentPoint.lat) * 111000, 2) + 
-        Math.pow((photo.lon - currentPoint.lon) * 111000 * Math.cos(photo.lat * Math.PI / 180), 2)
-      );
-      return distance < 50; // 50 meters threshold
-    });
-
-    if (nearbyPhoto && !viewPhoto) {
-      // Zoom in 50% and center on current position
-      map.current.easeTo({
-        center: [currentPoint.lon, currentPoint.lat],
-        zoom: 15,
-        duration: 800,
-        essential: true
-      });
-
-      // Show photo after zoom completes
-      setTimeout(() => {
-        setViewPhoto(nearbyPhoto);
-        setIsPhotoViewOpen(true);
-      }, 900);
-
-      // Hide photo and zoom back to full trail view after 3 seconds
-      setTimeout(() => {
-        setIsPhotoViewOpen(false);
-        setViewPhoto(null);
-        
-        // Zoom back to fit full trail
-        setTimeout(() => {
-          if (map.current && gpxData && gpxData.bounds) {
-            map.current.fitBounds([
-              [gpxData.bounds.minLon, gpxData.bounds.minLat],
-              [gpxData.bounds.maxLon, gpxData.bounds.maxLat]
-            ], {
-              padding: 50,
-              duration: 1000
-            });
-          }
-        }, 100);
-      }, 4000);
-    }
-  }, [currentPosition, gpxData, photos, viewPhoto]);
-
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
 
@@ -291,7 +236,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       markerRef.current.remove();
     }
 
-    // Create new marker
+    // Create new marker (just the moving point without location symbol)
     const markerElement = document.createElement('div');
     markerElement.className = 'w-3 h-3 bg-trail-active rounded-full shadow-lg';
     
@@ -299,16 +244,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       .setLngLat([point.lon, point.lat])
       .addTo(map.current);
 
-    // Only move camera if not currently viewing a photo
-    if (!viewPhoto) {
-      map.current.easeTo({
-        center: [point.lon, point.lat],
-        duration: 200,
-        essential: true
-      });
-    }
+    // Smooth camera movement to follow the point without changing zoom
+    map.current.easeTo({
+      center: [point.lon, point.lat],
+      duration: 200,
+      essential: true
+    });
 
-  }, [currentPosition, gpxData, viewPhoto]);
+  }, [currentPosition, gpxData]);
 
   // Effect for photo markers using GeoJSON
   useEffect(() => {
