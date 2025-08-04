@@ -242,10 +242,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     });
 
     if (nearbyPhoto && !viewPhoto) {
-      // Zoom in on the photo location
+      const currentZoom = map.current.getZoom();
+      
+      // Zoom current map view by 50%
       map.current.easeTo({
-        center: [nearbyPhoto.lon, nearbyPhoto.lat],
-        zoom: 16,
+        zoom: currentZoom * 1.5,
         duration: 800,
         essential: true
       });
@@ -256,17 +257,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         setIsPhotoViewOpen(true);
       }, 900);
 
-      // Hide photo and zoom out after 3 seconds
+      // Hide photo and zoom back after 3 seconds
       setTimeout(() => {
         setIsPhotoViewOpen(false);
         setViewPhoto(null);
         
-        // Zoom back out
+        // Zoom back to original level
         setTimeout(() => {
           if (map.current) {
             map.current.easeTo({
-              center: [currentPoint.lon, currentPoint.lat],
-              zoom: 12,
+              zoom: currentZoom,
               duration: 800,
               essential: true
             });
