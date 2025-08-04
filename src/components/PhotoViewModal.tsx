@@ -19,18 +19,18 @@ export const PhotoViewModal: React.FC<PhotoViewModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-auto animate-scale-in" aria-describedby="photo-description">
-        <div className="space-y-4">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-auto animate-fade-in" aria-describedby="photo-description">
+        <div className="space-y-4 animate-fade-in">
           <img 
             src={photo.photo} 
             alt={photo.description || 'Fotka z trasy'} 
-            className="w-full max-h-96 object-contain rounded-lg animate-[scale-in_0.8s_ease-out]"
+            className="w-full max-h-96 object-contain rounded-lg animate-[fade-in_0.6s_ease-out,scale-in_0.6s_ease-out] transition-all duration-300"
             onError={(e) => {
               console.error('Image failed to load:', photo.photo);
               e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23cccccc"/><text x="50" y="50" text-anchor="middle" dy=".3em">Chyba</text></svg>';
             }}
           />
-          <div id="photo-description">
+          <div id="photo-description" className="animate-[fade-in_0.8s_ease-out]">
             {photo.description ? (
               <p className="text-sm text-foreground">
                 {photo.description}
