@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { FileUpload } from '@/components/FileUpload';
 import { TrailMap } from '@/components/TrailMap';
-import { Trail3D } from '@/components/Trail3D';
+
 import { AnimationControls } from '@/components/AnimationControls';
 import { PhotoViewModal } from '@/components/PhotoViewModal';
 import { GPXParser } from '@/utils/gpxParser';
@@ -9,7 +9,7 @@ import { GPXData, PhotoPoint } from '@/types/gpx';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mountain, Route, Timer, Map, Box } from 'lucide-react';
+import { Mountain, Route, Timer } from 'lucide-react';
 
 const Index = () => {
   const [gpxData, setGpxData] = useState<GPXData | null>(null);
@@ -22,7 +22,7 @@ const Index = () => {
   const [shownPhotosInSession, setShownPhotosInSession] = useState<Set<string>>(new Set());
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [is3DView, setIs3DView] = useState(false);
+  
 
   const parser = new GPXParser();
 
@@ -334,54 +334,17 @@ const Index = () => {
               isRecording={isRecording}
             />
 
-            {/* View Toggle */}
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant={!is3DView ? "default" : "outline"}
-                    onClick={() => setIs3DView(false)}
-                    className="flex items-center gap-2"
-                  >
-                    <Map className="w-4 h-4" />
-                    2D Mapa
-                  </Button>
-                  <Button
-                    variant={is3DView ? "default" : "outline"}
-                    onClick={() => setIs3DView(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <Box className="w-4 h-4" />
-                    3D Průlet
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Trail View */}
-            {is3DView ? (
-              <Trail3D 
-                gpxData={gpxData} 
-                currentPosition={currentPosition}
-                onPhotosUpdate={(photos) => {
-                  // Update GPX data with photos
-                  if (gpxData) {
-                    setGpxData({ ...gpxData, photos });
-                  }
-                }}
-              />
-            ) : (
-              <TrailMap 
-                gpxData={gpxData} 
-                currentPosition={currentPosition}
-                onPhotosUpdate={(photos) => {
-                  // Update GPX data with photos
-                  if (gpxData) {
-                    setGpxData({ ...gpxData, photos });
-                  }
-                }}
-              />
-            )}
+            <TrailMap 
+              gpxData={gpxData} 
+              currentPosition={currentPosition}
+              onPhotosUpdate={(photos) => {
+                // Update GPX data with photos
+                if (gpxData) {
+                  setGpxData({ ...gpxData, photos });
+                }
+              }}
+            />
 
             {/* File Upload for New File */}
             <Card>
