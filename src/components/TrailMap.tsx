@@ -242,11 +242,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     });
 
     if (nearbyPhoto && !viewPhoto) {
-      const currentZoom = map.current.getZoom();
-      
-      // Zoom current map view by 50%
+      // Zoom in 50% and center on current position
       map.current.easeTo({
-        zoom: currentZoom * 1.5,
+        center: [currentPoint.lon, currentPoint.lat],
+        zoom: 15,
         duration: 800,
         essential: true
       });
@@ -257,18 +256,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         setIsPhotoViewOpen(true);
       }, 900);
 
-      // Hide photo and zoom back after 3 seconds
+      // Hide photo and zoom back to full trail view after 3 seconds
       setTimeout(() => {
         setIsPhotoViewOpen(false);
         setViewPhoto(null);
         
-        // Zoom back to original level
+        // Zoom back to fit full trail
         setTimeout(() => {
-          if (map.current) {
-            map.current.easeTo({
-              zoom: currentZoom,
-              duration: 800,
-              essential: true
+          if (map.current && gpxData && gpxData.bounds) {
+            map.current.fitBounds([
+              [gpxData.bounds.minLon, gpxData.bounds.minLat],
+              [gpxData.bounds.maxLon, gpxData.bounds.maxLat]
+            ], {
+              padding: 50,
+              duration: 1000
             });
           }
         }, 100);
