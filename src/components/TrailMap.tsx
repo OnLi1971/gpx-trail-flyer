@@ -244,29 +244,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       .setLngLat([point.lon, point.lat])
       .addTo(map.current);
 
-    // Dynamic zoom based on position - zoom in during animation
-    const baseZoom = 10;
-    const maxZoom = 16;
-    const zoomRange = maxZoom - baseZoom;
-    
-    // Create a zoom curve that increases during the middle part of the animation
-    // and returns to normal at the end
-    let dynamicZoom;
-    if (currentPosition < 10) {
-      // Start: gradually zoom in from base
-      dynamicZoom = baseZoom + (currentPosition / 10) * (zoomRange * 0.3);
-    } else if (currentPosition < 90) {
-      // Middle: stay at high zoom
-      dynamicZoom = baseZoom + zoomRange * 0.8;
-    } else {
-      // End: zoom back out
-      dynamicZoom = baseZoom + zoomRange * 0.8 * (1 - (currentPosition - 90) / 10);
-    }
-
-    // Smooth camera transition to follow the point with dynamic zoom
+    // Smooth camera movement to follow the point without changing zoom
     map.current.easeTo({
       center: [point.lon, point.lat],
-      zoom: dynamicZoom,
       duration: 200,
       essential: true
     });
