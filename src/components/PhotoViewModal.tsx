@@ -24,13 +24,13 @@ export const PhotoViewModal: React.FC<PhotoViewModalProps> = ({
           <img 
             src={photo.photo} 
             alt={photo.description || 'Fotka z trasy'} 
-            className="w-full max-h-96 object-contain rounded-lg animate-[fade-in_0.6s_ease-out,scale-in_0.6s_ease-out] transition-all duration-300"
+            className="w-full max-h-96 object-contain rounded-lg animate-[fade-in_1.8s_ease-out,scale-in_1.8s_ease-out] transition-all duration-900"
             onError={(e) => {
               console.error('Image failed to load:', photo.photo);
               e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23cccccc"/><text x="50" y="50" text-anchor="middle" dy=".3em">Chyba</text></svg>';
             }}
           />
-          <div id="photo-description" className="animate-[fade-in_0.8s_ease-out]">
+          <div id="photo-description" className="animate-[fade-in_2.4s_ease-out]">
             {photo.description ? (
               <p className="text-sm text-foreground">
                 {photo.description}
