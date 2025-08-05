@@ -321,13 +321,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     // Ověř, že mapa je inicializovaná a styl je načtený
     if (!map.current.isStyleLoaded()) {
-      console.log('Map style not loaded yet');
+      console.log('Mapa není připravena!');
       return;
     }
 
     console.log('handleArrivedPhoto called for photo:', photo.id);
-    console.log('Zoomuji na fotku:', photo.lon, photo.lat);
-
+    
     // Uložit původní stav PŘED jakoukoli animací
     const currentCenter = map.current.getCenter();
     const currentZoom = map.current.getZoom();
@@ -341,34 +340,24 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     const newZoom = Math.min(currentZoom * 1.5, 18);
 
+    console.log('Zoomuji na fotku:', photo.lon, photo.lat, newZoom);
     console.log('Starting flyTo animation to:', { lat: photo.lat, lon: photo.lon, zoom: newZoom });
 
-    // Zastavit všechny ostatní animace během flyTo
-    const mapInstance = map.current;
-    
     // Spustit flyTo animaci
     console.log('Calling flyTo...');
-    mapInstance.flyTo({
+    map.current.flyTo({
       center: [photo.lon, photo.lat],
       zoom: newZoom,
-      duration: 2000,
+      duration: 1500,
       essential: true
     });
 
-    // Přidat listener pro konec flyTo animace
-    const onMoveEnd = () => {
-      console.log('FlyTo animation completed');
-      mapInstance.off('moveend', onMoveEnd);
-      
-      // Otevřít modal po dokončení animace
-      setTimeout(() => {
-        console.log('Opening photo modal');
-        setViewPhoto(photo);
-        setIsPhotoViewOpen(true);
-      }, 200);
-    };
-
-    mapInstance.on('moveend', onMoveEnd);
+    // Prodloužený timeout pro debugging
+    setTimeout(() => {
+      console.log('Otevírám modal s fotkou:', photo.id);
+      setViewPhoto(photo);
+      setIsPhotoViewOpen(true);
+    }, 2000);
   };
 
   // Efekt pro “dosažení” fotky při pohybu trasy
