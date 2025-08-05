@@ -316,24 +316,37 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const handleArrivedPhoto = (photo: PhotoPoint) => {
     if (!map.current) return;
 
+    console.log('handleArrivedPhoto called for photo:', photo.id);
+
+    // Uložit původní stav PŘED jakoukoli animací
+    const currentCenter = map.current.getCenter();
+    const currentZoom = map.current.getZoom();
+    
     setOriginalMapState({
-      center: [map.current.getCenter().lng, map.current.getCenter().lat],
-      zoom: map.current.getZoom()
+      center: [currentCenter.lng, currentCenter.lat],
+      zoom: currentZoom
     });
 
-    const currentZoom = map.current.getZoom();
+    console.log('Original map state saved:', { center: [currentCenter.lng, currentCenter.lat], zoom: currentZoom });
+
     const newZoom = Math.min(currentZoom * 1.5, 18);
 
+    console.log('Starting flyTo animation to:', { lat: photo.lat, lon: photo.lon, zoom: newZoom });
+
+    // Spustit flyTo animaci
     map.current.flyTo({
       center: [photo.lon, photo.lat],
       zoom: newZoom,
-      duration: 1000
+      duration: 2000, // Delší animace pro lepší vizuální efekt
+      essential: true // Zajistí, že animace nebude přerušena
     });
 
+    // Počkat déle na dokončení animace před otevřením modalu
     setTimeout(() => {
+      console.log('Opening photo modal after flyTo completion');
       setViewPhoto(photo);
       setIsPhotoViewOpen(true);
-    }, 1000);
+    }, 2200); // Trochu delší než duration animace
   };
 
   // Efekt pro “dosažení” fotky při pohybu trasy
