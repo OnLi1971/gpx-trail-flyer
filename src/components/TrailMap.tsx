@@ -71,14 +71,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     // Add click listener for adding photos
     map.current.on('click', (e) => {
       console.log('Map clicked at:', e.lngLat.lat, e.lngLat.lng);
-      
+
       // Check if click target is a photo marker
       const target = e.originalEvent.target as HTMLElement;
       if (target && target.closest('[data-photo-marker]')) {
         console.log('Click on photo marker detected, ignoring map click');
         return;
       }
-      
+
       setClickedPosition({
         lat: e.lngLat.lat,
         lon: e.lngLat.lng
@@ -240,7 +240,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     // Create new marker (just the moving point without location symbol)
     const markerElement = document.createElement('div');
     markerElement.className = 'w-3 h-3 bg-trail-active rounded-full shadow-lg';
-    
+
     markerRef.current = new Marker(markerElement)
       .setLngLat([point.lon, point.lat])
       .addTo(map.current);
@@ -301,38 +301,28 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       const markerElement = document.createElement('div');
       markerElement.className = 'w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform duration-200';
       markerElement.setAttribute('data-photo-marker', 'true');
-      
+
       const marker = new Marker(markerElement)
         .setLngLat([photo.lon, photo.lat])
         .addTo(map.current!);
-      
-      // Add click handler
-      markerElement.addEventListener('click', (e) => {
-        e.stopPropagation();
-        console.log('Photo marker clicked:', photo.id);
-        handlePhotoClick(photo);
-      });
-      
+
+      // (Click handler už není potřeba pro automatické otevírání fotek)
       photoMarkersRef.current.push(marker);
     });
 
-
   }, [photos]);
 
-
-  // === ZOOM NA FOTKU PŘED OTEVŘENÍM MODALU ===
-  const handlePhotoClick = (photo: PhotoPoint) => {
+  // Funkce pro otevření fotky, když k ní dojede značka
+  const handleArrivedPhoto = (photo: PhotoPoint) => {
     if (!map.current) return;
 
-    // Uložit současný stav mapy
     setOriginalMapState({
       center: [map.current.getCenter().lng, map.current.getCenter().lat],
       zoom: map.current.getZoom()
     });
 
-    // Přiblížit na fotku o cca 50 %, ale ne přes maximální zoom
     const currentZoom = map.current.getZoom();
-    const newZoom = Math.min(currentZoom * 1.5, 18); // max hodnotu zoomu nastav dle potřeby (např. 18)
+    const newZoom = Math.min(currentZoom * 1.5, 18);
 
     map.current.flyTo({
       center: [photo.lon, photo.lat],
@@ -340,14 +330,37 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       duration: 1000
     });
 
-    // Po 1 sekundě otevřít fotku
     setTimeout(() => {
       setViewPhoto(photo);
       setIsPhotoViewOpen(true);
     }, 1000);
   };
 
-  // === VRÁCENÍ ZOOMU PO ZAVŘENÍ FOTKY ===
+  // Efekt pro “dosažení” fotky při pohybu trasy
+  useEffect(() => {
+    if (!map.current || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) return;
+
+    const track = gpxData.tracks[0];
+    const pointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
+    const point = track.points[pointIndex];
+
+    if (!point) return;
+
+    // Pro každou fotku zjisti, zda je marker u její polohy
+    const threshold = 0.00005; // toleranční vzdálenost, aby nebylo nutné přesně na souřadnici
+    photos.forEach(photo => {
+      if (
+        Math.abs(photo.lat - point.lat) < threshold &&
+        Math.abs(photo.lon - point.lon) < threshold &&
+        !isPhotoViewOpen // otevři jen pokud už modal není otevřený
+      ) {
+        handleArrivedPhoto(photo);
+      }
+    });
+
+  }, [currentPosition, gpxData, photos, isPhotoViewOpen]);
+
+  // VRÁCENÍ ZOOMU PO ZAVŘENÍ FOTKY
   const handlePhotoClose = () => {
     setIsPhotoViewOpen(false);
     setViewPhoto(null);
@@ -371,7 +384,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       id: Date.now().toString(),
       timestamp: Date.now()
     };
-    
+
     const updatedPhotos = [...photos, newPhoto];
     setPhotos(updatedPhotos);
     onPhotosUpdate?.(updatedPhotos);
@@ -397,7 +410,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     const totalPoints = track.points.length;
     const currentPointIndex = Math.floor((currentPosition / 100) * (totalPoints - 1));
     const currentPoint = track.points[currentPointIndex];
-    
+
     // Find the closest elevation point to current position
     let currentChartPoint = null;
     if (currentPoint && currentPoint.ele !== undefined) {
@@ -410,7 +423,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       // Find nearest point with elevation
       let minDistance = Infinity;
       let nearestPoint = null;
-      
+
       pointsWithElevation.forEach((elevPoint, elevIndex) => {
         const elevOriginalIndex = track.points.indexOf(elevPoint);
         const distance = Math.abs(elevOriginalIndex - currentPointIndex);
@@ -426,7 +439,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     const photosOnChart = photos.map(photo => {
       let closestPoint = track.points[0];
       let minDistance = Number.MAX_VALUE;
-      
+
       track.points.forEach(point => {
         const distance = Math.sqrt(
           Math.pow(point.lat - photo.lat, 2) + Math.pow(point.lon - photo.lon, 2)
@@ -439,7 +452,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       const pointIndex = track.points.indexOf(closestPoint);
       const chartPoint = chartData.find(data => data.originalIndex === pointIndex);
-      
+
       return {
         ...photo,
         chartDistance: chartPoint?.distance || 0,
