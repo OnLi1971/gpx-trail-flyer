@@ -320,25 +320,26 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   }, [photos]);
 
 
+  // === ZOOM NA FOTKU PŘED OTEVŘENÍM MODALU ===
   const handlePhotoClick = (photo: PhotoPoint) => {
     if (!map.current) return;
-    
+
     // Uložit současný stav mapy
     setOriginalMapState({
       center: [map.current.getCenter().lng, map.current.getCenter().lat],
       zoom: map.current.getZoom()
     });
-    
-    // Zazoomovat na fotku o 50%
+
+    // Přiblížit na fotku o cca 50 %, ale ne přes maximální zoom
     const currentZoom = map.current.getZoom();
-    const newZoom = currentZoom * 1.5;
-    
+    const newZoom = Math.min(currentZoom * 1.5, 18); // max hodnotu zoomu nastav dle potřeby (např. 18)
+
     map.current.flyTo({
       center: [photo.lon, photo.lat],
       zoom: newZoom,
       duration: 1000
     });
-    
+
     // Po 1 sekundě otevřít fotku
     setTimeout(() => {
       setViewPhoto(photo);
@@ -346,10 +347,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }, 1000);
   };
 
+  // === VRÁCENÍ ZOOMU PO ZAVŘENÍ FOTKY ===
   const handlePhotoClose = () => {
     setIsPhotoViewOpen(false);
     setViewPhoto(null);
-    
+
     // Vrátit mapu do původního stavu
     if (map.current && originalMapState) {
       map.current.flyTo({
@@ -359,6 +361,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       });
       setOriginalMapState(null);
     }
+
+    // Pokud potřebuješ pokračovat v animaci, vlož zde volání na funkci například: continueRoute();
   };
 
   const handlePhotoSave = (photoData: Omit<PhotoPoint, 'id' | 'timestamp'>) => {
