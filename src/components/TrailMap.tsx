@@ -314,9 +314,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   // Funkce pro otevření fotky, když k ní dojede značka
   const handleArrivedPhoto = (photo: PhotoPoint) => {
-    if (!map.current) return;
+    if (!map.current) {
+      console.log('Map not available');
+      return;
+    }
+
+    // Ověř, že mapa je inicializovaná a styl je načtený
+    if (!map.current.isStyleLoaded()) {
+      console.log('Map style not loaded yet');
+      return;
+    }
 
     console.log('handleArrivedPhoto called for photo:', photo.id);
+    console.log('Zoomuji na fotku:', photo.lon, photo.lat);
 
     // Uložit původní stav PŘED jakoukoli animací
     const currentCenter = map.current.getCenter();
@@ -341,7 +351,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       essential: true // Zajistí, že animace nebude přerušena
     });
 
-    // Počkat déle na dokončení animace před otevřením modalu
+    // Počkat na dokončení animace před otevřením modalu
     setTimeout(() => {
       console.log('Opening photo modal after flyTo completion');
       setViewPhoto(photo);
@@ -362,11 +372,17 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     // Pro každou fotku zjisti, zda je marker u její polohy
     const threshold = 0.00005; // toleranční vzdálenost, aby nebylo nutné přesně na souřadnici
     photos.forEach(photo => {
+      const latDiff = Math.abs(photo.lat - point.lat);
+      const lonDiff = Math.abs(photo.lon - point.lon);
+      
+      console.log('Current pos:', point.lat, point.lon, 'Photo:', photo.lat, photo.lon, 'Diffs:', { latDiff, lonDiff, threshold });
+      
       if (
-        Math.abs(photo.lat - point.lat) < threshold &&
-        Math.abs(photo.lon - point.lon) < threshold &&
+        latDiff < threshold &&
+        lonDiff < threshold &&
         !isPhotoViewOpen // otevři jen pokud už modal není otevřený
       ) {
+        console.log('Photo reached! Triggering handleArrivedPhoto for:', photo.id);
         handleArrivedPhoto(photo);
       }
     });
