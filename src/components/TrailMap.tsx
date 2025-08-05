@@ -351,12 +351,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       essential: true // Zajistí, že animace nebude přerušena
     });
 
-    // Počkat na dokončení animace před otevřením modalu
+    // Počkat delší dobu na dokončení animace před otevřením modalu (test)
     setTimeout(() => {
       console.log('Opening photo modal after flyTo completion');
       setViewPhoto(photo);
       setIsPhotoViewOpen(true);
-    }, 2200); // Trochu delší než duration animace
+    }, 3000); // 3 sekundy pro test
   };
 
   // Efekt pro “dosažení” fotky při pohybu trasy
