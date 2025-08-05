@@ -28,6 +28,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [photos, setPhotos] = useState<PhotoPoint[]>([]);
   const [viewPhoto, setViewPhoto] = useState<PhotoPoint | null>(null);
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
+  const [originalMapState, setOriginalMapState] = useState<{center: [number, number], zoom: number} | null>(null);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -309,8 +310,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       markerElement.addEventListener('click', (e) => {
         e.stopPropagation();
         console.log('Photo marker clicked:', photo.id);
-        setViewPhoto(photo);
-        setIsPhotoViewOpen(true);
+        handlePhotoClick(photo);
       });
       
       photoMarkersRef.current.push(marker);
@@ -319,6 +319,47 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   }, [photos]);
 
+
+  const handlePhotoClick = (photo: PhotoPoint) => {
+    if (!map.current) return;
+    
+    // Uložit současný stav mapy
+    setOriginalMapState({
+      center: [map.current.getCenter().lng, map.current.getCenter().lat],
+      zoom: map.current.getZoom()
+    });
+    
+    // Zazoomovat na fotku o 50%
+    const currentZoom = map.current.getZoom();
+    const newZoom = currentZoom * 1.5;
+    
+    map.current.flyTo({
+      center: [photo.lon, photo.lat],
+      zoom: newZoom,
+      duration: 1000
+    });
+    
+    // Po 1 sekundě otevřít fotku
+    setTimeout(() => {
+      setViewPhoto(photo);
+      setIsPhotoViewOpen(true);
+    }, 1000);
+  };
+
+  const handlePhotoClose = () => {
+    setIsPhotoViewOpen(false);
+    setViewPhoto(null);
+    
+    // Vrátit mapu do původního stavu
+    if (map.current && originalMapState) {
+      map.current.flyTo({
+        center: originalMapState.center,
+        zoom: originalMapState.zoom,
+        duration: 1000
+      });
+      setOriginalMapState(null);
+    }
+  };
 
   const handlePhotoSave = (photoData: Omit<PhotoPoint, 'id' | 'timestamp'>) => {
     const newPhoto: PhotoPoint = {
@@ -506,7 +547,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       <PhotoViewModal
         photo={viewPhoto}
         isOpen={isPhotoViewOpen}
-        onClose={() => setIsPhotoViewOpen(false)}
+        onClose={handlePhotoClose}
       />
     </>
   );
