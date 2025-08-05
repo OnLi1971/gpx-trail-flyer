@@ -6,17 +6,20 @@ import { PhotoUploadModal } from './PhotoUploadModal';
 import { PhotoViewModal } from './PhotoViewModal';
 import { Bike } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
+import { AnimationSettings } from './PhotoAnimationControls';
 
 interface TrailMapProps {
   gpxData: GPXData | null;
   currentPosition: number;
   onPhotosUpdate?: (photos: PhotoPoint[]) => void;
+  animationSettings: AnimationSettings;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({ 
   gpxData, 
   currentPosition,
-  onPhotosUpdate
+  onPhotosUpdate,
+  animationSettings
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
@@ -338,7 +341,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     console.log('Original map state saved:', { center: [currentCenter.lng, currentCenter.lat], zoom: currentZoom });
 
-    const newZoom = Math.min(currentZoom * 1.5, 18);
+    const newZoom = Math.min(currentZoom * animationSettings.zoomFactor, 18);
 
     console.log('Zoomuji na fotku:', photo.lon, photo.lat, newZoom);
     console.log('Starting flyTo animation to:', { lat: photo.lat, lon: photo.lon, zoom: newZoom });
@@ -348,16 +351,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     map.current.flyTo({
       center: [photo.lon, photo.lat],
       zoom: newZoom,
-      duration: 1500,
+      duration: animationSettings.flyToDuration,
       essential: true
     });
 
-    // Prodloužený timeout pro debugging
+    // Použít nastavený timeout pro otevření modalu
     setTimeout(() => {
       console.log('Otevírám modal s fotkou:', photo.id);
       setViewPhoto(photo);
       setIsPhotoViewOpen(true);
-    }, 2000);
+    }, animationSettings.modalDelay);
   };
 
   // Efekt pro “dosažení” fotky při pohybu trasy
@@ -371,7 +374,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (!point) return;
 
     // Pro každou fotku zjisti, zda je marker u její polohy
-    const threshold = 0.01; // zvětšil jsem threshold na ~1km pro debugging
+    const threshold = animationSettings.threshold;
     console.log('DEBUG: Checking photo proximity with threshold:', threshold);
     
     photos.forEach(photo => {
@@ -403,7 +406,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       map.current.flyTo({
         center: originalMapState.center,
         zoom: originalMapState.zoom,
-        duration: 1000
+        duration: animationSettings.zoomBackDuration
       });
       setOriginalMapState(null);
     }
