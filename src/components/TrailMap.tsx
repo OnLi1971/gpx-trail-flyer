@@ -343,20 +343,32 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     console.log('Starting flyTo animation to:', { lat: photo.lat, lon: photo.lon, zoom: newZoom });
 
+    // Zastavit všechny ostatní animace během flyTo
+    const mapInstance = map.current;
+    
     // Spustit flyTo animaci
-    map.current.flyTo({
+    console.log('Calling flyTo...');
+    mapInstance.flyTo({
       center: [photo.lon, photo.lat],
       zoom: newZoom,
-      duration: 2000, // Delší animace pro lepší vizuální efekt
-      essential: true // Zajistí, že animace nebude přerušena
+      duration: 2000,
+      essential: true
     });
 
-    // Počkat delší dobu na dokončení animace před otevřením modalu (test)
-    setTimeout(() => {
-      console.log('Opening photo modal after flyTo completion');
-      setViewPhoto(photo);
-      setIsPhotoViewOpen(true);
-    }, 3000); // 3 sekundy pro test
+    // Přidat listener pro konec flyTo animace
+    const onMoveEnd = () => {
+      console.log('FlyTo animation completed');
+      mapInstance.off('moveend', onMoveEnd);
+      
+      // Otevřít modal po dokončení animace
+      setTimeout(() => {
+        console.log('Opening photo modal');
+        setViewPhoto(photo);
+        setIsPhotoViewOpen(true);
+      }, 200);
+    };
+
+    mapInstance.on('moveend', onMoveEnd);
   };
 
   // Efekt pro “dosažení” fotky při pohybu trasy
