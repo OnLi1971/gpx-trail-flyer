@@ -371,19 +371,22 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (!point) return;
 
     // Pro každou fotku zjisti, zda je marker u její polohy
-    const threshold = 0.00005; // toleranční vzdálenost, aby nebylo nutné přesně na souřadnici
+    const threshold = 0.01; // zvětšil jsem threshold na ~1km pro debugging
+    console.log('DEBUG: Checking photo proximity with threshold:', threshold);
+    
     photos.forEach(photo => {
       const latDiff = Math.abs(photo.lat - point.lat);
       const lonDiff = Math.abs(photo.lon - point.lon);
       
-      console.log('Current pos:', point.lat, point.lon, 'Photo:', photo.lat, photo.lon, 'Diffs:', { latDiff, lonDiff, threshold });
+      console.log('DEBUG Current pos:', point.lat, point.lon, 'Photo:', photo.lat, photo.lon, 'Diffs:', { latDiff, lonDiff, threshold });
+      console.log('DEBUG Photo conditions - latDiff < threshold:', latDiff < threshold, 'lonDiff < threshold:', lonDiff < threshold, 'modalNotOpen:', !isPhotoViewOpen);
       
       if (
         latDiff < threshold &&
         lonDiff < threshold &&
         !isPhotoViewOpen // otevři jen pokud už modal není otevřený
       ) {
-        console.log('Photo reached! Triggering handleArrivedPhoto for:', photo.id);
+        console.log('DEBUG: Photo reached! Triggering handleArrivedPhoto for:', photo.id);
         handleArrivedPhoto(photo);
       }
     });
