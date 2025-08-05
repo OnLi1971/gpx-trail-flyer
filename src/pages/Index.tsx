@@ -8,6 +8,7 @@ import { GPXData, PhotoPoint } from '@/types/gpx';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mountain, Route, Timer } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [gpxData, setGpxData] = useState<GPXData | null>(null);
@@ -242,6 +243,21 @@ const Index = () => {
               </CardHeader>
               <CardContent>
                 <FileUpload onFileUpload={handleFileUpload} />
+              </CardContent>
+            </Card>
+
+            {/* Test FlyTo */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Test flyTo animace</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={() => window.open('/test-flyto', '_blank')}
+                  variant="outline"
+                >
+                  Otevřít test flyTo v novém okně
+                </Button>
               </CardContent>
             </Card>
           </div>
