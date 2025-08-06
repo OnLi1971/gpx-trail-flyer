@@ -33,6 +33,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
   const [originalMapState, setOriginalMapState] = useState<{center: [number, number], zoom: number} | null>(null);
 
+  // NOVÝ STAV pro kontrolu opakovaného otevření modalu
+  const [lastOpenedPhotoId, setLastOpenedPhotoId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!mapContainer.current) return;
 
@@ -373,35 +376,30 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     if (!point) return;
 
-    // Pro každou fotku zjisti, zda je marker u její polohy
     const threshold = animationSettings.threshold;
-    console.log('DEBUG: Checking photo proximity with threshold:', threshold);
-    
+
     photos.forEach(photo => {
       const latDiff = Math.abs(photo.lat - point.lat);
       const lonDiff = Math.abs(photo.lon - point.lon);
-      
-      console.log('DEBUG Current pos:', point.lat, point.lon, 'Photo:', photo.lat, photo.lon, 'Diffs:', { latDiff, lonDiff, threshold });
-      console.log('DEBUG Photo conditions - latDiff < threshold:', latDiff < threshold, 'lonDiff < threshold:', lonDiff < threshold, 'modalNotOpen:', !isPhotoViewOpen);
-      
+
+      // Otevři modal pouze pokud nebyl pro tuto fotku již otevřen
       if (
         latDiff < threshold &&
         lonDiff < threshold &&
-        !isPhotoViewOpen // otevři jen pokud už modal není otevřený
+        !isPhotoViewOpen &&
+        lastOpenedPhotoId !== photo.id
       ) {
-        console.log('DEBUG: Photo reached! Triggering handleArrivedPhoto for:', photo.id);
+        setLastOpenedPhotoId(photo.id);
         handleArrivedPhoto(photo);
       }
     });
+  }, [currentPosition, gpxData, photos, isPhotoViewOpen, lastOpenedPhotoId, animationSettings.threshold]);
 
-  }, [currentPosition, gpxData, photos, isPhotoViewOpen]);
-
-  // VRÁCENÍ ZOOMU PO ZAVŘENÍ FOTKY
+  // VRÁCENÍ ZOOMU PO ZAVŘENÍ FOTKY (upraveno)
   const handlePhotoClose = () => {
     setIsPhotoViewOpen(false);
     setViewPhoto(null);
-
-    // Vrátit mapu do původního stavu
+    setLastOpenedPhotoId(null); // Tím povolíš otevření další fotky!
     if (map.current && originalMapState) {
       map.current.flyTo({
         center: originalMapState.center,
@@ -410,8 +408,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       });
       setOriginalMapState(null);
     }
-
-    // Pokud potřebuješ pokračovat v animaci, vlož zde volání na funkci například: continueRoute();
   };
 
   const handlePhotoSave = (photoData: Omit<PhotoPoint, 'id' | 'timestamp'>) => {
