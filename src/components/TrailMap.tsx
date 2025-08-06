@@ -378,14 +378,30 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     const threshold = animationSettings.threshold;
 
+    // Funkce pro výpočet vzdálenosti v metrech (Haversine)
+    const getDistanceMeters = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+      const R = 6371000; // Poloměr Země v metrech
+      const toRadians = (degrees: number) => degrees * (Math.PI / 180);
+      
+      const dLat = toRadians(lat2 - lat1);
+      const dLon = toRadians(lon2 - lon1);
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    };
+
+    // Převod threshold na metry (threshold je nyní v rozsahu 0.001-0.02, převádíme na metry)
+    const thresholdMeters = threshold * 100000; // 0.001 = 100m, 0.02 = 2000m
+
     photos.forEach(photo => {
-      const latDiff = Math.abs(photo.lat - point.lat);
-      const lonDiff = Math.abs(photo.lon - point.lon);
+      const distance = getDistanceMeters(photo.lat, photo.lon, point.lat, point.lon);
 
       // Otevři modal pouze pokud nebyl pro tuto fotku již otevřen
       if (
-        latDiff < threshold &&
-        lonDiff < threshold &&
+        distance < thresholdMeters &&
         !isPhotoViewOpen &&
         lastOpenedPhotoId !== photo.id
       ) {
