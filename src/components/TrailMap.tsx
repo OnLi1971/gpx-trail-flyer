@@ -33,8 +33,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
   const [originalMapState, setOriginalMapState] = useState<{center: [number, number], zoom: number} | null>(null);
 
-  // NOVÝ STAV pro kontrolu opakovaného otevření modalu
-  const [lastOpenedPhotoId, setLastOpenedPhotoId] = useState<string | null>(null);
+  // PATCH: stav synchronizace animace/fotky
+  const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -76,20 +76,15 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     // Add click listener for adding photos
     map.current.on('click', (e) => {
-      console.log('Map clicked at:', e.lngLat.lat, e.lngLat.lng);
-
       // Check if click target is a photo marker
       const target = e.originalEvent.target as HTMLElement;
       if (target && target.closest('[data-photo-marker]')) {
-        console.log('Click on photo marker detected, ignoring map click');
         return;
       }
-
       setClickedPosition({
         lat: e.lngLat.lat,
         lon: e.lngLat.lng
       });
-      console.log('Opening upload modal');
       setIsModalOpen(true);
     });
 
@@ -224,7 +219,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // Initialize photos from GPX data
   useEffect(() => {
     if (gpxData?.photos) {
-      console.log('Initializing photos from GPX data:', gpxData.photos);
       setPhotos(gpxData.photos);
     }
   }, [gpxData]);
@@ -268,25 +262,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       return;
     }
 
-    console.log('Adding photo markers via GeoJSON:', photos.length);
-
-    // Create GeoJSON for photos
-    const photoGeoJSON: GeoJSON.FeatureCollection = {
-      type: 'FeatureCollection',
-      features: photos.map(photo => ({
-        type: 'Feature',
-        properties: {
-          id: photo.id,
-          description: photo.description,
-          photo: photo.photo
-        },
-        geometry: {
-          type: 'Point',
-          coordinates: [photo.lon, photo.lat]
-        }
-      }))
-    };
-
     // Remove existing photo layers and markers
     if (map.current.getLayer('photo-icons')) {
       map.current.removeLayer('photo-icons');
@@ -312,110 +287,65 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         .setLngLat([photo.lon, photo.lat])
         .addTo(map.current!);
 
-      // (Click handler už není potřeba pro automatické otevírání fotek)
       photoMarkersRef.current.push(marker);
     });
 
   }, [photos]);
 
+  // PATCH: Synchronizace pohybu a otevírání fotky
+  useEffect(() => {
+    if (!map.current || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) return;
+    const track = gpxData.tracks[0];
+    const pointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
+    const point = track.points[pointIndex];
+
+    if (!point) return;
+    const threshold = animationSettings.threshold;
+
+    photos.forEach(photo => {
+      const latDiff = Math.abs(photo.lat - point.lat);
+      const lonDiff = Math.abs(photo.lon - point.lon);
+
+      // Otevři modal pouze pokud není žádná aktivní animace nebo modal
+      if (
+        latDiff < threshold &&
+        lonDiff < threshold &&
+        !isPhotoViewOpen &&
+        activePhotoId === null
+      ) {
+        setActivePhotoId(photo.id);
+        handleArrivedPhoto(photo);
+      }
+    });
+  }, [currentPosition, gpxData, photos, isPhotoViewOpen, activePhotoId, animationSettings.threshold]);
+
   // Funkce pro otevření fotky, když k ní dojede značka
   const handleArrivedPhoto = (photo: PhotoPoint) => {
-    if (!map.current) {
-      console.log('Map not available');
-      return;
-    }
-
-    // Ověř, že mapa je inicializovaná a styl je načtený
-    if (!map.current.isStyleLoaded()) {
-      console.log('Mapa není připravena!');
-      return;
-    }
-
-    console.log('handleArrivedPhoto called for photo:', photo.id);
-    
-    // Uložit původní stav PŘED jakoukoli animací
-    const currentCenter = map.current.getCenter();
-    const currentZoom = map.current.getZoom();
-    
+    if (!map.current) return;
+    if (!map.current.isStyleLoaded()) return;
     setOriginalMapState({
-      center: [currentCenter.lng, currentCenter.lat],
-      zoom: currentZoom
+      center: [map.current.getCenter().lng, map.current.getCenter().lat],
+      zoom: map.current.getZoom()
     });
-
-    console.log('Original map state saved:', { center: [currentCenter.lng, currentCenter.lat], zoom: currentZoom });
-
+    const currentZoom = map.current.getZoom();
     const newZoom = Math.min(currentZoom * animationSettings.zoomFactor, 18);
-
-    console.log('Zoomuji na fotku:', photo.lon, photo.lat, newZoom);
-    console.log('Starting flyTo animation to:', { lat: photo.lat, lon: photo.lon, zoom: newZoom });
-
-    // Spustit flyTo animaci
-    console.log('Calling flyTo...');
     map.current.flyTo({
       center: [photo.lon, photo.lat],
       zoom: newZoom,
       duration: animationSettings.flyToDuration,
       essential: true
     });
-
-    // Použít nastavený timeout pro otevření modalu
     setTimeout(() => {
-      console.log('Otevírám modal s fotkou:', photo.id);
       setViewPhoto(photo);
       setIsPhotoViewOpen(true);
     }, animationSettings.modalDelay);
   };
 
-  // Efekt pro “dosažení” fotky při pohybu trasy
-  useEffect(() => {
-    if (!map.current || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) return;
-
-    const track = gpxData.tracks[0];
-    const pointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
-    const point = track.points[pointIndex];
-
-    if (!point) return;
-
-    const threshold = animationSettings.threshold;
-
-    // Funkce pro výpočet vzdálenosti v metrech (Haversine)
-    const getDistanceMeters = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-      const R = 6371000; // Poloměr Země v metrech
-      const toRadians = (degrees: number) => degrees * (Math.PI / 180);
-      
-      const dLat = toRadians(lat2 - lat1);
-      const dLon = toRadians(lon2 - lon1);
-      const a = 
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return R * c;
-    };
-
-    // Převod threshold na metry (threshold je nyní v rozsahu 0.001-0.02, převádíme na metry)
-    const thresholdMeters = threshold * 100000; // 0.001 = 100m, 0.02 = 2000m
-
-    photos.forEach(photo => {
-      const distance = getDistanceMeters(photo.lat, photo.lon, point.lat, point.lon);
-
-      // Otevři modal pouze pokud nebyl pro tuto fotku již otevřen
-      if (
-        distance < thresholdMeters &&
-        !isPhotoViewOpen &&
-        lastOpenedPhotoId !== photo.id
-      ) {
-        setLastOpenedPhotoId(photo.id);
-        handleArrivedPhoto(photo);
-      }
-    });
-  }, [currentPosition, gpxData, photos, isPhotoViewOpen, lastOpenedPhotoId, animationSettings.threshold]);
-
-  // VRÁCENÍ ZOOMU PO ZAVŘENÍ FOTKY (upraveno)
+  // PATCH: VRÁCENÍ ZOOMU PO ZAVŘENÍ FOTKY + uvolnění synchronizačního stavu
   const handlePhotoClose = () => {
     setIsPhotoViewOpen(false);
     setViewPhoto(null);
-    setLastOpenedPhotoId(null); // Tím povolíš otevření další fotky!
+    setActivePhotoId(null); // Povolit otevření další fotky až po úplném zavření a odzoomování
     if (map.current && originalMapState) {
       map.current.flyTo({
         center: originalMapState.center,
@@ -462,13 +392,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     // Find the closest elevation point to current position
     let currentChartPoint = null;
     if (currentPoint && currentPoint.ele !== undefined) {
-      // If current point has elevation, use it directly
       const chartIndex = chartData.findIndex(data => data.originalIndex === currentPointIndex);
       if (chartIndex >= 0) {
         currentChartPoint = chartData[chartIndex];
       }
     } else {
-      // Find nearest point with elevation
       let minDistance = Infinity;
       let nearestPoint = null;
 
