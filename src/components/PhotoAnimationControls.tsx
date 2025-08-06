@@ -61,7 +61,7 @@ export const PhotoAnimationControls: React.FC<PhotoAnimationControlsProps> = ({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-3">
             <Label className="text-sm font-medium">
-              Vzdálenost spuštění: {settings.threshold.toFixed(3)}
+              Vzdálenost spuštění (0.001-0.02): {settings.threshold.toFixed(3)}
             </Label>
             <Slider
               value={[settings.threshold]}
@@ -78,7 +78,7 @@ export const PhotoAnimationControls: React.FC<PhotoAnimationControlsProps> = ({
 
           <div className="space-y-3">
             <Label className="text-sm font-medium">
-              Zoom faktor: {settings.zoomFactor.toFixed(1)}x
+              Zoom faktor (1.0-3.0x): {settings.zoomFactor.toFixed(1)}x
             </Label>
             <Slider
               value={[settings.zoomFactor]}
@@ -95,7 +95,7 @@ export const PhotoAnimationControls: React.FC<PhotoAnimationControlsProps> = ({
 
           <div className="space-y-3">
             <Label className="text-sm font-medium">
-              Rychlost zoom: {settings.flyToDuration}ms
+              Rychlost zoom (500-3000ms): {settings.flyToDuration}ms
             </Label>
             <Slider
               value={[settings.flyToDuration]}
@@ -112,7 +112,7 @@ export const PhotoAnimationControls: React.FC<PhotoAnimationControlsProps> = ({
 
           <div className="space-y-3">
             <Label className="text-sm font-medium">
-              Zpoždění fotky: {settings.modalDelay}ms
+              Zpoždění fotky (0-5000ms): {settings.modalDelay}ms
             </Label>
             <Slider
               value={[settings.modalDelay]}
@@ -129,7 +129,7 @@ export const PhotoAnimationControls: React.FC<PhotoAnimationControlsProps> = ({
 
           <div className="space-y-3">
             <Label className="text-sm font-medium">
-              Rychlost návratu: {settings.zoomBackDuration}ms
+              Rychlost návratu (500-3000ms): {settings.zoomBackDuration}ms
             </Label>
             <Slider
               value={[settings.zoomBackDuration]}
