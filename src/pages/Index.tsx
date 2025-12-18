@@ -22,10 +22,9 @@ const Index = () => {
   const [isAutoPhotoOpen, setIsAutoPhotoOpen] = useState(false);
   const [shownPhotosInSession, setShownPhotosInSession] = useState<Set<string>>(new Set());
 
-  const parser = new GPXParser();
-
   const handleFileUpload = useCallback((content: string, filename: string) => {
     try {
+      const parser = new GPXParser();
       const parsedData = parser.parseGPX(content);
       
       if (parsedData.tracks.length === 0) {
@@ -41,7 +40,7 @@ const Index = () => {
       console.error('Error parsing GPX:', error);
       toast.error('Chyba při načítání GPX souboru. Zkontroluj formát.');
     }
-  }, [parser]);
+  }, []);
 
   const handlePlayPause = useCallback(() => {
     if (!isPlaying) {
