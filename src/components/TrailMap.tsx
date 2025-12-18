@@ -110,20 +110,39 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           properties: {},
           geometry: {
             type: 'LineString',
-            coordinates: track.points.map(point => [point.lon, point.lat])
-          }
-        }
-      ]
+            coordinates: track.points.map((point) => [point.lon, point.lat]),
+          },
+        },
+      ],
     };
 
-    // Wait for map to load
-    map.current.on('load', () => {
+    const ensureTrailLayers = () => {
       if (!map.current) return;
 
-      // Add trail source and layer
+      // Remove existing layers/sources safely (prevents crashes when switching GPX)
+      if (map.current.getLayer('trail-glow')) map.current.removeLayer('trail-glow');
+      if (map.current.getLayer('trail-line')) map.current.removeLayer('trail-line');
+      if (map.current.getSource('trail')) map.current.removeSource('trail');
+
       map.current.addSource('trail', {
         type: 'geojson',
-        data: geojson
+        data: geojson,
+      });
+
+      map.current.addLayer({
+        id: 'trail-glow',
+        type: 'line',
+        source: 'trail',
+        layout: {
+          'line-join': 'round',
+          'line-cap': 'round',
+        },
+        paint: {
+          'line-color': '#059669',
+          'line-width': 8,
+          'line-opacity': 0.3,
+          'line-blur': 2,
+        },
       });
 
       map.current.addLayer({
@@ -132,90 +151,30 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         source: 'trail',
         layout: {
           'line-join': 'round',
-          'line-cap': 'round'
+          'line-cap': 'round',
         },
         paint: {
           'line-color': '#059669',
           'line-width': 4,
-          'line-opacity': 0.8
-        }
-      });
-
-      // Add trail glow effect
-      map.current.addLayer({
-        id: 'trail-glow',
-        type: 'line',
-        source: 'trail',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
+          'line-opacity': 0.8,
         },
-        paint: {
-          'line-color': '#059669',
-          'line-width': 8,
-          'line-opacity': 0.3,
-          'line-blur': 2
-        }
-      }, 'trail-line');
+      });
 
       // Fit map to trail bounds
       const bounds = new LngLatBounds();
-      track.points.forEach(point => {
+      track.points.forEach((point) => {
         bounds.extend([point.lon, point.lat]);
       });
       map.current.fitBounds(bounds, { padding: 50 });
-    });
+    };
 
-    // If map is already loaded, add layers immediately
     if (map.current.isStyleLoaded()) {
-      if (map.current.getSource('trail')) {
-        map.current.removeLayer('trail-glow');
-        map.current.removeLayer('trail-line');
-        map.current.removeSource('trail');
-      }
-
-      map.current.addSource('trail', {
-        type: 'geojson',
-        data: geojson
-      });
-
-      map.current.addLayer({
-        id: 'trail-glow',
-        type: 'line',
-        source: 'trail',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': '#059669',
-          'line-width': 8,
-          'line-opacity': 0.3,
-          'line-blur': 2
-        }
-      });
-
-      map.current.addLayer({
-        id: 'trail-line',
-        type: 'line',
-        source: 'trail',
-        layout: {
-          'line-join': 'round',
-          'line-cap': 'round'
-        },
-        paint: {
-          'line-color': '#059669',
-          'line-width': 4,
-          'line-opacity': 0.8
-        }
-      });
-
-      const bounds = new LngLatBounds();
-      track.points.forEach(point => {
-        bounds.extend([point.lon, point.lat]);
-      });
-      map.current.fitBounds(bounds, { padding: 50 });
+      ensureTrailLayers();
+      return;
     }
+
+    // Run once when style becomes ready (avoids stacking multiple 'load' handlers)
+    map.current.once('load', ensureTrailLayers);
   }, [gpxData]);
 
   // Initialize photos from GPX data
