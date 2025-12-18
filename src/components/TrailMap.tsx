@@ -4,10 +4,11 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { PhotoViewModal } from './PhotoViewModal';
-import { Bike, Mountain } from 'lucide-react';
+import { Bike, Mountain, Play, Square } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
 import { AnimationSettings } from './PhotoAnimationControls';
 import { Slider } from '@/components/ui/slider';
+import { Button } from '@/components/ui/button';
 interface TrailMapProps {
   gpxData: GPXData | null;
   currentPosition: number;
@@ -33,6 +34,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
   const [originalMapState, setOriginalMapState] = useState<{center: [number, number], zoom: number} | null>(null);
   const [mapPitch, setMapPitch] = useState(0);
+  const [isFlying, setIsFlying] = useState(false);
+  const flyAnimationRef = useRef<number | null>(null);
 
   // PATCH: stav synchronizace animace/fotky
   const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
@@ -318,6 +321,116 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
   };
 
+  // Calculate bearing between two points
+  const calculateBearing = (start: { lat: number; lon: number }, end: { lat: number; lon: number }) => {
+    const startLat = start.lat * Math.PI / 180;
+    const startLon = start.lon * Math.PI / 180;
+    const endLat = end.lat * Math.PI / 180;
+    const endLon = end.lon * Math.PI / 180;
+    
+    const dLon = endLon - startLon;
+    const y = Math.sin(dLon) * Math.cos(endLat);
+    const x = Math.cos(startLat) * Math.sin(endLat) - Math.sin(startLat) * Math.cos(endLat) * Math.cos(dLon);
+    
+    let bearing = Math.atan2(y, x) * 180 / Math.PI;
+    return (bearing + 360) % 360;
+  };
+
+  // Start 3D flythrough animation
+  const startFlythrough = () => {
+    if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
+    
+    const track = gpxData.tracks[0];
+    if (track.points.length < 2) return;
+
+    setIsFlying(true);
+    let currentIndex = 0;
+    const totalPoints = track.points.length;
+    const step = Math.max(1, Math.floor(totalPoints / 200)); // Sample ~200 points for smooth animation
+
+    const animateStep = () => {
+      if (!map.current || currentIndex >= totalPoints - 1) {
+        stopFlythrough();
+        return;
+      }
+
+      const currentPoint = track.points[currentIndex];
+      const nextIndex = Math.min(currentIndex + step, totalPoints - 1);
+      const nextPoint = track.points[nextIndex];
+      
+      const bearing = calculateBearing(currentPoint, nextPoint);
+      
+      // Dynamic pitch based on elevation change
+      let targetPitch = 60;
+      if (currentPoint.ele && nextPoint.ele) {
+        const elevChange = nextPoint.ele - currentPoint.ele;
+        targetPitch = Math.max(45, Math.min(70, 60 + elevChange * 0.5));
+      }
+
+      map.current.easeTo({
+        center: [currentPoint.lon, currentPoint.lat],
+        bearing: bearing,
+        pitch: targetPitch,
+        zoom: 15,
+        duration: 100,
+        easing: (t) => t
+      });
+
+      setMapPitch(Math.round(targetPitch));
+      currentIndex = nextIndex;
+      
+      flyAnimationRef.current = requestAnimationFrame(animateStep);
+    };
+
+    // Initial setup - zoom to start
+    const startPoint = track.points[0];
+    const secondPoint = track.points[Math.min(step, totalPoints - 1)];
+    const initialBearing = calculateBearing(startPoint, secondPoint);
+
+    map.current.flyTo({
+      center: [startPoint.lon, startPoint.lat],
+      zoom: 15,
+      pitch: 60,
+      bearing: initialBearing,
+      duration: 2000,
+      essential: true
+    });
+
+    setMapPitch(60);
+
+    // Start animation after initial flyTo
+    setTimeout(() => {
+      flyAnimationRef.current = requestAnimationFrame(animateStep);
+    }, 2000);
+  };
+
+  // Stop flythrough animation
+  const stopFlythrough = () => {
+    if (flyAnimationRef.current) {
+      cancelAnimationFrame(flyAnimationRef.current);
+      flyAnimationRef.current = null;
+    }
+    setIsFlying(false);
+    
+    // Reset to normal view
+    if (map.current && gpxData && gpxData.tracks.length > 0) {
+      const track = gpxData.tracks[0];
+      const bounds = new LngLatBounds();
+      track.points.forEach((point) => {
+        bounds.extend([point.lon, point.lat]);
+      });
+      
+      map.current.flyTo({
+        center: bounds.getCenter(),
+        zoom: 12,
+        pitch: 0,
+        bearing: 0,
+        duration: 1500
+      });
+      setMapPitch(0);
+    }
+  };
+
   const handlePhotoSave = (photoData: Omit<PhotoPoint, 'id' | 'timestamp'>) => {
     const newPhoto: PhotoPoint = {
       ...photoData,
@@ -413,7 +526,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             Klikněte na mapu pro přidání fotky
           </div>
           
-          {/* 3D Pitch slider */}
+          {/* 3D Controls */}
           <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-md">
             <div className="flex items-center gap-3">
               <Mountain className="w-4 h-4 text-muted-foreground" />
@@ -430,8 +543,31 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 max={60}
                 step={1}
                 className="flex-1"
+                disabled={isFlying}
               />
               <span className="text-xs text-muted-foreground min-w-[30px] text-right">{mapPitch}°</span>
+              
+              {/* Flythrough button */}
+              {gpxData && (
+                <Button
+                  size="sm"
+                  variant={isFlying ? "destructive" : "default"}
+                  onClick={isFlying ? stopFlythrough : startFlythrough}
+                  className="ml-2 gap-1"
+                >
+                  {isFlying ? (
+                    <>
+                      <Square className="w-3 h-3" />
+                      Stop
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3 h-3" />
+                      3D průlet
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         </div>
