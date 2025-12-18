@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { PhotoViewModal } from './PhotoViewModal';
-import { Bike, Mountain, Play, Square } from 'lucide-react';
+import { Bike, Mountain, Play, Square, RotateCcw } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
 import { AnimationSettings } from './PhotoAnimationControls';
 import { Slider } from '@/components/ui/slider';
@@ -36,9 +36,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [mapPitch, setMapPitch] = useState(0);
   const [isFlying, setIsFlying] = useState(false);
   const [flySpeed, setFlySpeed] = useState(50); // 1-100, lower = slower
+  const [flyRotation, setFlyRotation] = useState(50); // 0-100, how much bearing changes
   const [flyingIndex, setFlyingIndex] = useState<number | null>(null); // Current index during flythrough
   const flyAnimationRef = useRef<number | null>(null);
   const flySpeedRef = useRef(50);
+  const flyRotationRef = useRef(50);
+  const lastBearingRef = useRef(0);
 
   // PATCH: stav synchronizace animace/fotky
   const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
@@ -368,7 +371,23 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       const nextIndex = Math.min(currentIndex + step, totalPoints - 1);
       const nextPoint = track.points[nextIndex];
       
-      const bearing = calculateBearing(currentPoint, nextPoint);
+      const targetBearing = calculateBearing(currentPoint, nextPoint);
+      
+      // Smooth bearing based on rotation setting (0 = no rotation, 100 = full rotation)
+      const rotationFactor = flyRotationRef.current / 100;
+      let smoothBearing = lastBearingRef.current;
+      
+      if (rotationFactor > 0) {
+        // Calculate shortest rotation direction
+        let diff = targetBearing - lastBearingRef.current;
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+        
+        smoothBearing = lastBearingRef.current + diff * rotationFactor * 0.3;
+        // Normalize to 0-360
+        smoothBearing = ((smoothBearing % 360) + 360) % 360;
+      }
+      lastBearingRef.current = smoothBearing;
       
       // Dynamic pitch based on elevation change
       let targetPitch = 60;
@@ -379,7 +398,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       map.current.easeTo({
         center: [currentPoint.lon, currentPoint.lat],
-        bearing: bearing,
+        bearing: smoothBearing,
         pitch: targetPitch,
         zoom: 15,
         duration: duration,
@@ -543,35 +562,37 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs text-gray-600">
             Klikněte na mapu pro přidání fotky
           </div>
+        </div>
+        
+        {/* 3D Controls - outside map */}
+        <div className="bg-muted/50 border-t p-4 space-y-3">
+          {/* Pitch slider */}
+          <div className="flex items-center gap-3">
+            <Mountain className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-xs font-medium text-muted-foreground w-20">3D náklon</span>
+            <Slider
+              value={[mapPitch]}
+              onValueChange={(value) => {
+                setMapPitch(value[0]);
+                if (map.current) {
+                  map.current.easeTo({ pitch: value[0], duration: 300 });
+                }
+              }}
+              min={0}
+              max={60}
+              step={1}
+              className="flex-1"
+              disabled={isFlying}
+            />
+            <span className="text-xs text-muted-foreground w-10 text-right">{mapPitch}°</span>
+          </div>
           
-          {/* 3D Controls */}
-          <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-md space-y-2">
-            {/* Pitch slider */}
-            <div className="flex items-center gap-3">
-              <Mountain className="w-4 h-4 text-muted-foreground" />
-              <span className="text-xs font-medium text-muted-foreground min-w-[60px]">3D náklon</span>
-              <Slider
-                value={[mapPitch]}
-                onValueChange={(value) => {
-                  setMapPitch(value[0]);
-                  if (map.current) {
-                    map.current.easeTo({ pitch: value[0], duration: 300 });
-                  }
-                }}
-                min={0}
-                max={60}
-                step={1}
-                className="flex-1"
-                disabled={isFlying}
-              />
-              <span className="text-xs text-muted-foreground min-w-[30px] text-right">{mapPitch}°</span>
-            </div>
-            
-            {/* Speed slider and flythrough button */}
-            {gpxData && (
+          {gpxData && (
+            <>
+              {/* Speed slider */}
               <div className="flex items-center gap-3">
-                <Play className="w-4 h-4 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground min-w-[60px]">Rychlost</span>
+                <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground w-20">Rychlost</span>
                 <Slider
                   value={[flySpeed]}
                   onValueChange={(value) => {
@@ -583,29 +604,50 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   step={1}
                   className="flex-1"
                 />
-                <span className="text-xs text-muted-foreground min-w-[30px] text-right">{flySpeed}%</span>
-                
+                <span className="text-xs text-muted-foreground w-10 text-right">{flySpeed}%</span>
+              </div>
+              
+              {/* Rotation slider */}
+              <div className="flex items-center gap-3">
+                <RotateCcw className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground w-20">Rotace</span>
+                <Slider
+                  value={[flyRotation]}
+                  onValueChange={(value) => {
+                    setFlyRotation(value[0]);
+                    flyRotationRef.current = value[0];
+                  }}
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-10 text-right">{flyRotation}%</span>
+              </div>
+              
+              {/* Flythrough button */}
+              <div className="flex justify-center pt-2">
                 <Button
                   size="sm"
                   variant={isFlying ? "destructive" : "default"}
                   onClick={isFlying ? stopFlythrough : startFlythrough}
-                  className="ml-2 gap-1"
+                  className="gap-2"
                 >
                   {isFlying ? (
                     <>
-                      <Square className="w-3 h-3" />
-                      Stop
+                      <Square className="w-4 h-4" />
+                      Zastavit průlet
                     </>
                   ) : (
                     <>
-                      <Play className="w-3 h-3" />
-                      3D průlet
+                      <Play className="w-4 h-4" />
+                      Spustit 3D průlet
                     </>
                   )}
                 </Button>
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
         
         {/* Integrated elevation chart overlay */}
