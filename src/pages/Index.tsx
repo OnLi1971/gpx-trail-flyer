@@ -8,11 +8,12 @@ import { GPXParser } from '@/utils/gpxParser';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mountain, Route, Timer } from 'lucide-react';
+import { Mountain, Route, Timer, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [gpxData, setGpxData] = useState<GPXData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [animationDuration] = useState(10000); // 10 seconds
@@ -23,23 +24,31 @@ const Index = () => {
   const [shownPhotosInSession, setShownPhotosInSession] = useState<Set<string>>(new Set());
 
   const handleFileUpload = useCallback((content: string, filename: string) => {
-    try {
-      const parser = new GPXParser();
-      const parsedData = parser.parseGPX(content);
-      
-      if (parsedData.tracks.length === 0) {
-        toast.error('Nepodařilo se najít žádné trasy v GPX souboru');
-        return;
-      }
+    setIsLoading(true);
+    
+    // Use setTimeout to allow UI to update before parsing
+    setTimeout(() => {
+      try {
+        const parser = new GPXParser();
+        const parsedData = parser.parseGPX(content);
+        
+        if (parsedData.tracks.length === 0) {
+          toast.error('Nepodařilo se najít žádné trasy v GPX souboru');
+          setIsLoading(false);
+          return;
+        }
 
-      setGpxData(parsedData);
-      setCurrentPosition(0);
-      setIsPlaying(false);
-      toast.success(`Nahrán GPX soubor: ${filename}`);
-    } catch (error) {
-      console.error('Error parsing GPX:', error);
-      toast.error('Chyba při načítání GPX souboru. Zkontroluj formát.');
-    }
+        setGpxData(parsedData);
+        setCurrentPosition(0);
+        setIsPlaying(false);
+        toast.success(`Nahrán GPX soubor: ${filename}`);
+      } catch (error) {
+        console.error('Error parsing GPX:', error);
+        toast.error('Chyba při načítání GPX souboru. Zkontroluj formát.');
+      } finally {
+        setIsLoading(false);
+      }
+    }, 50);
   }, []);
 
   const handlePlayPause = useCallback(() => {
@@ -172,6 +181,16 @@ const Index = () => {
       <div className="container mx-auto px-4 py-6 space-y-6">
         {!gpxData ? (
           <div className="max-w-2xl mx-auto space-y-6">
+            {/* Loading Overlay */}
+            {isLoading && (
+              <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="w-12 h-12 text-primary animate-spin" />
+                  <p className="text-lg font-medium">Načítám GPX soubor...</p>
+                </div>
+              </div>
+            )}
+            
             {/* Welcome Section */}
             <Card className="text-center">
               <CardHeader>
