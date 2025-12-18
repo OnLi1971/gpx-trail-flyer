@@ -35,7 +35,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [originalMapState, setOriginalMapState] = useState<{center: [number, number], zoom: number} | null>(null);
   const [mapPitch, setMapPitch] = useState(0);
   const [isFlying, setIsFlying] = useState(false);
+  const [flySpeed, setFlySpeed] = useState(50); // 1-100, lower = slower
   const flyAnimationRef = useRef<number | null>(null);
+  const flySpeedRef = useRef(50);
 
   // PATCH: stav synchronizace animace/fotky
   const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
@@ -346,13 +348,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     setIsFlying(true);
     let currentIndex = 0;
     const totalPoints = track.points.length;
-    const step = Math.max(1, Math.floor(totalPoints / 200)); // Sample ~200 points for smooth animation
 
     const animateStep = () => {
       if (!map.current || currentIndex >= totalPoints - 1) {
         stopFlythrough();
         return;
       }
+
+      // Use ref for real-time speed updates
+      const speed = flySpeedRef.current;
+      // Step size: 1 at slowest, up to 5 at fastest
+      const step = Math.max(1, Math.floor(speed / 20));
+      // Duration: 800ms at slowest (speed=1), 50ms at fastest (speed=100)
+      const duration = Math.max(50, 800 - (speed * 7.5));
 
       const currentPoint = track.points[currentIndex];
       const nextIndex = Math.min(currentIndex + step, totalPoints - 1);
@@ -372,19 +380,23 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         bearing: bearing,
         pitch: targetPitch,
         zoom: 15,
-        duration: 100,
+        duration: duration,
         easing: (t) => t
       });
 
       setMapPitch(Math.round(targetPitch));
       currentIndex = nextIndex;
       
-      flyAnimationRef.current = requestAnimationFrame(animateStep);
+      // Schedule next frame with delay based on speed
+      setTimeout(() => {
+        flyAnimationRef.current = requestAnimationFrame(animateStep);
+      }, duration * 0.8);
     };
 
     // Initial setup - zoom to start
     const startPoint = track.points[0];
-    const secondPoint = track.points[Math.min(step, totalPoints - 1)];
+    const initialStep = Math.max(1, Math.floor(flySpeedRef.current / 20));
+    const secondPoint = track.points[Math.min(initialStep, totalPoints - 1)];
     const initialBearing = calculateBearing(startPoint, secondPoint);
 
     map.current.flyTo({
@@ -527,7 +539,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           </div>
           
           {/* 3D Controls */}
-          <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-md">
+          <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-md space-y-2">
+            {/* Pitch slider */}
             <div className="flex items-center gap-3">
               <Mountain className="w-4 h-4 text-muted-foreground" />
               <span className="text-xs font-medium text-muted-foreground min-w-[60px]">3D náklon</span>
@@ -546,9 +559,26 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 disabled={isFlying}
               />
               <span className="text-xs text-muted-foreground min-w-[30px] text-right">{mapPitch}°</span>
-              
-              {/* Flythrough button */}
-              {gpxData && (
+            </div>
+            
+            {/* Speed slider and flythrough button */}
+            {gpxData && (
+              <div className="flex items-center gap-3">
+                <Play className="w-4 h-4 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground min-w-[60px]">Rychlost</span>
+                <Slider
+                  value={[flySpeed]}
+                  onValueChange={(value) => {
+                    setFlySpeed(value[0]);
+                    flySpeedRef.current = value[0];
+                  }}
+                  min={1}
+                  max={100}
+                  step={1}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground min-w-[30px] text-right">{flySpeed}%</span>
+                
                 <Button
                   size="sm"
                   variant={isFlying ? "destructive" : "default"}
@@ -567,8 +597,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                     </>
                   )}
                 </Button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </div>
         
