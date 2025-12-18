@@ -394,12 +394,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       lastBearingRef.current = smoothBearing;
       
       // Dynamic pitch based on elevation change and exaggeration setting
-      const exaggeration = flyExaggerationRef.current / 50; // 0-2 multiplier
-      let basePitch = 45 + (exaggeration * 15); // 45-75 base pitch
-      let targetPitch = basePitch;
+      const exaggeration = flyExaggerationRef.current / 25; // 0-4 multiplier (increased range)
+      let basePitch = 30 + (exaggeration * 20); // 30-110 base pitch range
+      let targetPitch = Math.min(basePitch, 85); // Cap at 85 for usability
       if (currentPoint.ele && nextPoint.ele) {
         const elevChange = nextPoint.ele - currentPoint.ele;
-        targetPitch = Math.max(30, Math.min(75, basePitch + elevChange * exaggeration));
+        targetPitch = Math.max(20, Math.min(85, basePitch + elevChange * exaggeration * 1.5));
       }
 
       map.current.easeTo({
@@ -414,6 +414,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       setMapPitch(Math.round(targetPitch));
       currentIndex = nextIndex;
       setFlyingIndex(currentIndex); // Update position for elevation chart
+      
+      // Update flying marker position on map
+      if (markerRef.current) {
+        markerRef.current.setLngLat([currentPoint.lon, currentPoint.lat]);
+      } else {
+        // Create flying marker if it doesn't exist
+        const markerElement = document.createElement('div');
+        markerElement.className = 'w-4 h-4 bg-red-500 rounded-full shadow-lg border-2 border-white animate-pulse';
+        markerRef.current = new Marker(markerElement)
+          .setLngLat([currentPoint.lon, currentPoint.lat])
+          .addTo(map.current!);
+      }
       
       // Schedule next frame with delay based on speed
       setTimeout(() => {
