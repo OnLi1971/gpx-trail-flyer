@@ -4,10 +4,10 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { PhotoViewModal } from './PhotoViewModal';
-import { Bike } from 'lucide-react';
+import { Bike, Mountain } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
 import { AnimationSettings } from './PhotoAnimationControls';
-
+import { Slider } from '@/components/ui/slider';
 interface TrailMapProps {
   gpxData: GPXData | null;
   currentPosition: number;
@@ -32,6 +32,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [viewPhoto, setViewPhoto] = useState<PhotoPoint | null>(null);
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
   const [originalMapState, setOriginalMapState] = useState<{center: [number, number], zoom: number} | null>(null);
+  const [mapPitch, setMapPitch] = useState(0);
 
   // PATCH: stav synchronizace animace/fotky
   const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
@@ -410,6 +411,28 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           <div ref={mapContainer} className="absolute inset-0" />
           <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs text-gray-600">
             Klikněte na mapu pro přidání fotky
+          </div>
+          
+          {/* 3D Pitch slider */}
+          <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-sm rounded-lg p-3 shadow-md">
+            <div className="flex items-center gap-3">
+              <Mountain className="w-4 h-4 text-muted-foreground" />
+              <span className="text-xs font-medium text-muted-foreground min-w-[60px]">3D náklon</span>
+              <Slider
+                value={[mapPitch]}
+                onValueChange={(value) => {
+                  setMapPitch(value[0]);
+                  if (map.current) {
+                    map.current.easeTo({ pitch: value[0], duration: 300 });
+                  }
+                }}
+                min={0}
+                max={60}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground min-w-[30px] text-right">{mapPitch}°</span>
+            </div>
           </div>
         </div>
         
