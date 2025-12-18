@@ -25,6 +25,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
+  const flyMarkerRef = useRef<Marker | null>(null);
   const photoMarkersRef = useRef<Marker[]>([]);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -394,12 +395,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       lastBearingRef.current = smoothBearing;
       
       // Dynamic pitch based on elevation change and exaggeration setting
-      const exaggeration = flyExaggerationRef.current / 25; // 0-4 multiplier (increased range)
-      let basePitch = 30 + (exaggeration * 20); // 30-110 base pitch range
-      let targetPitch = Math.min(basePitch, 85); // Cap at 85 for usability
+      const exaggeration = flyExaggerationRef.current / 15; // 0-6.67 multiplier (even bigger range)
+      let basePitch = 20 + (exaggeration * 12); // 20-100 base pitch range
+      let targetPitch = Math.min(basePitch, 87); // Cap at 87 for extreme effect
       if (currentPoint.ele && nextPoint.ele) {
         const elevChange = nextPoint.ele - currentPoint.ele;
-        targetPitch = Math.max(20, Math.min(85, basePitch + elevChange * exaggeration * 1.5));
+        targetPitch = Math.max(15, Math.min(87, basePitch + elevChange * exaggeration * 2.5));
       }
 
       map.current.easeTo({
@@ -416,13 +417,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       setFlyingIndex(currentIndex); // Update position for elevation chart
       
       // Update flying marker position on map
-      if (markerRef.current) {
-        markerRef.current.setLngLat([currentPoint.lon, currentPoint.lat]);
+      if (flyMarkerRef.current) {
+        flyMarkerRef.current.setLngLat([currentPoint.lon, currentPoint.lat]);
       } else {
         // Create flying marker if it doesn't exist
         const markerElement = document.createElement('div');
-        markerElement.className = 'w-4 h-4 bg-red-500 rounded-full shadow-lg border-2 border-white animate-pulse';
-        markerRef.current = new Marker(markerElement)
+        markerElement.className = 'w-6 h-6 bg-red-500 rounded-full shadow-lg border-3 border-white animate-pulse';
+        markerElement.style.boxShadow = '0 0 15px rgba(255, 0, 0, 0.7)';
+        flyMarkerRef.current = new Marker({ element: markerElement })
           .setLngLat([currentPoint.lon, currentPoint.lat])
           .addTo(map.current!);
       }
@@ -464,6 +466,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
     setIsFlying(false);
     setFlyingIndex(null);
+    
+    // Remove flying marker
+    if (flyMarkerRef.current) {
+      flyMarkerRef.current.remove();
+      flyMarkerRef.current = null;
+    }
     
     // Reset to normal view
     if (map.current && gpxData && gpxData.tracks.length > 0) {
