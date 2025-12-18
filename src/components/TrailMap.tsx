@@ -44,22 +44,24 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       style: {
         version: 8,
         sources: {
-          'topo-tiles': {
+          'cyclosm-tiles': {
             type: 'raster',
             tiles: [
-              'https://tile.opentopomap.org/{z}/{x}/{y}.png'
+              'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+              'https://b.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+              'https://c.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png'
             ],
             tileSize: 256,
-            attribution: '© OpenTopoMap contributors'
+            attribution: '© CycloOSM contributors'
           }
         },
         layers: [
           {
-            id: 'topo-layer',
+            id: 'cyclosm-layer',
             type: 'raster',
-            source: 'topo-tiles',
+            source: 'cyclosm-tiles',
             minzoom: 0,
-            maxzoom: 17
+            maxzoom: 19
           }
         ]
       },
