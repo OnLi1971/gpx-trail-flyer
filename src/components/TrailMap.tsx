@@ -36,6 +36,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [mapPitch, setMapPitch] = useState(0);
   const [isFlying, setIsFlying] = useState(false);
   const [flySpeed, setFlySpeed] = useState(50); // 1-100, lower = slower
+  const [flyingIndex, setFlyingIndex] = useState<number | null>(null); // Current index during flythrough
   const flyAnimationRef = useRef<number | null>(null);
   const flySpeedRef = useRef(50);
 
@@ -346,6 +347,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (track.points.length < 2) return;
 
     setIsFlying(true);
+    setFlyingIndex(0);
     let currentIndex = 0;
     const totalPoints = track.points.length;
 
@@ -386,6 +388,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       setMapPitch(Math.round(targetPitch));
       currentIndex = nextIndex;
+      setFlyingIndex(currentIndex); // Update position for elevation chart
       
       // Schedule next frame with delay based on speed
       setTimeout(() => {
@@ -423,6 +426,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       flyAnimationRef.current = null;
     }
     setIsFlying(false);
+    setFlyingIndex(null);
     
     // Reset to normal view
     if (map.current && gpxData && gpxData.tracks.length > 0) {
@@ -471,9 +475,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       originalIndex: track.points.indexOf(point)
     }));
 
-    // Calculate current position in chart data based on actual track position
+    // Calculate current position in chart data based on actual track position or flying index
     const totalPoints = track.points.length;
-    const currentPointIndex = Math.floor((currentPosition / 100) * (totalPoints - 1));
+    const currentPointIndex = flyingIndex !== null 
+      ? flyingIndex 
+      : Math.floor((currentPosition / 100) * (totalPoints - 1));
     const currentPoint = track.points[currentPointIndex];
 
     // Find the closest elevation point to current position
