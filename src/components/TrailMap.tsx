@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { PhotoViewModal } from './PhotoViewModal';
-import { Bike, Mountain, Play, Square, RotateCcw, ZoomIn } from 'lucide-react';
+import { Bike, Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
 import { AnimationSettings } from './PhotoAnimationControls';
 import { Slider } from '@/components/ui/slider';
@@ -39,11 +39,13 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [flySpeed, setFlySpeed] = useState(50); // 1-100, lower = slower
   const [flyRotation, setFlyRotation] = useState(50); // 0-100, how much bearing changes
   const [flyZoom, setFlyZoom] = useState(15); // 10-18, zoom level during flythrough
+  const [elevationExaggeration, setElevationExaggeration] = useState(1.5); // 1-5, multiplier for elevation display
   const [flyingIndex, setFlyingIndex] = useState<number | null>(null); // Current index during flythrough
   const flyAnimationRef = useRef<number | null>(null);
   const flySpeedRef = useRef(50);
   const flyRotationRef = useRef(50);
   const flyZoomRef = useRef(15);
+  const elevationExaggerationRef = useRef(1.5);
   const lastBearingRef = useRef(0);
 
   // PATCH: stav synchronizace animace/fotky
@@ -505,12 +507,21 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     if (pointsWithElevation.length === 0) return { chartData: [], currentChartPoint: null, photosOnChart: [] };
 
-    // Prepare chart data with distance in kilometers
-    const chartData = pointsWithElevation.map((point, index) => ({
-      distance: (index / (pointsWithElevation.length - 1)) * (track.totalDistance / 1000),
-      elevation: point.ele!,
-      originalIndex: track.points.indexOf(point)
-    }));
+    // Calculate base elevation for exaggeration (minimum elevation as reference)
+    const baseElevation = Math.min(...pointsWithElevation.map(p => p.ele!));
+
+    // Prepare chart data with distance in kilometers and exaggerated elevation
+    const chartData = pointsWithElevation.map((point, index) => {
+      const originalEle = point.ele!;
+      // Apply exaggeration: base + (difference from base * exaggeration factor)
+      const exaggeratedEle = baseElevation + (originalEle - baseElevation) * elevationExaggeration;
+      return {
+        distance: (index / (pointsWithElevation.length - 1)) * (track.totalDistance / 1000),
+        elevation: exaggeratedEle,
+        originalElevation: originalEle,
+        originalIndex: track.points.indexOf(point)
+      };
+    });
 
     // Calculate current position in chart data based on actual track position or flying index
     const totalPoints = track.points.length;
@@ -659,6 +670,24 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   className="flex-1"
                 />
                 <span className="text-xs text-muted-foreground w-10 text-right">{flyZoom}</span>
+              </div>
+              
+              {/* Elevation exaggeration slider */}
+              <div className="flex items-center gap-3">
+                <TrendingUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground w-20">Zvýraznění</span>
+                <Slider
+                  value={[elevationExaggeration]}
+                  onValueChange={(value) => {
+                    setElevationExaggeration(value[0]);
+                    elevationExaggerationRef.current = value[0];
+                  }}
+                  min={1}
+                  max={5}
+                  step={0.1}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-10 text-right">{elevationExaggeration}×</span>
               </div>
               
               
