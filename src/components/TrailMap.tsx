@@ -68,6 +68,13 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             ],
             tileSize: 256,
             attribution: '© CycloOSM contributors'
+          },
+          'terrain-dem': {
+            type: 'raster-dem',
+            tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+            tileSize: 256,
+            maxzoom: 15,
+            encoding: 'terrarium'
           }
         },
         layers: [
@@ -78,7 +85,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             minzoom: 0,
             maxzoom: 19
           }
-        ]
+        ],
+        terrain: {
+          source: 'terrain-dem',
+          exaggeration: 1.5
+        }
       },
       zoom: 10,
       center: [14.4, 50.1], // Prague default
@@ -681,6 +692,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   onValueChange={(value) => {
                     setElevationExaggeration(value[0]);
                     elevationExaggerationRef.current = value[0];
+                    // Update terrain exaggeration in real-time
+                    if (map.current) {
+                      map.current.setTerrain({ source: 'terrain-dem', exaggeration: value[0] });
+                    }
                   }}
                   min={1}
                   max={5}
