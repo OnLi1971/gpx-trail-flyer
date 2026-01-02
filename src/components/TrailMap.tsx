@@ -392,13 +392,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       }
       lastBearingRef.current = smoothBearing;
       
-      // Dynamic pitch based on elevation change
-      let basePitch = 60;
-      let targetPitch = basePitch;
-      if (currentPoint.ele && nextPoint.ele) {
-        const elevChange = nextPoint.ele - currentPoint.ele;
-        targetPitch = Math.max(40, Math.min(75, basePitch + elevChange * 0.5));
-      }
+      // Use constant pitch from slider
+      const targetPitch = mapPitch;
 
       map.current.easeTo({
         center: [currentPoint.lon, currentPoint.lat],
