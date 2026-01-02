@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { PhotoViewModal } from './PhotoViewModal';
-import { Bike, Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp } from 'lucide-react';
+import { Bike, Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
 import { AnimationSettings } from './PhotoAnimationControls';
 import { Slider } from '@/components/ui/slider';
@@ -41,6 +41,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [flyZoom, setFlyZoom] = useState(15); // 10-18, zoom level during flythrough
   const [elevationExaggeration, setElevationExaggeration] = useState(1.5); // 1-5, multiplier for elevation display
   const [flyingIndex, setFlyingIndex] = useState<number | null>(null); // Current index during flythrough
+  const [currentGrade, setCurrentGrade] = useState<number | null>(null); // Current grade in % during flythrough
   const flyAnimationRef = useRef<number | null>(null);
   const flySpeedRef = useRef(50);
   const flyRotationRef = useRef(50);
@@ -358,6 +359,28 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     return (bearing + 360) % 360;
   };
 
+  // Calculate grade (slope) between two points in percentage
+  const calculateGrade = (start: { lat: number; lon: number; ele?: number }, end: { lat: number; lon: number; ele?: number }) => {
+    if (start.ele === undefined || end.ele === undefined) return null;
+    
+    // Calculate horizontal distance using Haversine formula (in meters)
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (end.lat - start.lat) * Math.PI / 180;
+    const dLon = (end.lon - start.lon) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(start.lat * Math.PI / 180) * Math.cos(end.lat * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const horizontalDistance = R * c;
+    
+    if (horizontalDistance < 1) return null; // Too close to calculate
+    
+    const elevationDiff = end.ele - start.ele;
+    const grade = (elevationDiff / horizontalDistance) * 100;
+    
+    return Math.round(grade * 10) / 10; // Round to 1 decimal
+  };
+
   // Start 3D flythrough animation
   const startFlythrough = () => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
@@ -421,6 +444,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       currentIndex = nextIndex;
       setFlyingIndex(currentIndex); // Update position for elevation chart
       
+      // Calculate and update current grade
+      const grade = calculateGrade(currentPoint, nextPoint);
+      setCurrentGrade(grade);
+      
       // Update flying marker position on map
       if (flyMarkerRef.current) {
         flyMarkerRef.current.setLngLat([currentPoint.lon, currentPoint.lat]);
@@ -471,6 +498,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
     setIsFlying(false);
     setFlyingIndex(null);
+    setCurrentGrade(null);
     
     // Remove flying marker
     if (flyMarkerRef.current) {
@@ -706,8 +734,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               </div>
               
               
-              {/* Flythrough button */}
-              <div className="flex justify-center pt-2">
+              {/* Flythrough button and grade indicator */}
+              <div className="flex items-center justify-center gap-4 pt-2">
                 <Button
                   size="sm"
                   variant={isFlying ? "destructive" : "default"}
@@ -726,6 +754,26 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                     </>
                   )}
                 </Button>
+                
+                {/* Grade indicator - only visible during flythrough */}
+                {isFlying && currentGrade !== null && (
+                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-medium text-sm ${
+                    currentGrade > 2 
+                      ? 'bg-red-100 text-red-700' 
+                      : currentGrade < -2 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'bg-gray-100 text-gray-700'
+                  }`}>
+                    {currentGrade > 1 ? (
+                      <ArrowUp className="w-4 h-4" />
+                    ) : currentGrade < -1 ? (
+                      <ArrowDown className="w-4 h-4" />
+                    ) : (
+                      <Minus className="w-4 h-4" />
+                    )}
+                    <span>{currentGrade > 0 ? '+' : ''}{currentGrade}%</span>
+                  </div>
+                )}
               </div>
             </>
           )}
