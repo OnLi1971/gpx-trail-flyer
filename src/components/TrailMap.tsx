@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { PhotoViewModal } from './PhotoViewModal';
-import { Bike, Mountain, Play, Square, RotateCcw, ZoomIn, Layers } from 'lucide-react';
+import { Bike, Mountain, Play, Square, RotateCcw, ZoomIn } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
 import { AnimationSettings } from './PhotoAnimationControls';
 import { Slider } from '@/components/ui/slider';
@@ -39,13 +39,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [flySpeed, setFlySpeed] = useState(50); // 1-100, lower = slower
   const [flyRotation, setFlyRotation] = useState(50); // 0-100, how much bearing changes
   const [flyZoom, setFlyZoom] = useState(15); // 10-18, zoom level during flythrough
-  const [flyExaggeration, setFlyExaggeration] = useState(50); // 0-100, pitch intensity
   const [flyingIndex, setFlyingIndex] = useState<number | null>(null); // Current index during flythrough
   const flyAnimationRef = useRef<number | null>(null);
   const flySpeedRef = useRef(50);
   const flyRotationRef = useRef(50);
   const flyZoomRef = useRef(15);
-  const flyExaggerationRef = useRef(50);
   const lastBearingRef = useRef(0);
 
   // PATCH: stav synchronizace animace/fotky
@@ -394,13 +392,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       }
       lastBearingRef.current = smoothBearing;
       
-      // Dynamic pitch based on elevation change and exaggeration setting
-      const exaggeration = flyExaggerationRef.current / 15; // 0-6.67 multiplier (even bigger range)
-      let basePitch = 20 + (exaggeration * 12); // 20-100 base pitch range
-      let targetPitch = Math.min(basePitch, 87); // Cap at 87 for extreme effect
+      // Dynamic pitch based on elevation change
+      let basePitch = 60;
+      let targetPitch = basePitch;
       if (currentPoint.ele && nextPoint.ele) {
         const elevChange = nextPoint.ele - currentPoint.ele;
-        targetPitch = Math.max(15, Math.min(87, basePitch + elevChange * exaggeration * 2.5));
+        targetPitch = Math.max(40, Math.min(75, basePitch + elevChange * 0.5));
       }
 
       map.current.easeTo({
@@ -669,23 +666,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 <span className="text-xs text-muted-foreground w-10 text-right">{flyZoom}</span>
               </div>
               
-              {/* Exaggeration slider */}
-              <div className="flex items-center gap-3">
-                <Layers className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <span className="text-xs font-medium text-muted-foreground w-20">3D efekt</span>
-                <Slider
-                  value={[flyExaggeration]}
-                  onValueChange={(value) => {
-                    setFlyExaggeration(value[0]);
-                    flyExaggerationRef.current = value[0];
-                  }}
-                  min={0}
-                  max={100}
-                  step={1}
-                  className="flex-1"
-                />
-                <span className="text-xs text-muted-foreground w-10 text-right">{flyExaggeration}%</span>
-              </div>
               
               {/* Flythrough button */}
               <div className="flex justify-center pt-2">
