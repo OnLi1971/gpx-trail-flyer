@@ -452,10 +452,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       if (flyMarkerRef.current) {
         flyMarkerRef.current.setLngLat([currentPoint.lon, currentPoint.lat]);
       } else {
-        // Create flying marker if it doesn't exist
+        // Create flying marker with cyclist icon
         const markerElement = document.createElement('div');
-        markerElement.className = 'w-6 h-6 bg-red-500 rounded-full shadow-lg border-3 border-white animate-pulse';
-        markerElement.style.boxShadow = '0 0 15px rgba(255, 0, 0, 0.7)';
+        markerElement.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18.5" cy="17.5" r="3.5"/>
+            <circle cx="5.5" cy="17.5" r="3.5"/>
+            <circle cx="15" cy="5" r="1"/>
+            <path d="M12 17.5V14l-3-3 4-3 2 3h2"/>
+          </svg>
+        `;
+        markerElement.style.color = '#ef4444';
+        markerElement.style.filter = 'drop-shadow(0 0 6px rgba(239, 68, 68, 0.8))';
         flyMarkerRef.current = new Marker({ element: markerElement })
           .setLngLat([currentPoint.lon, currentPoint.lat])
           .addTo(map.current!);
