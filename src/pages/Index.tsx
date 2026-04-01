@@ -17,7 +17,7 @@ const Index = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [animationDuration] = useState(10000); // 10 seconds
-  const [animationSettings, setAnimationSettings] = useState<AnimationSettings>(defaultSettings);
+  const [animationSettings] = useState<AnimationSettings>(defaultSettings);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [autoPhotoView, setAutoPhotoView] = useState<PhotoPoint | null>(null);
   const [isAutoPhotoOpen, setIsAutoPhotoOpen] = useState(false);
