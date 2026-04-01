@@ -13,8 +13,6 @@ export const PhotoViewModal: React.FC<PhotoViewModalProps> = ({
   isOpen,
   onClose
 }) => {
-  console.log('PhotoViewModal render:', { photo, isOpen });
-  
   if (!photo) return null;
 
   return (

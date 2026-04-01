@@ -633,7 +633,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     <>
       <div className="relative w-full rounded-lg overflow-hidden shadow-lg">
         {/* Main map container */}
-        <div className="relative w-full h-96">
+        <div className="relative w-full h-[500px]">
           <div ref={mapContainer} className="absolute inset-0" />
           <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs text-gray-600">
             Klikněte na mapu pro přidání fotky

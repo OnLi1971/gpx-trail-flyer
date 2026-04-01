@@ -234,8 +234,7 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
+            <div className="space-y-6">
                 {/* Animation Controls */}
                 <AnimationControls
                   gpxData={gpxData}
@@ -252,21 +251,11 @@ const Index = () => {
                   currentPosition={currentPosition}
                   animationSettings={animationSettings}
                   onPhotosUpdate={(photos) => {
-                    // Update GPX data with photos
                     if (gpxData) {
                       setGpxData({ ...gpxData, photos });
                     }
                   }}
                 />
-              </div>
-              
-              <div className="space-y-4">
-                {/* Photo Animation Controls */}
-                <PhotoAnimationControls
-                  settings={animationSettings}
-                  onSettingsChange={setAnimationSettings}
-                />
-              </div>
             </div>
 
             {/* File Upload for New File */}
