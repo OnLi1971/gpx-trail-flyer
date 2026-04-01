@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { PhotoPoint } from '@/types/gpx';
 
@@ -13,8 +13,6 @@ export const PhotoViewModal: React.FC<PhotoViewModalProps> = ({
   isOpen,
   onClose
 }) => {
-  console.log('PhotoViewModal render:', { photo, isOpen });
-  
   if (!photo) return null;
 
   return (

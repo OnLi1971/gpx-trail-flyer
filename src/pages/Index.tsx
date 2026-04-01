@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { FileUpload } from '@/components/FileUpload';
 import { TrailMap } from '@/components/TrailMap';
 import { AnimationControls } from '@/components/AnimationControls';
-import { PhotoAnimationControls, defaultSettings, AnimationSettings } from '@/components/PhotoAnimationControls';
+import { defaultSettings, AnimationSettings } from '@/components/PhotoAnimationControls';
 import { PhotoViewModal } from '@/components/PhotoViewModal';
 import { GPXParser } from '@/utils/gpxParser';
 import { GPXData, PhotoPoint } from '@/types/gpx';
@@ -17,7 +17,7 @@ const Index = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [animationDuration] = useState(10000); // 10 seconds
-  const [animationSettings, setAnimationSettings] = useState<AnimationSettings>(defaultSettings);
+  const [animationSettings] = useState<AnimationSettings>(defaultSettings);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [autoPhotoView, setAutoPhotoView] = useState<PhotoPoint | null>(null);
   const [isAutoPhotoOpen, setIsAutoPhotoOpen] = useState(false);
@@ -234,8 +234,7 @@ const Index = () => {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2 space-y-6">
+            <div className="space-y-6">
                 {/* Animation Controls */}
                 <AnimationControls
                   gpxData={gpxData}
@@ -252,21 +251,11 @@ const Index = () => {
                   currentPosition={currentPosition}
                   animationSettings={animationSettings}
                   onPhotosUpdate={(photos) => {
-                    // Update GPX data with photos
                     if (gpxData) {
                       setGpxData({ ...gpxData, photos });
                     }
                   }}
                 />
-              </div>
-              
-              <div className="space-y-4">
-                {/* Photo Animation Controls */}
-                <PhotoAnimationControls
-                  settings={animationSettings}
-                  onSettingsChange={setAnimationSettings}
-                />
-              </div>
             </div>
 
             {/* File Upload for New File */}
