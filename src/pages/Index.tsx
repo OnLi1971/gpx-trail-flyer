@@ -252,11 +252,8 @@ const Index = () => {
                   gpxData={gpxData} 
                   currentPosition={currentPosition}
                   animationSettings={animationSettings}
-                  onPhotosUpdate={(photos) => {
-                    if (gpxData) {
-                      setGpxData({ ...gpxData, photos });
-                    }
-                  }}
+                  photos={photos}
+                  onAddPhotos={(newPhotos) => setPhotos(prev => [...prev, ...newPhotos])}
                 />
             </div>
 
