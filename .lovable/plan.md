@@ -1,40 +1,31 @@
 
 
-## Automatické umístění fotek podle GPS souřadnic z EXIF dat
+## Oprava: Fotky se nezobrazují na mapě
 
-Místo ručního klikání na mapu přidám tlačítko "Přidat fotky", které umožní vybrat více fotek najednou. Z každé fotky se automaticky přečtou GPS souřadnice z EXIF metadat a fotka se umístí na správné místo na mapě.
+### Problém
+V `exifReader.ts` je chyba v konfiguraci `exifr.parse()`. Volání `{ gps: true, pick: ['DateTimeOriginal', 'CreateDate'] }` — parametr `pick` omezuje parsování jen na vybrané tagy a může přebít `gps: true`, takže `latitude`/`longitude` nejsou v výsledku.
 
-### Jak to bude fungovat
+Navíc chybí jakékoliv logování do konzole, když fotky nemají GPS — uživatel nevidí, proč se nic nestalo.
 
-1. Uživatel klikne na tlačítko "📷 Přidat fotky" (místo klikání na mapu)
-2. Vybere jednu nebo více fotek z disku
-3. Z každé fotky se přečtou EXIF GPS souřadnice
-4. Fotky se automaticky umístí na mapě na správné pozice
-5. Fotky bez GPS dat se přeskočí s upozorněním
+### Řešení
 
-### Technické změny
+**Soubor `src/utils/exifReader.ts`:**
+1. Opravit `exifr.parse()` volání — místo `pick` použít správnou konfiguraci, která zachová GPS parsing:
+   - `await exifr.parse(file, { gps: true, tiff: true, exif: true })` — bez `pick` filtru
+   - Pak zvlášť přistupovat k `DateTimeOriginal` / `CreateDate`
+2. Přidat `console.log` pro debugging — logovat co exifr vrátí
 
-**Nová závislost:**
-- `exifr` — lightweight knihovna pro čtení EXIF dat z obrázků (GPS, datum, orientace)
+**Soubor `src/components/TrailMap.tsx`:**
+3. V `handleBulkPhotoUpload` přidat loading indikátor (toast "Zpracovávám fotky...") aby uživatel věděl, že se něco děje
+4. Přidat lepší chybové hlášky s názvy souborů bez GPS
 
-**Nový soubor `src/utils/exifReader.ts`:**
-- Funkce `extractPhotoGPS(file: File)` → vrací `{ lat, lon, timestamp?, description? }` nebo `null` pokud fotka nemá GPS
-- Použije `exifr` k parsování GPS souřadnic z EXIF dat
-- Komprese obrázku na thumbnail (max 800px, kvalita 70%) — stejně jako v současném `PhotoUploadModal`
+### Technický detail
+Problém je specificky na řádku 12 v `exifReader.ts`:
+```typescript
+// Špatně - pick přebíjí gps
+exifr.parse(file, { gps: true, pick: ['DateTimeOriginal', 'CreateDate'] })
 
-**Úprava `src/components/TrailMap.tsx`:**
-- Přidat tlačítko "📷 Přidat fotky" do UI (vedle ovládacích prvků mapy)
-- Skrytý `<input type="file" multiple accept="image/*">` pro výběr více fotek
-- Po výběru fotek: pro každou zavolat `extractPhotoGPS`, vytvořit `PhotoPoint` a přidat na mapu
-- Odebrat click listener na mapě pro ruční přidávání fotek (řádky 108-120)
-- Odebrat `PhotoUploadModal` — už nebude potřeba
-
-**Co zůstane stejné:**
-- Vizuální styl foto markerů (kulaté thumbnaily s tyčkou) — beze změny
-- `PhotoViewModal` pro zobrazení detailu — beze změny
-- Logika v `Index.tsx` pro animaci a auto-zobrazení fotek — beze změny
-
-### Upozornění pro uživatele
-- Pokud některé fotky nemají GPS data, zobrazí se toast "3 z 5 fotek nemají GPS souřadnice a byly přeskočeny"
-- Pokud žádná fotka nemá GPS, zobrazí se chybová hláška
+// Správně - nechat gps fungovat, bez pick filtru
+exifr.parse(file, true) // parse all, including GPS
+```
 
