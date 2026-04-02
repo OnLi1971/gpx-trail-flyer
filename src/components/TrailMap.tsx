@@ -195,14 +195,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     map.current.once('load', ensureTrailLayers);
   }, [gpxData]);
 
-  // Initialize photos from GPX data (only once on first load)
-  const photosInitializedRef = useRef(false);
-  useEffect(() => {
-    if (gpxData?.photos && !photosInitializedRef.current) {
-      photosInitializedRef.current = true;
-      setPhotos(gpxData.photos);
-    }
-  }, [gpxData]);
 
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
