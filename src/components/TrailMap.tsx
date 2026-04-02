@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Map, NavigationControl, Marker, LngLatBounds } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint } from '@/types/gpx';
-import { PhotoUploadModal } from './PhotoUploadModal';
 import { PhotoViewModal } from './PhotoViewModal';
-import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera } from 'lucide-react';
+import { extractPhotoGPS } from '@/utils/exifReader';
+import { toast } from 'sonner';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
 import { AnimationSettings } from './PhotoAnimationControls';
 import { Slider } from '@/components/ui/slider';
@@ -30,8 +31,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const photoMarkersRef = useRef<Marker[]>([]);
   const poiMarkersRef = useRef<Marker[]>([]);
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [clickedPosition, setClickedPosition] = useState<{lat: number, lon: number} | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<PhotoPoint[]>([]);
   const [viewPhoto, setViewPhoto] = useState<PhotoPoint | null>(null);
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
@@ -105,19 +105,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       'top-right'
     );
 
-    // Add click listener for adding photos
-    map.current.on('click', (e) => {
-      // Check if click target is a photo marker
-      const target = e.originalEvent.target as HTMLElement;
-      if (target && target.closest('[data-photo-marker]')) {
-        return;
-      }
-      setClickedPosition({
-        lat: e.lngLat.lat,
-        lon: e.lngLat.lng
-      });
-      setIsModalOpen(true);
-    });
 
     return () => {
       map.current?.remove();
@@ -667,16 +654,40 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
   };
 
-  const handlePhotoSave = (photoData: Omit<PhotoPoint, 'id' | 'timestamp'>) => {
-    const newPhoto: PhotoPoint = {
-      ...photoData,
-      id: Date.now().toString(),
-      timestamp: Date.now()
-    };
+  const handleBulkPhotoUpload = async (files: FileList) => {
+    const newPhotos: PhotoPoint[] = [];
+    let skipped = 0;
 
-    const updatedPhotos = [...photos, newPhoto];
-    setPhotos(updatedPhotos);
-    onPhotosUpdate?.(updatedPhotos);
+    for (const file of Array.from(files)) {
+      const result = await extractPhotoGPS(file);
+      if (result) {
+        newPhotos.push({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          lat: result.lat,
+          lon: result.lon,
+          photo: result.thumbnail,
+          description: file.name.replace(/\.[^.]+$/, ''),
+          timestamp: result.timestamp || Date.now(),
+        });
+      } else {
+        skipped++;
+      }
+    }
+
+    if (newPhotos.length > 0) {
+      const updatedPhotos = [...photos, ...newPhotos];
+      setPhotos(updatedPhotos);
+      onPhotosUpdate?.(updatedPhotos);
+      toast.success(`Přidáno ${newPhotos.length} fotek na mapu`);
+    }
+
+    if (skipped > 0) {
+      toast.warning(`${skipped} z ${files.length} fotek nemá GPS souřadnice a byly přeskočeny`);
+    }
+
+    if (newPhotos.length === 0 && skipped > 0) {
+      toast.error('Žádná z vybraných fotek nemá GPS souřadnice');
+    }
   };
 
   // Prepare elevation chart data
@@ -769,8 +780,29 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         {/* Main map container */}
         <div className="relative w-full h-[500px]">
           <div ref={mapContainer} className="absolute inset-0" />
-          <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs text-gray-600">
-            Klikněte na mapu pro přidání fotky
+          <div className="absolute top-2 left-2 z-10">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.length) {
+                  handleBulkPhotoUpload(e.target.files);
+                  e.target.value = '';
+                }
+              }}
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-2 shadow-md"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Camera className="w-4 h-4" />
+              Přidat fotky
+            </Button>
           </div>
         </div>
         
@@ -996,15 +1028,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         )}
       </div>
       
-      {clickedPosition && (
-        <PhotoUploadModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSave={handlePhotoSave}
-          lat={clickedPosition.lat}
-          lon={clickedPosition.lon}
-        />
-      )}
       
       <PhotoViewModal
         photo={viewPhoto}
