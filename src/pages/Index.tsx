@@ -78,7 +78,7 @@ const Index = () => {
   const [photoPositions, setPhotoPositions] = useState<Array<{photo: PhotoPoint, position: number}>>([]);
 
   useEffect(() => {
-    if (!gpxData?.photos?.length || !gpxData.tracks.length) {
+    if (!photos.length || !gpxData?.tracks.length) {
       setPhotoPositions([]);
       return;
     }
