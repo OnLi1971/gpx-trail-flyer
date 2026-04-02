@@ -9,6 +9,7 @@ import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, Carte
 import { AnimationSettings } from './PhotoAnimationControls';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
+import { fetchPeaksAndPlaces, filterPOIsNearTrack, POIPoint } from '@/utils/overpassApi';
 interface TrailMapProps {
   gpxData: GPXData | null;
   currentPosition: number;
