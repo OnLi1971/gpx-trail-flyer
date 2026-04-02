@@ -1,34 +1,44 @@
 
 
-## Oprava: Bílá obrazovka při přidání fotek
+## Čistá architektura pro správu fotek — jeden zdroj pravdy
 
-### Příčina problému
-V kódu je **nekonečná smyčka** (infinite loop):
-
-1. `handleBulkPhotoUpload` nastaví `setPhotos(updatedPhotos)` a zavolá `onPhotosUpdate(updatedPhotos)`
-2. `onPhotosUpdate` v `Index.tsx` zavolá `setGpxData({ ...gpxData, photos })` — vytvoří nový objekt gpxData
-3. V `TrailMap.tsx` (řádek 197-201) je `useEffect` který sleduje `gpxData` a volá `setPhotos(gpxData.photos)` — nastaví fotky zpět
-4. Změna `photos` spustí marker efekt, který vše opakuje → **crash / bílá obrazovka**
-
-Navíc se při každé změně fotek znovu vykreslují trail vrstvy (řádek 114-194), protože závisí na `gpxData` — což je zbytečné a způsobuje blikání mapy.
+### Problém
+Fotky existují na dvou místech: `photos` state v TrailMap + `gpxData.photos` v Index. Synchronizace přes `onPhotosUpdate` → `setGpxData` → `useEffect` → `setPhotos` vytváří cyklickou závislost. Aktuální fix (`photosInitializedRef`) je křehký hack — rozbije se při nahrání nového GPX souboru.
 
 ### Řešení
 
-**Soubor `src/components/TrailMap.tsx`:**
+Fotky se stanou samostatným stavem v `Index.tsx`. TrailMap je dostane jako prop a nebude mít vlastní `photos` state.
 
-1. **Opravit `useEffect` na řádku 197-201** — přidat podmínku, aby se `setPhotos` volalo jen při prvním načtení gpxData (ne při každé změně fotek):
-   ```typescript
-   useEffect(() => {
-     if (gpxData?.photos && photos.length === 0) {
-       setPhotos(gpxData.photos);
-     }
-   }, [gpxData]);
-   ```
-
-2. **Odebrat `onPhotosUpdate` volání z `handleBulkPhotoUpload`** — nebo lépe, zavolat ho jen jednou na konci, mimo cyklus. Fotky se spravují lokálně v `TrailMap`, `onPhotosUpdate` slouží jen pro sync s Index.tsx (pro animaci). Problém je, že `onPhotosUpdate` mění `gpxData`, což znovu triggeruje bod 1.
-
-**Čistší řešení:** Změnit efekt na řádku 197 tak, aby inicializoval fotky jen jednou (při prvním gpxData load), ne při každé změně gpxData reference. Tím se přeruší smyčka.
+```text
+Index.tsx (vlastník photos state)
+  ├── photos: PhotoPoint[]
+  ├── setPhotos / onAddPhotos callback
+  └── TrailMap
+        ├── photos (read-only prop)
+        ├── onAddPhotos (callback pro přidání nových)
+        └── žádný vlastní photos state
+```
 
 ### Změny
-- `src/components/TrailMap.tsx`: Opravit useEffect pro inicializaci fotek — přidat guard proti opakovanému nastavení + přidat `useRef` flag pro sledování, zda už byly fotky inicializovány
+
+**`src/pages/Index.tsx`:**
+- Přidat `const [photos, setPhotos] = useState<PhotoPoint[]>([])`
+- Resetovat `setPhotos([])` v `handleFileUpload` při nahrání nového GPX
+- `photoPositions` výpočet závisí na `photos` state (ne `gpxData.photos`)
+- Předat TrailMap props: `photos={photos}` a `onAddPhotos={(newPhotos) => setPhotos(prev => [...prev, ...newPhotos])}`
+- Odebrat `onPhotosUpdate` callback (ten co měnil gpxData)
+
+**`src/components/TrailMap.tsx`:**
+- Přidat do props: `photos: PhotoPoint[]` a `onAddPhotos: (photos: PhotoPoint[]) => void`
+- Odebrat z props: `onPhotosUpdate`
+- Odebrat: `const [photos, setPhotos]` (lokální state)
+- Odebrat: `photosInitializedRef` + jeho useEffect (řádky 197-203)
+- V `handleBulkPhotoUpload`: místo `setPhotos(updated)` + `onPhotosUpdate(updated)` zavolat jen `onAddPhotos(newPhotos)` — parent přidá fotky do svého state
+- Všechny existující efekty a renderování fotek (`photos.forEach`, `photos.length`) budou číst z prop místo lokálního state — žádná změna v logice, jen zdroj dat
+
+### Výsledek
+- Žádná cyklická závislost, žádný `useRef` hack
+- Změna fotek neovlivní `gpxData` → nemá vliv na trail/POI vrstvy
+- Při nahrání nového GPX se fotky korektně resetují
+- Čistý základ pro další práci na projektu
 
