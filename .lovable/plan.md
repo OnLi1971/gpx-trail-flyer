@@ -1,31 +1,34 @@
 
 
-## Oprava: Fotky se nezobrazují na mapě
+## Oprava: Bílá obrazovka při přidání fotek
 
-### Problém
-V `exifReader.ts` je chyba v konfiguraci `exifr.parse()`. Volání `{ gps: true, pick: ['DateTimeOriginal', 'CreateDate'] }` — parametr `pick` omezuje parsování jen na vybrané tagy a může přebít `gps: true`, takže `latitude`/`longitude` nejsou v výsledku.
+### Příčina problému
+V kódu je **nekonečná smyčka** (infinite loop):
 
-Navíc chybí jakékoliv logování do konzole, když fotky nemají GPS — uživatel nevidí, proč se nic nestalo.
+1. `handleBulkPhotoUpload` nastaví `setPhotos(updatedPhotos)` a zavolá `onPhotosUpdate(updatedPhotos)`
+2. `onPhotosUpdate` v `Index.tsx` zavolá `setGpxData({ ...gpxData, photos })` — vytvoří nový objekt gpxData
+3. V `TrailMap.tsx` (řádek 197-201) je `useEffect` který sleduje `gpxData` a volá `setPhotos(gpxData.photos)` — nastaví fotky zpět
+4. Změna `photos` spustí marker efekt, který vše opakuje → **crash / bílá obrazovka**
+
+Navíc se při každé změně fotek znovu vykreslují trail vrstvy (řádek 114-194), protože závisí na `gpxData` — což je zbytečné a způsobuje blikání mapy.
 
 ### Řešení
 
-**Soubor `src/utils/exifReader.ts`:**
-1. Opravit `exifr.parse()` volání — místo `pick` použít správnou konfiguraci, která zachová GPS parsing:
-   - `await exifr.parse(file, { gps: true, tiff: true, exif: true })` — bez `pick` filtru
-   - Pak zvlášť přistupovat k `DateTimeOriginal` / `CreateDate`
-2. Přidat `console.log` pro debugging — logovat co exifr vrátí
-
 **Soubor `src/components/TrailMap.tsx`:**
-3. V `handleBulkPhotoUpload` přidat loading indikátor (toast "Zpracovávám fotky...") aby uživatel věděl, že se něco děje
-4. Přidat lepší chybové hlášky s názvy souborů bez GPS
 
-### Technický detail
-Problém je specificky na řádku 12 v `exifReader.ts`:
-```typescript
-// Špatně - pick přebíjí gps
-exifr.parse(file, { gps: true, pick: ['DateTimeOriginal', 'CreateDate'] })
+1. **Opravit `useEffect` na řádku 197-201** — přidat podmínku, aby se `setPhotos` volalo jen při prvním načtení gpxData (ne při každé změně fotek):
+   ```typescript
+   useEffect(() => {
+     if (gpxData?.photos && photos.length === 0) {
+       setPhotos(gpxData.photos);
+     }
+   }, [gpxData]);
+   ```
 
-// Správně - nechat gps fungovat, bez pick filtru
-exifr.parse(file, true) // parse all, including GPS
-```
+2. **Odebrat `onPhotosUpdate` volání z `handleBulkPhotoUpload`** — nebo lépe, zavolat ho jen jednou na konci, mimo cyklus. Fotky se spravují lokálně v `TrailMap`, `onPhotosUpdate` slouží jen pro sync s Index.tsx (pro animaci). Problém je, že `onPhotosUpdate` mění `gpxData`, což znovu triggeruje bod 1.
+
+**Čistší řešení:** Změnit efekt na řádku 197 tak, aby inicializoval fotky jen jednou (při prvním gpxData load), ne při každé změně gpxData reference. Tím se přeruší smyčka.
+
+### Změny
+- `src/components/TrailMap.tsx`: Opravit useEffect pro inicializaci fotek — přidat guard proti opakovanému nastavení + přidat `useRef` flag pro sledování, zda už byly fotky inicializovány
 
