@@ -9,18 +9,22 @@ interface PhotoGPSResult {
 
 export async function extractPhotoGPS(file: File): Promise<PhotoGPSResult | null> {
   try {
-    const exif = await exifr.parse(file, { gps: true, pick: ['DateTimeOriginal', 'CreateDate'] });
-    
-    if (!exif?.latitude || !exif?.longitude) {
+    const exif = await exifr.parse(file, true);
+    console.log('EXIF data for', file.name, exif);
+
+    if (!exif || typeof exif.latitude === 'undefined' || typeof exif.longitude === 'undefined') {
+      console.log(`Photo ${file.name} has no GPS data, skipping.`);
       return null;
     }
 
     const thumbnail = await compressImage(file);
 
+    const timestamp = exif.DateTimeOriginal || exif.CreateDate;
+
     return {
       lat: exif.latitude,
       lon: exif.longitude,
-      timestamp: exif.DateTimeOriginal?.getTime() || exif.CreateDate?.getTime() || undefined,
+      timestamp: timestamp ? new Date(timestamp).getTime() : undefined,
       thumbnail,
     };
   } catch (err) {
