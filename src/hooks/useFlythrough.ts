@@ -1,0 +1,238 @@
+import { useState, useRef, useCallback, MutableRefObject } from 'react';
+import { Map, Marker, LngLatBounds } from 'maplibre-gl';
+import { GPXData } from '@/types/gpx';
+
+function calculateBearing(start: { lat: number; lon: number }, end: { lat: number; lon: number }) {
+  const startLat = start.lat * Math.PI / 180;
+  const startLon = start.lon * Math.PI / 180;
+  const endLat = end.lat * Math.PI / 180;
+  const endLon = end.lon * Math.PI / 180;
+
+  const dLon = endLon - startLon;
+  const y = Math.sin(dLon) * Math.cos(endLat);
+  const x = Math.cos(startLat) * Math.sin(endLat) - Math.sin(startLat) * Math.cos(endLat) * Math.cos(dLon);
+
+  let bearing = Math.atan2(y, x) * 180 / Math.PI;
+  return (bearing + 360) % 360;
+}
+
+function calculateGrade(start: { lat: number; lon: number; ele?: number }, end: { lat: number; lon: number; ele?: number }) {
+  if (start.ele === undefined || end.ele === undefined) return null;
+
+  const R = 6371000;
+  const dLat = (end.lat - start.lat) * Math.PI / 180;
+  const dLon = (end.lon - start.lon) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(start.lat * Math.PI / 180) * Math.cos(end.lat * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const horizontalDistance = R * c;
+
+  if (horizontalDistance < 1) return null;
+
+  const elevationDiff = end.ele - start.ele;
+  const grade = (elevationDiff / horizontalDistance) * 100;
+
+  return Math.round(grade * 10) / 10;
+}
+
+export function useFlythrough(
+  map: MutableRefObject<Map | null>,
+  gpxData: GPXData | null
+) {
+  const [isFlying, setIsFlying] = useState(false);
+  const [flySpeed, setFlySpeedState] = useState(50);
+  const [flyRotation, setFlyRotationState] = useState(50);
+  const [flyZoom, setFlyZoomState] = useState(15);
+  const [elevationExaggeration, setElevationExaggerationState] = useState(1.5);
+  const [flyingIndex, setFlyingIndex] = useState<number | null>(null);
+  const [currentGrade, setCurrentGrade] = useState<number | null>(null);
+  const [mapPitch, setMapPitchState] = useState(0);
+
+  const flyAnimationRef = useRef<number | null>(null);
+  const flySpeedRef = useRef(50);
+  const flyRotationRef = useRef(50);
+  const flyZoomRef = useRef(15);
+  const elevationExaggerationRef = useRef(1.5);
+  const lastBearingRef = useRef(0);
+  const flyMarkerRef = useRef<Marker | null>(null);
+
+  const setFlySpeed = useCallback((value: number) => {
+    setFlySpeedState(value);
+    flySpeedRef.current = value;
+  }, []);
+
+  const setFlyRotation = useCallback((value: number) => {
+    setFlyRotationState(value);
+    flyRotationRef.current = value;
+  }, []);
+
+  const setFlyZoom = useCallback((value: number) => {
+    setFlyZoomState(value);
+    flyZoomRef.current = value;
+  }, []);
+
+  const setElevationExaggeration = useCallback((value: number) => {
+    setElevationExaggerationState(value);
+    elevationExaggerationRef.current = value;
+    if (map.current) {
+      map.current.setTerrain({ source: 'terrain-dem', exaggeration: value });
+    }
+  }, [map]);
+
+  const setMapPitch = useCallback((value: number) => {
+    setMapPitchState(value);
+    if (map.current) {
+      map.current.easeTo({ pitch: value, duration: 300 });
+    }
+  }, [map]);
+
+  const stopFlythrough = useCallback(() => {
+    if (flyAnimationRef.current) {
+      cancelAnimationFrame(flyAnimationRef.current);
+      flyAnimationRef.current = null;
+    }
+    setIsFlying(false);
+    setFlyingIndex(null);
+    setCurrentGrade(null);
+
+    if (flyMarkerRef.current) {
+      flyMarkerRef.current.remove();
+      flyMarkerRef.current = null;
+    }
+
+    if (map.current && gpxData && gpxData.tracks.length > 0) {
+      const track = gpxData.tracks[0];
+      const bounds = new LngLatBounds();
+      track.points.forEach((point) => {
+        bounds.extend([point.lon, point.lat]);
+      });
+
+      map.current.flyTo({
+        center: bounds.getCenter(),
+        zoom: 12,
+        pitch: 0,
+        bearing: 0,
+        duration: 1500,
+      });
+      setMapPitchState(0);
+    }
+  }, [map, gpxData]);
+
+  const startFlythrough = useCallback(() => {
+    if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
+
+    const track = gpxData.tracks[0];
+    if (track.points.length < 2) return;
+
+    setIsFlying(true);
+    setFlyingIndex(0);
+    let currentIndex = 0;
+    const totalPoints = track.points.length;
+
+    const animateStep = () => {
+      if (!map.current || currentIndex >= totalPoints - 1) {
+        stopFlythrough();
+        return;
+      }
+
+      const speed = flySpeedRef.current;
+      const step = Math.max(1, Math.floor(speed / 20));
+      const duration = Math.max(50, 800 - (speed * 7.5));
+
+      const currentPoint = track.points[currentIndex];
+      const nextIndex = Math.min(currentIndex + step, totalPoints - 1);
+      const nextPoint = track.points[nextIndex];
+
+      const targetBearing = calculateBearing(currentPoint, nextPoint);
+
+      const rotationFactor = flyRotationRef.current / 100;
+      let smoothBearing = lastBearingRef.current;
+
+      if (rotationFactor > 0) {
+        let diff = targetBearing - lastBearingRef.current;
+        if (diff > 180) diff -= 360;
+        if (diff < -180) diff += 360;
+        smoothBearing = lastBearingRef.current + diff * rotationFactor * 0.3;
+        smoothBearing = ((smoothBearing % 360) + 360) % 360;
+      }
+      lastBearingRef.current = smoothBearing;
+
+      map.current.easeTo({
+        center: [currentPoint.lon, currentPoint.lat],
+        bearing: smoothBearing,
+        pitch: mapPitch,
+        zoom: flyZoomRef.current,
+        duration: duration,
+        easing: (t: number) => t,
+      });
+
+      currentIndex = nextIndex;
+      setFlyingIndex(currentIndex);
+
+      const grade = calculateGrade(currentPoint, nextPoint);
+      setCurrentGrade(grade);
+
+      if (flyMarkerRef.current) {
+        flyMarkerRef.current.setLngLat([currentPoint.lon, currentPoint.lat]);
+      } else {
+        const markerElement = document.createElement('div');
+        markerElement.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18.5" cy="17.5" r="3.5"/>
+            <circle cx="5.5" cy="17.5" r="3.5"/>
+            <circle cx="15" cy="5" r="1"/>
+            <path d="M12 17.5V14l-3-3 4-3 2 3h2"/>
+          </svg>
+        `;
+        markerElement.style.color = '#ef4444';
+        markerElement.style.filter = 'drop-shadow(0 0 6px rgba(239, 68, 68, 0.8))';
+        flyMarkerRef.current = new Marker({ element: markerElement })
+          .setLngLat([currentPoint.lon, currentPoint.lat])
+          .addTo(map.current!);
+      }
+
+      setTimeout(() => {
+        flyAnimationRef.current = requestAnimationFrame(animateStep);
+      }, duration * 0.8);
+    };
+
+    const startPoint = track.points[0];
+    const initialStep = Math.max(1, Math.floor(flySpeedRef.current / 20));
+    const secondPoint = track.points[Math.min(initialStep, totalPoints - 1)];
+    const initialBearing = calculateBearing(startPoint, secondPoint);
+
+    map.current.flyTo({
+      center: [startPoint.lon, startPoint.lat],
+      zoom: 15,
+      pitch: 60,
+      bearing: initialBearing,
+      duration: 2000,
+      essential: true,
+    });
+
+    setMapPitchState(60);
+
+    setTimeout(() => {
+      flyAnimationRef.current = requestAnimationFrame(animateStep);
+    }, 2000);
+  }, [map, gpxData, mapPitch, stopFlythrough]);
+
+  return {
+    isFlying,
+    flyingIndex,
+    currentGrade,
+    mapPitch,
+    flySpeed,
+    flyRotation,
+    flyZoom,
+    elevationExaggeration,
+    setFlySpeed,
+    setFlyRotation,
+    setFlyZoom,
+    setElevationExaggeration,
+    setMapPitch,
+    startFlythrough,
+    stopFlythrough,
+  };
+}
