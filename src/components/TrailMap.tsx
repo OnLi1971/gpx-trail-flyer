@@ -14,14 +14,16 @@ import { fetchPeaksAndPlaces, filterPOIsNearTrack } from '@/utils/overpassApi';
 interface TrailMapProps {
   gpxData: GPXData | null;
   currentPosition: number;
-  onPhotosUpdate?: (photos: PhotoPoint[]) => void;
+  photos: PhotoPoint[];
+  onAddPhotos: (newPhotos: PhotoPoint[]) => void;
   animationSettings: AnimationSettings;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({ 
   gpxData, 
   currentPosition,
-  onPhotosUpdate,
+  photos,
+  onAddPhotos,
   animationSettings
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
@@ -32,7 +34,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const poiMarkersRef = useRef<Marker[]>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [photos, setPhotos] = useState<PhotoPoint[]>([]);
+  
   const [viewPhoto, setViewPhoto] = useState<PhotoPoint | null>(null);
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
   const [originalMapState, setOriginalMapState] = useState<{center: [number, number], zoom: number} | null>(null);
@@ -193,14 +195,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     map.current.once('load', ensureTrailLayers);
   }, [gpxData]);
 
-  // Initialize photos from GPX data (only once on first load)
-  const photosInitializedRef = useRef(false);
-  useEffect(() => {
-    if (gpxData?.photos && !photosInitializedRef.current) {
-      photosInitializedRef.current = true;
-      setPhotos(gpxData.photos);
-    }
-  }, [gpxData]);
 
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
@@ -678,9 +672,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
 
     if (newPhotos.length > 0) {
-      const updatedPhotos = [...photos, ...newPhotos];
-      setPhotos(updatedPhotos);
-      onPhotosUpdate?.(updatedPhotos);
+      onAddPhotos(newPhotos);
       toast.success(`Přidáno ${newPhotos.length} fotek na mapu`);
     }
 

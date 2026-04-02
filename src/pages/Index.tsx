@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [gpxData, setGpxData] = useState<GPXData | null>(null);
+  const [photos, setPhotos] = useState<PhotoPoint[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
@@ -39,6 +40,7 @@ const Index = () => {
         }
 
         setGpxData(parsedData);
+        setPhotos([]);
         setCurrentPosition(0);
         setIsPlaying(false);
         toast.success(`Nahrán GPX soubor: ${filename}`);
@@ -76,13 +78,13 @@ const Index = () => {
   const [photoPositions, setPhotoPositions] = useState<Array<{photo: PhotoPoint, position: number}>>([]);
 
   useEffect(() => {
-    if (!gpxData?.photos?.length || !gpxData.tracks.length) {
+    if (!photos.length || !gpxData?.tracks.length) {
       setPhotoPositions([]);
       return;
     }
 
-    const track = gpxData.tracks[0];
-    const positions = gpxData.photos.map(photo => {
+    const track = gpxData!.tracks[0];
+    const positions = photos.map(photo => {
       let minDistance = Infinity;
       let closestIndex = 0;
 
@@ -106,7 +108,7 @@ const Index = () => {
     // Sort by position on track
     positions.sort((a, b) => a.position - b.position);
     setPhotoPositions(positions);
-  }, [gpxData]);
+  }, [gpxData, photos]);
 
   // Check for photos at current position during animation
   useEffect(() => {
@@ -250,11 +252,8 @@ const Index = () => {
                   gpxData={gpxData} 
                   currentPosition={currentPosition}
                   animationSettings={animationSettings}
-                  onPhotosUpdate={(photos) => {
-                    if (gpxData) {
-                      setGpxData({ ...gpxData, photos });
-                    }
-                  }}
+                  photos={photos}
+                  onAddPhotos={(newPhotos) => setPhotos(prev => [...prev, ...newPhotos])}
                 />
             </div>
 
