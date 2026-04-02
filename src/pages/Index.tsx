@@ -108,7 +108,7 @@ const Index = () => {
     // Sort by position on track
     positions.sort((a, b) => a.position - b.position);
     setPhotoPositions(positions);
-  }, [gpxData]);
+  }, [gpxData, photos]);
 
   // Check for photos at current position during animation
   useEffect(() => {
