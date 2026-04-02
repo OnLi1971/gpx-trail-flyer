@@ -1,57 +1,141 @@
 
 
-## Cleanup: Odstranění nadbytečností
+## Extrakce logiky z TrailMap.tsx — zapracované připomínky
 
-### Nalezené problémy
+TrailMap.tsx (1035 řádků) → orchestrační komponenta (~350 řádků) + 3 hooky + 1 prezentační komponenta.
 
-**1. `PhotoUploadModal.tsx` — mrtvý kód**
-Soubor `src/components/PhotoUploadModal.tsx` (143 řádků) se nikde neimportuje ani nepoužívá. Byl nahrazen bulk EXIF upload tlačítkem přímo v TrailMap. Smazat celý soubor.
+### Struktura
 
-**2. `MaplibreFlyToDemo.tsx` + route — testovací kód v produkci**
-Soubor `src/components/MaplibreFlyToDemo.tsx` (111 řádků) je testovací demo, které nemá v produkční aplikaci co dělat. Navíc v `Index.tsx` (řádky 270-283) je karta "Test flyTo animace" s tlačítkem na otevření této stránky. Smazat soubor, odebrat route z `App.tsx` a odebrat kartu z `Index.tsx`.
+```text
+src/hooks/
+  useFlythrough.ts      — 3D průlet: state, refs, animační smyčka
+  usePhotoMarkers.ts    — foto markery na mapě, auto-open, upload
+  useElevationData.ts   — čistě výpočetní hook pro výškový profil
 
-**3. `PhotoAnimationControls.tsx` — komponenta se nepoužívá, jen `defaultSettings` a typ**
-Celá komponenta `PhotoAnimationControls` (slider UI, 150 řádků) se nikde nerenderuje. Z tohoto souboru se importuje pouze `AnimationSettings` typ a `defaultSettings` konstanta. Přesunout typ a konstantu do `src/types/gpx.ts` (nebo nového `src/types/animation.ts`) a smazat komponentu.
+src/components/
+  ElevationChart.tsx    — prezentační komponenta (žádná logika)
+  TrailMap.tsx          — orchestrace, mapa, POI, slidery
+```
 
-**4. `GPXData.photos?` — mrtvé pole v typu**
-V `src/types/gpx.ts` je `photos?: PhotoPoint[]` na `GPXData` rozhraní. Fotky se nyní spravují jako samostatný state v `Index.tsx` a nikdy se nenastavují na `gpxData`. Odebrat toto pole.
+### 1. `src/hooks/useFlythrough.ts` (~200 řádků)
 
-**5. Duplicitní auto-photo logika v Index.tsx**
-V `Index.tsx` je kompletní systém pro auto-zobrazení fotek (řádky 78-141: `photoPositions`, `shownPhotosInSession`, `autoPhotoView`, `isAutoPhotoOpen`, `PhotoViewModal`). Stejnou funkcionalitu ale řeší i `TrailMap.tsx` (řádky 401-462: `activePhotoId`, `handleArrivedPhoto`, vlastní `PhotoViewModal`). Jsou to dva nezávislé systémy, které dělají totéž — jeden v Indexu (pro slider animaci), druhý v TrailMap (pro slider i 3D průlet). Ponechat jen TrailMap verzi, která je robustnější (má flyTo zoom), a odebrat duplicitní logiku z Indexu.
+**Přesunout state:** `isFlying`, `flySpeed`, `flyRotation`, `flyZoom`, `elevationExaggeration`, `flyingIndex`, `currentGrade`, `mapPitch`
 
-**6. `animationDuration` jako useState — zbytečný state**
-`const [animationDuration] = useState(10000)` — setter se nikdy nepoužívá. Nahradit konstantou `const ANIMATION_DURATION = 10000`.
+**Přesunout refs:** `flyAnimationRef`, `flySpeedRef`, `flyRotationRef`, `flyZoomRef`, `elevationExaggerationRef`, `lastBearingRef`, `flyMarkerRef`
 
-**7. `animationSettings` jako useState — zbytečný state**
-`const [animationSettings] = useState<AnimationSettings>(defaultSettings)` — setter se nikdy nepoužívá. Nahradit konstantou `const animationSettings = defaultSettings`.
+**Přesunout funkce:** `calculateBearing`, `calculateGrade`, `startFlythrough`, `stopFlythrough`
 
-### Změny po souborech
+**API hooku — pojmenované handlery (ne holé settery):**
+```typescript
+useFlythrough(map: MutableRefObject<Map | null>, gpxData: GPXData | null)
 
-**Smazat soubory:**
-- `src/components/PhotoUploadModal.tsx`
-- `src/components/MaplibreFlyToDemo.tsx`
+// Vrací:
+{
+  isFlying, flyingIndex, currentGrade, mapPitch,
+  flySpeed, flyRotation, flyZoom, elevationExaggeration,
+  // Pojmenované handlery s useCallback (stabilní reference):
+  setFlySpeed,        // sync state + ref
+  setFlyRotation,     // sync state + ref  
+  setFlyZoom,         // sync state + ref
+  setElevationExaggeration, // sync state + ref + map.setTerrain
+  setMapPitch,        // sync state + map.easeTo
+  startFlythrough,
+  stopFlythrough,
+}
+```
 
-**`src/types/gpx.ts`:**
-- Odebrat `photos?: PhotoPoint[]` z `GPXData`
-- Přidat `AnimationSettings` interface a `defaultSettings` konstantu (přesun z PhotoAnimationControls)
+Všechny handlery obaleny `useCallback` — stabilní reference, žádné zbytečné re-rendery mapy.
 
-**`src/components/PhotoAnimationControls.tsx`:**
-- Smazat celý soubor (typ a konstanta přesunuty do types)
+### 2. `src/hooks/usePhotoMarkers.ts` (~130 řádků)
 
-**`src/App.tsx`:**
-- Odebrat import `MaplibreFlyToDemo`
-- Odebrat route `/test-flyto`
+**Přesunout state:** `viewPhoto`, `isPhotoViewOpen`, `originalMapState`, `activePhotoId`
 
-**`src/pages/Index.tsx`:**
-- Odebrat import `PhotoAnimationControls` → importovat z nového místa
-- Odebrat: `photoPositions`, `shownPhotosInSession`, `autoPhotoView`, `isAutoPhotoOpen` state
-- Odebrat: oba useEffect pro photo positions a auto-photo (řádky 80-141)
-- Odebrat: `<PhotoViewModal>` na konci (řádky 287-295) — TrailMap má vlastní
-- Odebrat: "Test flyTo" kartu (řádky 270-283)
-- Změnit `useState(10000)` → `const ANIMATION_DURATION = 10000`
-- Změnit `useState(defaultSettings)` → `const animationSettings = defaultSettings`
-- Odebrat import `Button` (nepoužívá se po odebrání test karty)
+**Přesunout refs:** `photoMarkersRef`, `fileInputRef`
 
-**`src/components/TrailMap.tsx`:**
-- Aktualizovat import `AnimationSettings` z nového místa
+**Přesunout:** useEffect pro vytváření DOM markerů (řádky 224-302), useEffect pro auto-open při animaci (řádky 401-425), `handleArrivedPhoto`, `handlePhotoClose`, `handleBulkPhotoUpload`
+
+**API hooku:**
+```typescript
+usePhotoMarkers(
+  map: MutableRefObject<Map | null>,
+  gpxData: GPXData | null,
+  photos: PhotoPoint[],
+  onAddPhotos: (newPhotos: PhotoPoint[]) => void,
+  currentPosition: number,
+  animationSettings: AnimationSettings
+)
+
+// Vrací:
+{
+  viewPhoto, isPhotoViewOpen, handlePhotoClose,
+  fileInputRef, triggerUpload: () => void
+}
+```
+
+**Cleanup v useEffect:** Pečlivé odebrání všech DOM markerů + event listenerů při re-renderu. Stávající kód už markery odebírá přes `photoMarkersRef.current.forEach(m => m.remove())` — zachovat tento pattern.
+
+### 3. `src/hooks/useElevationData.ts` (~80 řádků)
+
+Čistě výpočetní — žádné side-effecty, žádné refs.
+
+```typescript
+useElevationData(
+  gpxData: GPXData | null,
+  photos: PhotoPoint[],
+  currentPosition: number,
+  flyingIndex: number | null,
+  elevationExaggeration: number
+)
+
+// Vrací:
+{ chartData, currentChartPoint, photosOnChart }
+```
+
+Uvnitř `useMemo` pro výpočet — přepočítá se jen když se změní vstupy.
+
+### 4. `src/components/ElevationChart.tsx` (~80 řádků)
+
+Prezentační komponenta bez logiky. Přesun JSX z řádků 952-1024.
+
+```typescript
+interface ElevationChartProps {
+  chartData: Array<{distance: number; elevation: number}>;
+  currentChartPoint: {distance: number; elevation: number} | null;
+  photosOnChart: Array<{id: string; chartDistance: number; chartElevation: number}>;
+}
+```
+
+Obalená `React.memo` — re-render jen při změně dat.
+
+### 5. `src/components/TrailMap.tsx` (zůstane ~350 řádků)
+
+**Zůstane:**
+- Map inicializace (useEffect řádky 59-114)
+- Trail layer rendering (useEffect řádky 116-196)
+- Slider position marker (useEffect řádky 199-221)
+- POI markery (useEffect řádky 305-399)
+- JSX: mapa + slidery + `<ElevationChart>` + `<PhotoViewModal>`
+
+**Orchestrace hooků:**
+```typescript
+const flythrough = useFlythrough(map, gpxData);
+const photoMarkers = usePhotoMarkers(
+  map, gpxData, photos, onAddPhotos, 
+  currentPosition, animationSettings
+);
+const elevationData = useElevationData(
+  gpxData, photos, currentPosition,
+  flythrough.flyingIndex,        // ← závislost: flythrough → elevation
+  flythrough.elevationExaggeration
+);
+```
+
+Pořadí volání respektuje závislosti: `useFlythrough` první (produkuje `flyingIndex`), pak `usePhotoMarkers`, pak `useElevationData` (konzumuje `flyingIndex`).
+
+### Pořadí implementace
+
+1. `useElevationData` + `ElevationChart` (nejjednodušší, žádné side-effecty)
+2. `useFlythrough` (self-contained animační smyčka)
+3. `usePhotoMarkers` (nejsložitější — DOM markery, event listenery, cleanup)
+4. Aktualizace `TrailMap.tsx` — zapojení hooků, odebrání přesunutého kódu
 
