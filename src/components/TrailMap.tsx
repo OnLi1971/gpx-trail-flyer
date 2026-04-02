@@ -105,19 +105,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       'top-right'
     );
 
-    // Add click listener for adding photos
-    map.current.on('click', (e) => {
-      // Check if click target is a photo marker
-      const target = e.originalEvent.target as HTMLElement;
-      if (target && target.closest('[data-photo-marker]')) {
-        return;
-      }
-      setClickedPosition({
-        lat: e.lngLat.lat,
-        lon: e.lngLat.lng
-      });
-      setIsModalOpen(true);
-    });
 
     return () => {
       map.current?.remove();
