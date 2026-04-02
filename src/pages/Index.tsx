@@ -83,8 +83,8 @@ const Index = () => {
       return;
     }
 
-    const track = gpxData.tracks[0];
-    const positions = gpxData.photos.map(photo => {
+    const track = gpxData!.tracks[0];
+    const positions = photos.map(photo => {
       let minDistance = Infinity;
       let closestIndex = 0;
 
