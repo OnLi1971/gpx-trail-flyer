@@ -4,11 +4,12 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { PhotoUploadModal } from './PhotoUploadModal';
 import { PhotoViewModal } from './PhotoViewModal';
-import { Bike, Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
 import { AnimationSettings } from './PhotoAnimationControls';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
+import { fetchPeaksAndPlaces, filterPOIsNearTrack } from '@/utils/overpassApi';
 interface TrailMapProps {
   gpxData: GPXData | null;
   currentPosition: number;
@@ -27,6 +28,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const markerRef = useRef<Marker | null>(null);
   const flyMarkerRef = useRef<Marker | null>(null);
   const photoMarkersRef = useRef<Marker[]>([]);
+  const poiMarkersRef = useRef<Marker[]>([]);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [clickedPosition, setClickedPosition] = useState<{lat: number, lon: number} | null>(null);
@@ -280,7 +282,103 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   }, [photos]);
 
-  // PATCH: Synchronizace pohybu a otevírání fotky
+  // Fetch and render POI markers (peaks + places) from Overpass API
+  useEffect(() => {
+    if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
+
+    const track = gpxData.tracks[0];
+    if (track.points.length === 0) return;
+
+    // Wait for map style to be loaded
+    const loadPOIs = async () => {
+      try {
+        const pois = await fetchPeaksAndPlaces(gpxData.bounds);
+        const nearbyPois = filterPOIsNearTrack(pois, track.points, 2);
+
+        // Clean up previous POI markers
+        poiMarkersRef.current.forEach(m => m.remove());
+        poiMarkersRef.current = [];
+
+        nearbyPois.forEach(poi => {
+          const el = document.createElement('div');
+          el.style.display = 'flex';
+          el.style.flexDirection = 'column';
+          el.style.alignItems = 'center';
+          el.style.pointerEvents = 'none';
+
+          if (poi.type === 'peak') {
+            el.innerHTML = `
+              <div style="
+                background: rgba(255,255,255,0.92);
+                border: 1.5px solid #b45309;
+                border-radius: 6px;
+                padding: 2px 6px;
+                font-size: 11px;
+                font-weight: 600;
+                color: #92400e;
+                white-space: nowrap;
+                box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+                display: flex;
+                align-items: center;
+                gap: 3px;
+              ">
+                <span style="font-size:13px">⛰️</span>
+                ${poi.name}${poi.ele ? ` ${poi.ele}\u202Fm` : ''}
+              </div>
+              <div style="
+                width: 2px;
+                height: 20px;
+                background: #b45309;
+                opacity: 0.6;
+              "></div>
+              <div style="
+                width: 6px;
+                height: 6px;
+                border-radius: 50%;
+                background: #b45309;
+              "></div>
+            `;
+          } else {
+            el.innerHTML = `
+              <div style="
+                background: rgba(255,255,255,0.88);
+                border: 1px solid #6b7280;
+                border-radius: 4px;
+                padding: 1px 5px;
+                font-size: 10px;
+                font-weight: 500;
+                color: #374151;
+                white-space: nowrap;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+              ">
+                ${poi.name}
+              </div>
+            `;
+          }
+
+          const marker = new Marker({ element: el, anchor: 'bottom' })
+            .setLngLat([poi.lon, poi.lat])
+            .addTo(map.current!);
+
+          poiMarkersRef.current.push(marker);
+        });
+      } catch (err) {
+        console.warn('POI loading failed:', err);
+      }
+    };
+
+    if (map.current.isStyleLoaded()) {
+      loadPOIs();
+    } else {
+      map.current.once('load', loadPOIs);
+    }
+
+    return () => {
+      poiMarkersRef.current.forEach(m => m.remove());
+      poiMarkersRef.current = [];
+    };
+  }, [gpxData]);
+
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) return;
     const track = gpxData.tracks[0];
