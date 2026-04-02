@@ -1028,15 +1028,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         )}
       </div>
       
-      {clickedPosition && (
-        <PhotoUploadModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSave={handlePhotoSave}
-          lat={clickedPosition.lat}
-          lon={clickedPosition.lon}
-        />
-      )}
       
       <PhotoViewModal
         photo={viewPhoto}
