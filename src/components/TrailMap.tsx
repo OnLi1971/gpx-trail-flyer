@@ -655,8 +655,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   };
 
   const handleBulkPhotoUpload = async (files: FileList) => {
+    toast.info(`Zpracovávám ${files.length} fotek...`);
     const newPhotos: PhotoPoint[] = [];
-    let skipped = 0;
+    const skippedNames: string[] = [];
 
     for (const file of Array.from(files)) {
       const result = await extractPhotoGPS(file);
@@ -670,7 +671,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           timestamp: result.timestamp || Date.now(),
         });
       } else {
-        skipped++;
+        skippedNames.push(file.name);
       }
     }
 
@@ -681,11 +682,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       toast.success(`Přidáno ${newPhotos.length} fotek na mapu`);
     }
 
-    if (skipped > 0) {
-      toast.warning(`${skipped} z ${files.length} fotek nemá GPS souřadnice a byly přeskočeny`);
+    if (skippedNames.length > 0) {
+      console.warn('Fotky bez GPS:', skippedNames);
+      toast.warning(`${skippedNames.length} z ${files.length} fotek nemá GPS souřadnice a byly přeskočeny`);
     }
 
-    if (newPhotos.length === 0 && skipped > 0) {
+    if (newPhotos.length === 0 && skippedNames.length > 0) {
       toast.error('Žádná z vybraných fotek nemá GPS souřadnice');
     }
   };
