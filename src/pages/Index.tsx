@@ -40,6 +40,7 @@ const Index = () => {
         }
 
         setGpxData(parsedData);
+        setPhotos([]);
         setCurrentPosition(0);
         setIsPlaying(false);
         toast.success(`Nahrán GPX soubor: ${filename}`);
