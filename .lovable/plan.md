@@ -1,37 +1,40 @@
 
 
-## Vylepšení fotek na trase - náhledové miniatury místo modrých teček
+## Automatické umístění fotek podle GPS souřadnic z EXIF dat
 
-Aktuálně jsou fotky zobrazeny jako malé modré kolečka na mapě. Navrhuju je nahradit efektními miniaturami fotek.
+Místo ručního klikání na mapu přidám tlačítko "Přidat fotky", které umožní vybrat více fotek najednou. Z každé fotky se automaticky přečtou GPS souřadnice z EXIF metadat a fotka se umístí na správné místo na mapě.
 
-### Co se změní
+### Jak to bude fungovat
 
-**Foto markery na mapě** (řádky 270-282 v `TrailMap.tsx`):
-- Místo modrého kolečka (`w-6 h-6 bg-blue-500 rounded-full`) zobrazit skutečný náhled fotky jako kulatý thumbnail s bílým rámečkem
-- Při hoveru se miniatura zvětší (scale efekt) a zobrazí se popisek
-- Kliknutím se otevře detail fotky jako dosud
-
-**Vizuální styl:**
-```text
-  ┌─────────┐
-  │  📷     │  ← kulatý thumbnail fotky (40x40px)
-  │  mini   │     bílý border 2px, box-shadow
-  └────┬────┘
-       │        ← malá tyčka (jako u POI)
-       ●
-```
-
-**Během 3D průletu:**
-- Když se cyklista blíží k fotce, miniatura se animovaně zvětší (pulse efekt)
-- Po přiblížení se otevře PhotoViewModal jako dosud
+1. Uživatel klikne na tlačítko "📷 Přidat fotky" (místo klikání na mapu)
+2. Vybere jednu nebo více fotek z disku
+3. Z každé fotky se přečtou EXIF GPS souřadnice
+4. Fotky se automaticky umístí na mapě na správné pozice
+5. Fotky bez GPS dat se přeskočí s upozorněním
 
 ### Technické změny
 
-**Soubor: `src/components/TrailMap.tsx`**
+**Nová závislost:**
+- `exifr` — lightweight knihovna pro čtení EXIF dat z obrázků (GPS, datum, orientace)
 
-1. **Změna foto markerů** (řádky 270-282): Nahradit modré kolečko HTML elementem s `<img>` thumbnailem uvnitř kruhu. Přidat CSS pro hover scale, bílý border, stín a malou tyčku pod fotkou.
+**Nový soubor `src/utils/exifReader.ts`:**
+- Funkce `extractPhotoGPS(file: File)` → vrací `{ lat, lon, timestamp?, description? }` nebo `null` pokud fotka nemá GPS
+- Použije `exifr` k parsování GPS souřadnic z EXIF dat
+- Komprese obrázku na thumbnail (max 800px, kvalita 70%) — stejně jako v současném `PhotoUploadModal`
 
-2. **Přidat pulse animaci** při blížení cyklisty: Když je `flyingIndex` blízko fotky, přidat CSS třídu `animate-pulse` na příslušný marker.
+**Úprava `src/components/TrailMap.tsx`:**
+- Přidat tlačítko "📷 Přidat fotky" do UI (vedle ovládacích prvků mapy)
+- Skrytý `<input type="file" multiple accept="image/*">` pro výběr více fotek
+- Po výběru fotek: pro každou zavolat `extractPhotoGPS`, vytvořit `PhotoPoint` a přidat na mapu
+- Odebrat click listener na mapě pro ruční přidávání fotek (řádky 108-120)
+- Odebrat `PhotoUploadModal` — už nebude potřeba
 
-Žádné nové soubory, žádné API změny - jen vizuální vylepšení existujících markerů.
+**Co zůstane stejné:**
+- Vizuální styl foto markerů (kulaté thumbnaily s tyčkou) — beze změny
+- `PhotoViewModal` pro zobrazení detailu — beze změny
+- Logika v `Index.tsx` pro animaci a auto-zobrazení fotek — beze změny
+
+### Upozornění pro uživatele
+- Pokud některé fotky nemají GPS data, zobrazí se toast "3 z 5 fotek nemají GPS souřadnice a byly přeskočeny"
+- Pokud žádná fotka nemá GPS, zobrazí se chybová hláška
 
