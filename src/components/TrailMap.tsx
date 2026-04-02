@@ -672,9 +672,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
 
     if (newPhotos.length > 0) {
-      const updatedPhotos = [...photos, ...newPhotos];
-      setPhotos(updatedPhotos);
-      onPhotosUpdate?.(updatedPhotos);
+      onAddPhotos(newPhotos);
       toast.success(`Přidáno ${newPhotos.length} fotek na mapu`);
     }
 
