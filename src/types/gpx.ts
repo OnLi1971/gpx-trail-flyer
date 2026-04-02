@@ -31,5 +31,20 @@ export interface GPXData {
     minLon: number;
     maxLon: number;
   };
-  photos?: PhotoPoint[];
 }
+
+export interface AnimationSettings {
+  threshold: number;
+  zoomFactor: number;
+  flyToDuration: number;
+  modalDelay: number;
+  zoomBackDuration: number;
+}
+
+export const defaultAnimationSettings: AnimationSettings = {
+  threshold: 0.01,
+  zoomFactor: 1.5,
+  flyToDuration: 1500,
+  modalDelay: 2000,
+  zoomBackDuration: 1000
+};
