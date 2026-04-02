@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Map, NavigationControl, Marker, LngLatBounds } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint } from '@/types/gpx';
@@ -193,9 +193,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     map.current.once('load', ensureTrailLayers);
   }, [gpxData]);
 
-  // Initialize photos from GPX data
+  // Initialize photos from GPX data (only once on first load)
+  const photosInitializedRef = useRef(false);
   useEffect(() => {
-    if (gpxData?.photos) {
+    if (gpxData?.photos && !photosInitializedRef.current) {
+      photosInitializedRef.current = true;
       setPhotos(gpxData.photos);
     }
   }, [gpxData]);
