@@ -31,8 +31,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const photoMarkersRef = useRef<Marker[]>([]);
   const poiMarkersRef = useRef<Marker[]>([]);
   
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [clickedPosition, setClickedPosition] = useState<{lat: number, lon: number} | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<PhotoPoint[]>([]);
   const [viewPhoto, setViewPhoto] = useState<PhotoPoint | null>(null);
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
