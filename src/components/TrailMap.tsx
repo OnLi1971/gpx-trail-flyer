@@ -14,14 +14,16 @@ import { fetchPeaksAndPlaces, filterPOIsNearTrack } from '@/utils/overpassApi';
 interface TrailMapProps {
   gpxData: GPXData | null;
   currentPosition: number;
-  onPhotosUpdate?: (photos: PhotoPoint[]) => void;
+  photos: PhotoPoint[];
+  onAddPhotos: (newPhotos: PhotoPoint[]) => void;
   animationSettings: AnimationSettings;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({ 
   gpxData, 
   currentPosition,
-  onPhotosUpdate,
+  photos,
+  onAddPhotos,
   animationSettings
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
