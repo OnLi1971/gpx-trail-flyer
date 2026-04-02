@@ -1,44 +1,57 @@
 
 
-## Čistá architektura pro správu fotek — jeden zdroj pravdy
+## Cleanup: Odstranění nadbytečností
 
-### Problém
-Fotky existují na dvou místech: `photos` state v TrailMap + `gpxData.photos` v Index. Synchronizace přes `onPhotosUpdate` → `setGpxData` → `useEffect` → `setPhotos` vytváří cyklickou závislost. Aktuální fix (`photosInitializedRef`) je křehký hack — rozbije se při nahrání nového GPX souboru.
+### Nalezené problémy
 
-### Řešení
+**1. `PhotoUploadModal.tsx` — mrtvý kód**
+Soubor `src/components/PhotoUploadModal.tsx` (143 řádků) se nikde neimportuje ani nepoužívá. Byl nahrazen bulk EXIF upload tlačítkem přímo v TrailMap. Smazat celý soubor.
 
-Fotky se stanou samostatným stavem v `Index.tsx`. TrailMap je dostane jako prop a nebude mít vlastní `photos` state.
+**2. `MaplibreFlyToDemo.tsx` + route — testovací kód v produkci**
+Soubor `src/components/MaplibreFlyToDemo.tsx` (111 řádků) je testovací demo, které nemá v produkční aplikaci co dělat. Navíc v `Index.tsx` (řádky 270-283) je karta "Test flyTo animace" s tlačítkem na otevření této stránky. Smazat soubor, odebrat route z `App.tsx` a odebrat kartu z `Index.tsx`.
 
-```text
-Index.tsx (vlastník photos state)
-  ├── photos: PhotoPoint[]
-  ├── setPhotos / onAddPhotos callback
-  └── TrailMap
-        ├── photos (read-only prop)
-        ├── onAddPhotos (callback pro přidání nových)
-        └── žádný vlastní photos state
-```
+**3. `PhotoAnimationControls.tsx` — komponenta se nepoužívá, jen `defaultSettings` a typ**
+Celá komponenta `PhotoAnimationControls` (slider UI, 150 řádků) se nikde nerenderuje. Z tohoto souboru se importuje pouze `AnimationSettings` typ a `defaultSettings` konstanta. Přesunout typ a konstantu do `src/types/gpx.ts` (nebo nového `src/types/animation.ts`) a smazat komponentu.
 
-### Změny
+**4. `GPXData.photos?` — mrtvé pole v typu**
+V `src/types/gpx.ts` je `photos?: PhotoPoint[]` na `GPXData` rozhraní. Fotky se nyní spravují jako samostatný state v `Index.tsx` a nikdy se nenastavují na `gpxData`. Odebrat toto pole.
+
+**5. Duplicitní auto-photo logika v Index.tsx**
+V `Index.tsx` je kompletní systém pro auto-zobrazení fotek (řádky 78-141: `photoPositions`, `shownPhotosInSession`, `autoPhotoView`, `isAutoPhotoOpen`, `PhotoViewModal`). Stejnou funkcionalitu ale řeší i `TrailMap.tsx` (řádky 401-462: `activePhotoId`, `handleArrivedPhoto`, vlastní `PhotoViewModal`). Jsou to dva nezávislé systémy, které dělají totéž — jeden v Indexu (pro slider animaci), druhý v TrailMap (pro slider i 3D průlet). Ponechat jen TrailMap verzi, která je robustnější (má flyTo zoom), a odebrat duplicitní logiku z Indexu.
+
+**6. `animationDuration` jako useState — zbytečný state**
+`const [animationDuration] = useState(10000)` — setter se nikdy nepoužívá. Nahradit konstantou `const ANIMATION_DURATION = 10000`.
+
+**7. `animationSettings` jako useState — zbytečný state**
+`const [animationSettings] = useState<AnimationSettings>(defaultSettings)` — setter se nikdy nepoužívá. Nahradit konstantou `const animationSettings = defaultSettings`.
+
+### Změny po souborech
+
+**Smazat soubory:**
+- `src/components/PhotoUploadModal.tsx`
+- `src/components/MaplibreFlyToDemo.tsx`
+
+**`src/types/gpx.ts`:**
+- Odebrat `photos?: PhotoPoint[]` z `GPXData`
+- Přidat `AnimationSettings` interface a `defaultSettings` konstantu (přesun z PhotoAnimationControls)
+
+**`src/components/PhotoAnimationControls.tsx`:**
+- Smazat celý soubor (typ a konstanta přesunuty do types)
+
+**`src/App.tsx`:**
+- Odebrat import `MaplibreFlyToDemo`
+- Odebrat route `/test-flyto`
 
 **`src/pages/Index.tsx`:**
-- Přidat `const [photos, setPhotos] = useState<PhotoPoint[]>([])`
-- Resetovat `setPhotos([])` v `handleFileUpload` při nahrání nového GPX
-- `photoPositions` výpočet závisí na `photos` state (ne `gpxData.photos`)
-- Předat TrailMap props: `photos={photos}` a `onAddPhotos={(newPhotos) => setPhotos(prev => [...prev, ...newPhotos])}`
-- Odebrat `onPhotosUpdate` callback (ten co měnil gpxData)
+- Odebrat import `PhotoAnimationControls` → importovat z nového místa
+- Odebrat: `photoPositions`, `shownPhotosInSession`, `autoPhotoView`, `isAutoPhotoOpen` state
+- Odebrat: oba useEffect pro photo positions a auto-photo (řádky 80-141)
+- Odebrat: `<PhotoViewModal>` na konci (řádky 287-295) — TrailMap má vlastní
+- Odebrat: "Test flyTo" kartu (řádky 270-283)
+- Změnit `useState(10000)` → `const ANIMATION_DURATION = 10000`
+- Změnit `useState(defaultSettings)` → `const animationSettings = defaultSettings`
+- Odebrat import `Button` (nepoužívá se po odebrání test karty)
 
 **`src/components/TrailMap.tsx`:**
-- Přidat do props: `photos: PhotoPoint[]` a `onAddPhotos: (photos: PhotoPoint[]) => void`
-- Odebrat z props: `onPhotosUpdate`
-- Odebrat: `const [photos, setPhotos]` (lokální state)
-- Odebrat: `photosInitializedRef` + jeho useEffect (řádky 197-203)
-- V `handleBulkPhotoUpload`: místo `setPhotos(updated)` + `onPhotosUpdate(updated)` zavolat jen `onAddPhotos(newPhotos)` — parent přidá fotky do svého state
-- Všechny existující efekty a renderování fotek (`photos.forEach`, `photos.length`) budou číst z prop místo lokálního state — žádná změna v logice, jen zdroj dat
-
-### Výsledek
-- Žádná cyklická závislost, žádný `useRef` hack
-- Změna fotek neovlivní `gpxData` → nemá vliv na trail/POI vrstvy
-- Při nahrání nového GPX se fotky korektně resetují
-- Čistý základ pro další práci na projektu
+- Aktualizovat import `AnimationSettings` z nového místa
 
