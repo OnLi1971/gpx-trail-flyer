@@ -267,13 +267,49 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     photoMarkersRef.current.forEach(marker => marker.remove());
     photoMarkersRef.current = [];
 
-    // Create simple blue markers for photos
+    // Create photo thumbnail markers with pole design
     photos.forEach(photo => {
-      const markerElement = document.createElement('div');
-      markerElement.className = 'w-6 h-6 bg-blue-500 rounded-full border-2 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform duration-200';
-      markerElement.setAttribute('data-photo-marker', 'true');
+      const container = document.createElement('div');
+      container.style.cssText = 'display:flex;flex-direction:column;align-items:center;cursor:pointer;';
+      container.setAttribute('data-photo-marker', 'true');
+      container.setAttribute('data-photo-id', photo.id);
 
-      const marker = new Marker(markerElement)
+      // Thumbnail circle
+      const thumb = document.createElement('div');
+      thumb.style.cssText = 'width:44px;height:44px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden;background:#1e293b;transition:transform 0.2s ease;';
+      
+      const img = document.createElement('img');
+      img.src = photo.photo;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      img.draggable = false;
+      thumb.appendChild(img);
+
+      // Pole (vertical line)
+      const pole = document.createElement('div');
+      pole.style.cssText = 'width:2px;height:16px;background:white;box-shadow:0 1px 3px rgba(0,0,0,0.3);';
+
+      // Dot at bottom
+      const dot = document.createElement('div');
+      dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:white;box-shadow:0 1px 3px rgba(0,0,0,0.3);';
+
+      container.appendChild(thumb);
+      container.appendChild(pole);
+      container.appendChild(dot);
+
+      // Hover effect
+      container.addEventListener('mouseenter', () => {
+        thumb.style.transform = 'scale(1.3)';
+      });
+      container.addEventListener('mouseleave', () => {
+        thumb.style.transform = 'scale(1)';
+      });
+
+      // Tooltip with description
+      if (photo.description) {
+        container.title = photo.description;
+      }
+
+      const marker = new Marker({ element: container, anchor: 'bottom' })
         .setLngLat([photo.lon, photo.lat])
         .addTo(map.current!);
 
