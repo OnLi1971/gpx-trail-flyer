@@ -7,7 +7,7 @@ import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDo
 import { extractPhotoGPS } from '@/utils/exifReader';
 import { toast } from 'sonner';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
-import { AnimationSettings } from './PhotoAnimationControls';
+import { AnimationSettings } from '@/types/gpx';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { fetchPeaksAndPlaces, filterPOIsNearTrack } from '@/utils/overpassApi';

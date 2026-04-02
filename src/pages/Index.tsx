@@ -2,14 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { FileUpload } from '@/components/FileUpload';
 import { TrailMap } from '@/components/TrailMap';
 import { AnimationControls } from '@/components/AnimationControls';
-import { defaultSettings, AnimationSettings } from '@/components/PhotoAnimationControls';
-import { PhotoViewModal } from '@/components/PhotoViewModal';
+import { defaultAnimationSettings } from '@/types/gpx';
 import { GPXParser } from '@/utils/gpxParser';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Mountain, Route, Timer, Loader2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+
+const ANIMATION_DURATION = 10000;
+const animationSettings = defaultAnimationSettings;
 
 const Index = () => {
   const [gpxData, setGpxData] = useState<GPXData | null>(null);
@@ -17,17 +18,11 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
-  const [animationDuration] = useState(10000); // 10 seconds
-  const [animationSettings] = useState<AnimationSettings>(defaultSettings);
   const [startTime, setStartTime] = useState<number | null>(null);
-  const [autoPhotoView, setAutoPhotoView] = useState<PhotoPoint | null>(null);
-  const [isAutoPhotoOpen, setIsAutoPhotoOpen] = useState(false);
-  const [shownPhotosInSession, setShownPhotosInSession] = useState<Set<string>>(new Set());
 
   const handleFileUpload = useCallback((content: string, filename: string) => {
     setIsLoading(true);
     
-    // Use setTimeout to allow UI to update before parsing
     setTimeout(() => {
       try {
         const parser = new GPXParser();
@@ -55,91 +50,23 @@ const Index = () => {
 
   const handlePlayPause = useCallback(() => {
     if (!isPlaying) {
-      setStartTime(Date.now() - (currentPosition / 100) * animationDuration);
+      setStartTime(Date.now() - (currentPosition / 100) * ANIMATION_DURATION);
     }
     setIsPlaying(!isPlaying);
-  }, [isPlaying, currentPosition, animationDuration]);
+  }, [isPlaying, currentPosition]);
 
   const handleReset = useCallback(() => {
     setCurrentPosition(0);
     setIsPlaying(false);
     setStartTime(null);
-    setShownPhotosInSession(new Set()); // Reset shown photos
   }, []);
 
   const handlePositionChange = useCallback((position: number) => {
     setCurrentPosition(position);
     if (isPlaying) {
-      setStartTime(Date.now() - (position / 100) * animationDuration);
+      setStartTime(Date.now() - (position / 100) * ANIMATION_DURATION);
     }
-  }, [isPlaying, animationDuration]);
-
-  // Calculate photo positions on track when GPX data changes
-  const [photoPositions, setPhotoPositions] = useState<Array<{photo: PhotoPoint, position: number}>>([]);
-
-  useEffect(() => {
-    if (!photos.length || !gpxData?.tracks.length) {
-      setPhotoPositions([]);
-      return;
-    }
-
-    const track = gpxData!.tracks[0];
-    const positions = photos.map(photo => {
-      let minDistance = Infinity;
-      let closestIndex = 0;
-
-      // Find closest point on track to photo
-      track.points.forEach((point, index) => {
-        const latDiff = photo.lat - point.lat;
-        const lonDiff = photo.lon - point.lon;
-        const distance = Math.sqrt(latDiff * latDiff + lonDiff * lonDiff);
-        
-        if (distance < minDistance) {
-          minDistance = distance;
-          closestIndex = index;
-        }
-      });
-
-      // Convert index to percentage position
-      const position = (closestIndex / (track.points.length - 1)) * 100;
-      return { photo, position };
-    });
-
-    // Sort by position on track
-    positions.sort((a, b) => a.position - b.position);
-    setPhotoPositions(positions);
-  }, [gpxData, photos]);
-
-  // Check for photos at current position during animation
-  useEffect(() => {
-    if (!isPlaying || !photoPositions.length) return;
-
-    const tolerance = 1; // 1% tolerance for triggering photo
-    const photoToShow = photoPositions.find(item => {
-      const isAtPosition = Math.abs(currentPosition - item.position) <= tolerance;
-      const notShownYet = !shownPhotosInSession.has(item.photo.id);
-      const isMovingForward = currentPosition >= item.position - tolerance;
-      
-      return isAtPosition && notShownYet && isMovingForward;
-    });
-
-    if (photoToShow) {
-      setShownPhotosInSession(prev => new Set([...prev, photoToShow.photo.id]));
-      setAutoPhotoView(photoToShow.photo);
-      setIsAutoPhotoOpen(true);
-      setIsPlaying(false); // Pause animation
-      setStartTime(null); // Clear start time to fully stop animation
-      
-      // Auto-close after 3 seconds and resume animation
-      setTimeout(() => {
-        setIsAutoPhotoOpen(false);
-        setAutoPhotoView(null);
-        // Resume animation from current position
-        setStartTime(Date.now() - (currentPosition / 100) * animationDuration);
-        setIsPlaying(true);
-      }, 3000);
-    }
-  }, [currentPosition, photoPositions, isPlaying, shownPhotosInSession]);
+  }, [isPlaying]);
 
   // Animation loop
   useEffect(() => {
@@ -147,7 +74,7 @@ const Index = () => {
 
     const animate = () => {
       const elapsed = Date.now() - startTime;
-      const progress = Math.min((elapsed / animationDuration) * 100, 100);
+      const progress = Math.min((elapsed / ANIMATION_DURATION) * 100, 100);
       
       setCurrentPosition(progress);
       
@@ -159,7 +86,7 @@ const Index = () => {
 
     const animationFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrame);
-  }, [isPlaying, startTime, animationDuration, currentPosition]);
+  }, [isPlaying, startTime, currentPosition]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -183,7 +110,6 @@ const Index = () => {
       <div className="container mx-auto px-4 py-6 space-y-6">
         {!gpxData ? (
           <div className="max-w-2xl mx-auto space-y-6">
-            {/* Loading Overlay */}
             {isLoading && (
               <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
@@ -193,7 +119,6 @@ const Index = () => {
               </div>
             )}
             
-            {/* Welcome Section */}
             <Card className="text-center">
               <CardHeader>
                 <CardTitle className="flex items-center justify-center gap-2 text-2xl">
@@ -231,13 +156,11 @@ const Index = () => {
               </CardContent>
             </Card>
 
-            {/* File Upload */}
             <FileUpload onFileUpload={handleFileUpload} />
           </div>
         ) : (
           <div className="space-y-6">
             <div className="space-y-6">
-                {/* Animation Controls */}
                 <AnimationControls
                   gpxData={gpxData}
                   isPlaying={isPlaying}
@@ -247,7 +170,6 @@ const Index = () => {
                   onPositionChange={handlePositionChange}
                 />
 
-                {/* Trail Map with Integrated Elevation Chart */}
                 <TrailMap 
                   gpxData={gpxData} 
                   currentPosition={currentPosition}
@@ -257,7 +179,6 @@ const Index = () => {
                 />
             </div>
 
-            {/* File Upload for New File */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg">Nahrát nový GPX soubor</CardTitle>
@@ -266,33 +187,8 @@ const Index = () => {
                 <FileUpload onFileUpload={handleFileUpload} />
               </CardContent>
             </Card>
-
-            {/* Test FlyTo */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Test flyTo animace</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Button 
-                  onClick={() => window.open('/test-flyto', '_blank')}
-                  variant="outline"
-                >
-                  Otevřít test flyTo v novém okně
-                </Button>
-              </CardContent>
-            </Card>
           </div>
         )}
-        
-        {/* Auto Photo View Modal */}
-        <PhotoViewModal
-          photo={autoPhotoView}
-          isOpen={isAutoPhotoOpen}
-          onClose={() => {
-            setIsAutoPhotoOpen(false);
-            setAutoPhotoView(null);
-          }}
-        />
       </div>
     </div>
   );
