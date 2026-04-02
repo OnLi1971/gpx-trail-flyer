@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [gpxData, setGpxData] = useState<GPXData | null>(null);
+  const [photos, setPhotos] = useState<PhotoPoint[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
