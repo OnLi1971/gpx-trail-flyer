@@ -153,24 +153,31 @@ export function usePhotoMarkers(
   }, [map, originalMapState, animationSettings.zoomBackDuration]);
 
   const handleBulkPhotoUpload = useCallback(async (files: FileList) => {
-    toast.info(`Zpracovávám ${files.length} fotek...`);
+    const fileArray = Array.from(files);
+    toast.info(`Zpracovávám ${fileArray.length} fotek...`);
     const newPhotos: PhotoPoint[] = [];
     const skippedNames: string[] = [];
 
-    for (const file of Array.from(files)) {
-      const result = await extractPhotoGPS(file);
-      if (result) {
-        newPhotos.push({
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          lat: result.lat,
-          lon: result.lon,
-          photo: result.thumbnail,
-          description: file.name.replace(/\.[^.]+$/, ''),
-          timestamp: result.timestamp || Date.now(),
-        });
-      } else {
-        skippedNames.push(file.name);
-      }
+    const BATCH_SIZE = 3;
+    for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
+      const batch = fileArray.slice(i, i + BATCH_SIZE);
+      const results = await Promise.all(batch.map(file => extractPhotoGPS(file)));
+
+      results.forEach((result, idx) => {
+        const file = batch[idx];
+        if (result) {
+          newPhotos.push({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            lat: result.lat,
+            lon: result.lon,
+            photo: result.thumbnail,
+            description: file.name.replace(/\.[^.]+$/, ''),
+            timestamp: result.timestamp ?? Date.now(),
+          });
+        } else {
+          skippedNames.push(file.name);
+        }
+      });
     }
 
     if (newPhotos.length > 0) {
@@ -180,7 +187,7 @@ export function usePhotoMarkers(
 
     if (skippedNames.length > 0) {
       console.warn('Fotky bez GPS:', skippedNames);
-      toast.warning(`${skippedNames.length} z ${files.length} fotek nemá GPS souřadnice a byly přeskočeny`);
+      toast.warning(`${skippedNames.length} fotek nemá GPS a byly přeskočeny`);
     }
 
     if (newPhotos.length === 0 && skippedNames.length > 0) {
