@@ -27,6 +27,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const map = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
   const flyMarkerRef = useRef<Marker | null>(null);
+  const photoMarkersRef = useRef<Marker[]>([]);
   const poiMarkersRef = useRef<Marker[]>([]);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
