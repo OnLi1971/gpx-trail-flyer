@@ -654,16 +654,40 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
   };
 
-  const handlePhotoSave = (photoData: Omit<PhotoPoint, 'id' | 'timestamp'>) => {
-    const newPhoto: PhotoPoint = {
-      ...photoData,
-      id: Date.now().toString(),
-      timestamp: Date.now()
-    };
+  const handleBulkPhotoUpload = async (files: FileList) => {
+    const newPhotos: PhotoPoint[] = [];
+    let skipped = 0;
 
-    const updatedPhotos = [...photos, newPhoto];
-    setPhotos(updatedPhotos);
-    onPhotosUpdate?.(updatedPhotos);
+    for (const file of Array.from(files)) {
+      const result = await extractPhotoGPS(file);
+      if (result) {
+        newPhotos.push({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          lat: result.lat,
+          lon: result.lon,
+          photo: result.thumbnail,
+          description: file.name.replace(/\.[^.]+$/, ''),
+          timestamp: result.timestamp || Date.now(),
+        });
+      } else {
+        skipped++;
+      }
+    }
+
+    if (newPhotos.length > 0) {
+      const updatedPhotos = [...photos, ...newPhotos];
+      setPhotos(updatedPhotos);
+      onPhotosUpdate?.(updatedPhotos);
+      toast.success(`Přidáno ${newPhotos.length} fotek na mapu`);
+    }
+
+    if (skipped > 0) {
+      toast.warning(`${skipped} z ${files.length} fotek nemá GPS souřadnice a byly přeskočeny`);
+    }
+
+    if (newPhotos.length === 0 && skipped > 0) {
+      toast.error('Žádná z vybraných fotek nemá GPS souřadnice');
+    }
   };
 
   // Prepare elevation chart data
