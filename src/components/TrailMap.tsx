@@ -780,8 +780,29 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         {/* Main map container */}
         <div className="relative w-full h-[500px]">
           <div ref={mapContainer} className="absolute inset-0" />
-          <div className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm rounded-md px-2 py-1 text-xs text-gray-600">
-            Klikněte na mapu pro přidání fotky
+          <div className="absolute top-2 left-2 z-10">
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.length) {
+                  handleBulkPhotoUpload(e.target.files);
+                  e.target.value = '';
+                }
+              }}
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              className="gap-2 shadow-md"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Camera className="w-4 h-4" />
+              Přidat fotky
+            </Button>
           </div>
         </div>
         
