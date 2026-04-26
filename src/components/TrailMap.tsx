@@ -195,6 +195,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         const pois = await fetchPeaksAndPlaces(gpxData.bounds);
         const nearbyPois = filterPOIsNearTrack(pois, track.points, 2);
 
+        if (nearbyPois.length > 0) {
+          console.log('[POI] First markers:', nearbyPois.slice(0, 3).map(p => `${p.name} (${p.type}) @ ${p.lat.toFixed(4)},${p.lon.toFixed(4)}`));
+        }
+
         poiMarkersRef.current.forEach(m => m.remove());
         poiMarkersRef.current = [];
 
@@ -204,44 +208,49 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           el.style.flexDirection = 'column';
           el.style.alignItems = 'center';
           el.style.pointerEvents = 'none';
+          el.style.zIndex = '5';
 
           if (poi.type === 'peak') {
             el.innerHTML = `
               <div style="
-                background: rgba(255,255,255,0.92);
-                border: 1.5px solid #b45309;
-                border-radius: 6px;
-                padding: 2px 6px;
-                font-size: 11px;
-                font-weight: 600;
-                color: #92400e;
+                background: rgba(255,255,255,0.97);
+                border: 2px solid #b45309;
+                border-radius: 8px;
+                padding: 3px 8px;
+                font-size: 12px;
+                font-weight: 700;
+                color: #78350f;
                 white-space: nowrap;
-                box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+                box-shadow: 0 2px 6px rgba(0,0,0,0.25);
                 display: flex;
                 align-items: center;
-                gap: 3px;
+                gap: 4px;
+                pointer-events: auto;
               ">
-                <span style="font-size:13px">⛰️</span>
+                <span style="font-size:16px;line-height:1;">⛰️</span>
                 ${poi.name}${poi.ele ? ` ${poi.ele}\u202Fm` : ''}
               </div>
-              <div style="width: 2px; height: 20px; background: #b45309; opacity: 0.6;"></div>
-              <div style="width: 6px; height: 6px; border-radius: 50%; background: #b45309;"></div>
+              <div style="width: 2px; height: 28px; background: linear-gradient(to bottom, #b45309, #78350f);"></div>
+              <div style="width: 8px; height: 8px; border-radius: 50%; background: #78350f; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>
             `;
           } else {
             el.innerHTML = `
               <div style="
-                background: rgba(255,255,255,0.88);
+                background: rgba(255,255,255,0.95);
                 border: 1px solid #6b7280;
                 border-radius: 4px;
-                padding: 1px 5px;
-                font-size: 10px;
+                padding: 2px 6px;
+                font-size: 11px;
                 font-weight: 500;
                 color: #374151;
                 white-space: nowrap;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+                pointer-events: auto;
               ">
                 ${poi.name}
               </div>
+              <div style="width: 1.5px; height: 12px; background: #6b7280; opacity: 0.7;"></div>
+              <div style="width: 4px; height: 4px; border-radius: 50%; background: #6b7280;"></div>
             `;
           }
 
