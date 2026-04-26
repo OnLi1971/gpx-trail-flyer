@@ -12,8 +12,8 @@ interface AnimationControlsProps {
   onPlayPause: () => void;
   onReset: () => void;
   onPositionChange: (position: number) => void;
-  animationSettings: AnimationSettings;
-  onAnimationSettingsChange: (settings: AnimationSettings) => void;
+  animationSettings?: AnimationSettings;
+  onAnimationSettingsChange?: (settings: AnimationSettings) => void;
 }
 
 export const AnimationControls: React.FC<AnimationControlsProps> = ({
