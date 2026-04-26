@@ -10,10 +10,8 @@ interface PhotoGPSResult {
 export async function extractPhotoGPS(file: File): Promise<PhotoGPSResult | null> {
   try {
     const exif = await exifr.parse(file, { gps: true, tiff: true });
-    console.log('EXIF data for', file.name, exif);
 
     if (!exif?.latitude || !exif?.longitude) {
-      console.log(`Photo ${file.name} has no GPS data, skipping.`);
       return null;
     }
 
