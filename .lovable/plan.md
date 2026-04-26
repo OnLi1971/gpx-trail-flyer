@@ -1,40 +1,38 @@
-## Oprava POI tyček (vrcholy + obce)
+## Přidat viditelný debug panel pro POI
 
-### Diagnóza
-Markery se generují, ale jsou špatně viditelné/umístěné kvůli:
-- HTML markery v MapLibre nemají depth-test → při 3D náklonu jsou schované za terénem nebo špatně zarovnané
-- `pointer-events: none` brání kliknutí
-- Z-index může kolidovat s ostatními vrstvami
-- Nepřehledné na 2D mapě (malé, splývající)
+### Cíl
+Na mobilu nelze otevřít konzoli, takže informace o načítání POI (vrcholy + obce) zobrazíme přímo v UI.
 
-### Změny v `src/components/TrailMap.tsx` — POI rendering blok
+### Změny v `src/components/TrailMap.tsx`
 
-**Vizuál vrcholů:**
-- Větší ikona ⛰️ (16px), tučnější rámeček, výraznější hnědá barva
-- Delší tyčka (28px) s gradientem (tmavší dole)
-- Větší tečka u základny (8px)
-- `z-index: 5` na celém elementu
+**1. Stav pro debug info**
+Přidat `useState` pro:
+- `poiStatus`: `'idle' | 'loading' | 'success' | 'error'`
+- `poiCounts`: `{ peaks: number; places: number; raw: number; filtered: number }`
+- `poiError`: `string | null`
 
-**Vizuál obcí:**
-- Bílé pozadí s vyšší opacitou (0.95)
-- Tečka u základny i pro obce (4px, šedá)
-- Krátká tyčka (12px)
+**2. Aktualizace v `loadPOIs`**
+- Před `fetch` → `setPoiStatus('loading')`
+- Po úspěchu → uložit počty (raw z API, filtered po 2km filtru, peaks, places) a `setPoiStatus('success')`
+- Při chybě → `setPoiError(err.message)` a `setPoiStatus('error')`
 
-**Pointer events:**
-- Povolit `pointer-events: auto` na bublině (tooltip-like) pro budoucí interakci
-- Tyčka a tečka zůstávají `none`
+**3. Debug panel v UI**
+Malý badge v rohu mapy (např. `top-2 right-12`, vedle navigation control) zobrazující:
+- 🔄 Načítám POI… (loading)
+- ⛰️ X vrcholů, 🏘️ Y obcí (success) — kliknutím zobrazí detail (raw vs filtered)
+- ⚠️ Chyba: {message} (error)
+- Skrýt, když není GPX nahráno
 
-**MapLibre options:**
-- Přidat `pitchAlignment: 'map'` na vrchol tyčky? — Ne, HTML markery to neumí. Místo toho zachovat `anchor: 'bottom'` a přijmout, že při velkém pitchu mohou být schované za kopci (omezení MapLibre HTML markerů).
+Styling: malý, polotransparentní, neruší. Použít `Badge` nebo jednoduchý div s tailwind.
 
-### Diagnostika
-- Po načtení vypsat do konzole první 3 POI s lat/lon, abychom ověřili, že se vůbec přidávají na správné místo
-- Zkontrolovat v konzoli logy `[Overpass]` — pokud `After 2km filter: 0/X`, je problém v datech, ne v renderingu
+### Co se tím dozvíme
+- Jestli se Overpass dotaz vůbec spustil
+- Kolik POI vrátilo API
+- Kolik prošlo 2km filtrem
+- Pokud filtered = 0 → problém v datech/filtru
+- Pokud filtered > 0 ale nevidíš tyčky → problém v renderingu (pravděpodobně 3D occlusion nebo z-index)
 
 ### Bez změny
-- `overpassApi.ts` — query je v pořádku po minulém fixu
-- Filtrace 2 km zůstává
-- Anchor `bottom` zůstává
-
-### Co tím nevyřešíme
-3D náklon přes 45° může stále některé tyčky schovat za kopci — to je omezení HTML markerů v MapLibre. Pokud bude vadit, dalším krokem by byl převod POI na nativní symbol layer (text + ikona z geojson sourcu), který respektuje terrain depth.
+- Logika `overpassApi.ts`
+- Vykreslování markerů
+- Console.log zůstávají (pro debugging na desktopu)
