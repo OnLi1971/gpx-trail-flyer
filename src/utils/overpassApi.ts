@@ -80,11 +80,13 @@ export function filterPOIsNearTrack(
 ): POIPoint[] {
   const threshold = maxDistKm / 111; // rough degree threshold
 
-  return pois.filter(poi =>
+  const filtered = pois.filter(poi =>
     trackPoints.some(tp => {
       const dLat = poi.lat - tp.lat;
       const dLon = poi.lon - tp.lon;
       return Math.sqrt(dLat * dLat + dLon * dLon) < threshold;
     })
   );
+  console.log(`[Overpass] After ${maxDistKm}km filter: ${filtered.length}/${pois.length} POIs near track`);
+  return filtered;
 }
