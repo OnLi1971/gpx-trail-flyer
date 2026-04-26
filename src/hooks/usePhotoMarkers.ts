@@ -42,12 +42,9 @@ export function usePhotoMarkers(
     if (!map.current) return;
 
     if (!photos.length) {
-      if (map.current.getLayer('photo-markers')) {
-        map.current.removeLayer('photo-markers');
-      }
-      if (map.current.getSource('photo-markers')) {
-        map.current.removeSource('photo-markers');
-      }
+      photoMarkersRef.current.forEach(marker => marker.remove());
+      photoMarkersRef.current = [];
+      photoMarkerMapRef.current = {};
       return;
     }
 
@@ -67,7 +64,7 @@ export function usePhotoMarkers(
 
     photos.forEach(photo => {
       const container = document.createElement('div');
-      container.style.cssText = 'display:flex;flex-direction:column;align-items:center;cursor:pointer;';
+      container.style.cssText = 'display:flex;flex-direction:column;align-items:center;cursor:pointer;width:44px;z-index:10;position:relative;';
       container.setAttribute('data-photo-marker', 'true');
       container.setAttribute('data-photo-id', photo.id);
 
