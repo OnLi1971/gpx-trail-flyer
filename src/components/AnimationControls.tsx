@@ -23,6 +23,8 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
   onPlayPause,
   onReset,
   onPositionChange,
+  animationSettings,
+  onAnimationSettingsChange,
 }) => {
   if (!gpxData || gpxData.tracks.length === 0) {
     return null;
