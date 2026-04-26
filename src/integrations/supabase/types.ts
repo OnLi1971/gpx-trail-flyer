@@ -14,7 +14,80 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      trail_photos: {
+        Row: {
+          created_at: string
+          description: string
+          id: string
+          lat: number
+          lon: number
+          photo_timestamp: number
+          photo_url: string
+          trail_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          id?: string
+          lat: number
+          lon: number
+          photo_timestamp: number
+          photo_url: string
+          trail_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          id?: string
+          lat?: number
+          lon?: number
+          photo_timestamp?: number
+          photo_url?: string
+          trail_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trail_photos_trail_id_fkey"
+            columns: ["trail_id"]
+            isOneToOne: false
+            referencedRelation: "trails"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trails: {
+        Row: {
+          created_at: string
+          gpx_data: Json
+          id: string
+          is_public: boolean
+          name: string
+          slug: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          gpx_data: Json
+          id?: string
+          is_public?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          gpx_data?: Json
+          id?: string
+          is_public?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
