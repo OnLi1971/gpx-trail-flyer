@@ -20,6 +20,7 @@ interface TrailMapProps {
   photos: PhotoPoint[];
   onAddPhotos: (newPhotos: PhotoPoint[]) => void;
   animationSettings: AnimationSettings;
+  readOnly?: boolean;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({
@@ -28,6 +29,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   photos,
   onAddPhotos,
   animationSettings,
+  readOnly = false,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
@@ -324,42 +326,44 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         {/* Main map container */}
         <div className="relative w-full h-[500px]">
           <div ref={mapContainer} className="absolute inset-0" />
-          <div className="absolute top-2 left-2 z-10 flex gap-2">
-            <input
-              ref={photoMarkers.fileInputRef}
-              type="file"
-              multiple
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files?.length) {
-                  photoMarkers.handleBulkPhotoUpload(e.target.files);
-                  e.target.value = '';
-                }
-              }}
-            />
-            <Button
-              size="sm"
-              variant="secondary"
-              className="gap-2 shadow-md"
-              onClick={photoMarkers.triggerUpload}
-              disabled={addPhotoMode}
-            >
-              <Camera className="w-4 h-4" />
-              Přidat fotky
-            </Button>
-            <Button
-              size="sm"
-              variant={addPhotoMode ? 'default' : 'secondary'}
-              className="gap-2 shadow-md"
-              onClick={() => setAddPhotoMode((v) => !v)}
-            >
-              <MapPin className="w-4 h-4" />
-              {addPhotoMode ? 'Zrušit' : 'Přidat klikem'}
-            </Button>
-          </div>
+          {!readOnly && (
+            <div className="absolute top-2 left-2 z-10 flex gap-2">
+              <input
+                ref={photoMarkers.fileInputRef}
+                type="file"
+                multiple
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files?.length) {
+                    photoMarkers.handleBulkPhotoUpload(e.target.files);
+                    e.target.value = '';
+                  }
+                }}
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-2 shadow-md"
+                onClick={photoMarkers.triggerUpload}
+                disabled={addPhotoMode}
+              >
+                <Camera className="w-4 h-4" />
+                Přidat fotky
+              </Button>
+              <Button
+                size="sm"
+                variant={addPhotoMode ? 'default' : 'secondary'}
+                className="gap-2 shadow-md"
+                onClick={() => setAddPhotoMode((v) => !v)}
+              >
+                <MapPin className="w-4 h-4" />
+                {addPhotoMode ? 'Zrušit' : 'Přidat klikem'}
+              </Button>
+            </div>
+          )}
 
-          {addPhotoMode && (
+          {addPhotoMode && !readOnly && (
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium animate-fade-in">
               <MapPin className="w-4 h-4" />
               Klikni na mapu pro umístění fotky

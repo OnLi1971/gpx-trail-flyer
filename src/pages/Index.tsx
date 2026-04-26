@@ -1,24 +1,33 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FileUpload } from '@/components/FileUpload';
 import { TrailMap } from '@/components/TrailMap';
 import { AnimationControls } from '@/components/AnimationControls';
+import { AppHeader } from '@/components/AppHeader';
+import { SaveTrailDialog } from '@/components/SaveTrailDialog';
 import { defaultAnimationSettings } from '@/types/gpx';
 import { GPXParser } from '@/utils/gpxParser';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Mountain, Route, Timer, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Mountain, Route, Timer, Loader2, LogIn } from 'lucide-react';
 
 const ANIMATION_DURATION = 10000;
 const animationSettings = defaultAnimationSettings;
 
 const Index = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [gpxData, setGpxData] = useState<GPXData | null>(null);
+  const [gpxFilename, setGpxFilename] = useState<string>('');
   const [photos, setPhotos] = useState<PhotoPoint[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
+  const [saveOpen, setSaveOpen] = useState(false);
 
   const handleFileUpload = useCallback((content: string, filename: string) => {
     setIsLoading(true);
@@ -35,6 +44,7 @@ const Index = () => {
         }
 
         setGpxData(parsedData);
+        setGpxFilename(filename.replace(/\.gpx$/i, ''));
         setPhotos([]);
         setCurrentPosition(0);
         setIsPlaying(false);
@@ -88,24 +98,18 @@ const Index = () => {
     return () => cancelAnimationFrame(animationFrame);
   }, [isPlaying, startTime, currentPosition]);
 
+  const handleSaveClick = () => {
+    if (!user) {
+      toast.info('Pro uložení trasy se přihlas');
+      navigate('/auth');
+      return;
+    }
+    setSaveOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-trail flex items-center justify-center">
-              <Mountain className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">GPX Trail Flyer</h1>
-              <p className="text-sm text-muted-foreground">
-                Visualizace a animace GPS tras
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AppHeader onSaveClick={handleSaveClick} canSave={!!gpxData} />
 
       <div className="container mx-auto px-4 py-6 space-y-6">
         {!gpxData ? (
@@ -136,23 +140,29 @@ const Index = () => {
                       <Route className="w-4 h-4 text-primary" />
                     </div>
                     <div className="font-medium">Interaktivní mapa</div>
-                    <div className="text-muted-foreground">Zobrazení trasy na mapě Mapbox</div>
+                    <div className="text-muted-foreground">Zobrazení trasy na mapě</div>
                   </div>
                   <div className="space-y-2">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                       <Timer className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="font-medium">Animace 10s</div>
-                    <div className="text-muted-foreground">Plynulý průlet trasou</div>
+                    <div className="font-medium">3D průlet</div>
+                    <div className="text-muted-foreground">Plynulá animace trasou</div>
                   </div>
                   <div className="space-y-2">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
                       <Mountain className="w-4 h-4 text-primary" />
                     </div>
-                    <div className="font-medium">Profil výšky</div>
-                    <div className="text-muted-foreground">Graf nadmořské výšky</div>
+                    <div className="font-medium">Uložit a sdílet</div>
+                    <div className="text-muted-foreground">{user ? 'Trasy v cloudu' : 'Po přihlášení'}</div>
                   </div>
                 </div>
+                {!user && (
+                  <Button variant="outline" size="sm" onClick={() => navigate('/auth')} className="gap-2 mt-2">
+                    <LogIn className="w-4 h-4" />
+                    Přihlásit pro ukládání
+                  </Button>
+                )}
               </CardContent>
             </Card>
 
@@ -190,6 +200,16 @@ const Index = () => {
           </div>
         )}
       </div>
+
+      {gpxData && (
+        <SaveTrailDialog
+          open={saveOpen}
+          onOpenChange={setSaveOpen}
+          gpxData={gpxData}
+          photos={photos}
+          defaultName={gpxFilename}
+        />
+      )}
     </div>
   );
 };
