@@ -476,6 +476,25 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.mapPitch}°</span>
           </div>
 
+          {/* POI density slider */}
+          {gpxData && poiCounts.filtered > 0 && (
+            <div className="flex items-center gap-3">
+              <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Hustota POI</span>
+              <Slider
+                value={[poiLimit]}
+                onValueChange={(value) => setPoiLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.filtered, 10)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(poiLimit, poiCounts.filtered)}/{poiCounts.filtered}
+              </span>
+            </div>
+          )}
+
           {gpxData && (
             <>
               {/* Speed slider */}
