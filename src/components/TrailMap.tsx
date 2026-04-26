@@ -20,6 +20,7 @@ interface TrailMapProps {
   photos: PhotoPoint[];
   onAddPhotos: (newPhotos: PhotoPoint[]) => void;
   animationSettings: AnimationSettings;
+  readOnly?: boolean;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({
@@ -28,6 +29,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   photos,
   onAddPhotos,
   animationSettings,
+  readOnly = false,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
