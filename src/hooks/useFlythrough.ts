@@ -202,7 +202,7 @@ export function useFlythrough(
           .addTo(map.current!);
       }
 
-      setTimeout(() => {
+      flyStepTimeoutRef.current = setTimeout(() => {
         flyAnimationRef.current = requestAnimationFrame(animateStep);
       }, duration * 0.8);
     };
