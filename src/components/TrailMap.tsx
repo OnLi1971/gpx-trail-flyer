@@ -1,10 +1,11 @@
-import React, { useEffect, useRef } from 'react';
-import { Map, NavigationControl, Marker, LngLatBounds } from 'maplibre-gl';
+import React, { useEffect, useRef, useState } from 'react';
+import { Map, NavigationControl, Marker, LngLatBounds, MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint, AnimationSettings } from '@/types/gpx';
 import { PhotoViewModal } from './PhotoViewModal';
+import { ManualPhotoDialog } from './ManualPhotoDialog';
 import { ElevationChart } from './ElevationChart';
-import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { fetchPeaksAndPlaces, filterPOIsNearTrack } from '@/utils/overpassApi';
@@ -31,6 +32,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const map = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
   const poiMarkersRef = useRef<Marker[]>([]);
+
+  // Manual photo placement state
+  const [addPhotoMode, setAddPhotoMode] = useState(false);
+  const [pendingCoords, setPendingCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // Hooks — order matters: flythrough first (produces flyingIndex)
   const flythrough = useFlythrough(map, gpxData);
