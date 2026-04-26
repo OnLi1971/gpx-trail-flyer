@@ -67,7 +67,7 @@ export function usePhotoMarkers(
 
     photos.forEach(photo => {
       const container = document.createElement('div');
-      container.style.cssText = 'display:flex;flex-direction:column;align-items:center;cursor:pointer;';
+      container.style.cssText = 'display:flex;flex-direction:column;align-items:center;cursor:pointer;width:44px;z-index:10;position:relative;';
       container.setAttribute('data-photo-marker', 'true');
       container.setAttribute('data-photo-id', photo.id);
 
