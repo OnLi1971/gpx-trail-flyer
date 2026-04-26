@@ -38,6 +38,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [pendingCoords, setPendingCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  // POI debug state (visible on mobile)
+  const [poiStatus, setPoiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [poiCounts, setPoiCounts] = useState({ peaks: 0, places: 0, raw: 0, filtered: 0 });
+  const [poiError, setPoiError] = useState<string | null>(null);
+  const [poiPanelExpanded, setPoiPanelExpanded] = useState(false);
+
   // Hooks — order matters: flythrough first (produces flyingIndex)
   const flythrough = useFlythrough(map, gpxData);
   const photoMarkers = usePhotoMarkers(map, gpxData, photos, onAddPhotos, currentPosition, animationSettings);
@@ -191,9 +197,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (track.points.length === 0) return;
 
     const loadPOIs = async () => {
+      setPoiStatus('loading');
+      setPoiError(null);
       try {
         const pois = await fetchPeaksAndPlaces(gpxData.bounds);
         const nearbyPois = filterPOIsNearTrack(pois, track.points, 2);
+
+        const peaks = nearbyPois.filter(p => p.type === 'peak').length;
+        const places = nearbyPois.filter(p => p.type === 'place').length;
+        setPoiCounts({ peaks, places, raw: pois.length, filtered: nearbyPois.length });
+        setPoiStatus('success');
 
         if (nearbyPois.length > 0) {
           console.log('[POI] First markers:', nearbyPois.slice(0, 3).map(p => `${p.name} (${p.type}) @ ${p.lat.toFixed(4)},${p.lon.toFixed(4)}`));
@@ -262,6 +275,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         });
       } catch (err) {
         console.warn('POI loading failed:', err);
+        setPoiStatus('error');
+        setPoiError(err instanceof Error ? err.message : 'Neznámá chyba');
       }
     };
 
@@ -350,6 +365,49 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               >
                 <X className="w-4 h-4" />
               </button>
+            </div>
+          )}
+
+          {/* POI debug panel — visible on mobile, helps diagnose missing markers */}
+          {gpxData && poiStatus !== 'idle' && (
+            <div
+              className="absolute bottom-2 left-2 z-10 bg-background/90 backdrop-blur-sm border rounded-md shadow-md text-xs select-none"
+              onClick={() => setPoiPanelExpanded((v) => !v)}
+            >
+              <div className="px-2.5 py-1.5 flex items-center gap-2 cursor-pointer">
+                {poiStatus === 'loading' && (
+                  <span className="text-muted-foreground">🔄 Načítám POI…</span>
+                )}
+                {poiStatus === 'success' && (
+                  <span className="font-medium">
+                    ⛰️ {poiCounts.peaks} · 🏘️ {poiCounts.places}
+                  </span>
+                )}
+                {poiStatus === 'error' && (
+                  <span className="text-destructive font-medium">⚠️ POI chyba</span>
+                )}
+              </div>
+              {poiPanelExpanded && (
+                <div className="border-t px-2.5 py-1.5 space-y-0.5 text-muted-foreground">
+                  {poiStatus === 'success' && (
+                    <>
+                      <div>API vrátilo: <span className="text-foreground font-medium">{poiCounts.raw}</span></div>
+                      <div>Po filtru 2 km: <span className="text-foreground font-medium">{poiCounts.filtered}</span></div>
+                      <div>Vrcholy: <span className="text-foreground font-medium">{poiCounts.peaks}</span></div>
+                      <div>Obce: <span className="text-foreground font-medium">{poiCounts.places}</span></div>
+                      {poiCounts.filtered === 0 && poiCounts.raw > 0 && (
+                        <div className="text-amber-600 pt-1">Žádný POI není do 2 km od trasy</div>
+                      )}
+                      {poiCounts.raw === 0 && (
+                        <div className="text-amber-600 pt-1">Overpass API nevrátilo nic pro tuto oblast</div>
+                      )}
+                    </>
+                  )}
+                  {poiStatus === 'error' && poiError && (
+                    <div className="text-destructive break-all max-w-[240px]">{poiError}</div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
