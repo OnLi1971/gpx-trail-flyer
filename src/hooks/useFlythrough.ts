@@ -50,6 +50,8 @@ export function useFlythrough(
   const [mapPitch, setMapPitchState] = useState(0);
 
   const flyAnimationRef = useRef<number | null>(null);
+  const flyStartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const flyStepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flySpeedRef = useRef(50);
   const flyRotationRef = useRef(50);
   const flyZoomRef = useRef(15);
@@ -91,6 +93,14 @@ export function useFlythrough(
     if (flyAnimationRef.current) {
       cancelAnimationFrame(flyAnimationRef.current);
       flyAnimationRef.current = null;
+    }
+    if (flyStartTimeoutRef.current) {
+      clearTimeout(flyStartTimeoutRef.current);
+      flyStartTimeoutRef.current = null;
+    }
+    if (flyStepTimeoutRef.current) {
+      clearTimeout(flyStepTimeoutRef.current);
+      flyStepTimeoutRef.current = null;
     }
     setIsFlying(false);
     setFlyingIndex(null);

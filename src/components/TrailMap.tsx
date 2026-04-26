@@ -196,21 +196,21 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     const track = gpxData.tracks[0];
     if (track.points.length === 0) return;
 
+    let cancelled = false;
+
     const loadPOIs = async () => {
       setPoiStatus('loading');
       setPoiError(null);
       try {
         const pois = await fetchPeaksAndPlaces(gpxData.bounds);
+        if (cancelled || !map.current) return;
+
         const nearbyPois = filterPOIsNearTrack(pois, track.points, 2);
 
         const peaks = nearbyPois.filter(p => p.type === 'peak').length;
         const places = nearbyPois.filter(p => p.type === 'place').length;
         setPoiCounts({ peaks, places, raw: pois.length, filtered: nearbyPois.length });
         setPoiStatus('success');
-
-        if (nearbyPois.length > 0) {
-          console.log('[POI] First markers:', nearbyPois.slice(0, 3).map(p => `${p.name} (${p.type}) @ ${p.lat.toFixed(4)},${p.lon.toFixed(4)}`));
-        }
 
         poiMarkersRef.current.forEach(m => m.remove());
         poiMarkersRef.current = [];
@@ -274,7 +274,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           poiMarkersRef.current.push(marker);
         });
       } catch (err) {
-        console.warn('POI loading failed:', err);
+        if (cancelled) return;
         setPoiStatus('error');
         setPoiError(err instanceof Error ? err.message : 'Neznámá chyba');
       }
@@ -287,6 +287,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
 
     return () => {
+      cancelled = true;
       poiMarkersRef.current.forEach(m => m.remove());
       poiMarkersRef.current = [];
     };
