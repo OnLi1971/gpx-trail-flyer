@@ -178,6 +178,8 @@ const Index = () => {
                   onPlayPause={handlePlayPause}
                   onReset={handleReset}
                   onPositionChange={handlePositionChange}
+                  animationSettings={animationSettings}
+                  onAnimationSettingsChange={setAnimationSettings}
                 />
 
                 <TrailMap 
