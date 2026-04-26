@@ -5,7 +5,7 @@ import { GPXData, PhotoPoint, AnimationSettings } from '@/types/gpx';
 import { PhotoViewModal } from './PhotoViewModal';
 import { ManualPhotoDialog } from './ManualPhotoDialog';
 import { ElevationChart } from './ElevationChart';
-import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { fetchPeaksAndPlaces, filterPOIsNearTrack } from '@/utils/overpassApi';
@@ -369,43 +369,44 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
-          {/* POI debug panel — visible on mobile, helps diagnose missing markers */}
+          {/* POI debug — diskrétní ikona, klik rozbalí detail */}
           {gpxData && poiStatus !== 'idle' && (
-            <div
-              className="absolute bottom-2 left-2 z-10 bg-background/90 backdrop-blur-sm border rounded-md shadow-md text-xs select-none"
-              onClick={() => setPoiPanelExpanded((v) => !v)}
-            >
-              <div className="px-2.5 py-1.5 flex items-center gap-2 cursor-pointer">
-                {poiStatus === 'loading' && (
-                  <span className="text-muted-foreground">🔄 Načítám POI…</span>
+            <div className="absolute bottom-2 left-2 z-10">
+              <button
+                type="button"
+                onClick={() => setPoiPanelExpanded((v) => !v)}
+                className="w-7 h-7 rounded-full bg-background/80 hover:bg-background border shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="POI debug info"
+                title="POI debug info"
+              >
+                {poiStatus === 'error' ? (
+                  <span className="text-destructive text-xs">⚠️</span>
+                ) : (
+                  <Bug className="w-3.5 h-3.5" />
                 )}
-                {poiStatus === 'success' && (
-                  <span className="font-medium">
-                    ⛰️ {poiCounts.peaks} · 🏘️ {poiCounts.places}
-                  </span>
-                )}
-                {poiStatus === 'error' && (
-                  <span className="text-destructive font-medium">⚠️ POI chyba</span>
-                )}
-              </div>
+              </button>
               {poiPanelExpanded && (
-                <div className="border-t px-2.5 py-1.5 space-y-0.5 text-muted-foreground">
+                <div className="absolute bottom-9 left-0 bg-background/95 backdrop-blur-sm border rounded-md shadow-md text-xs px-3 py-2 space-y-1 min-w-[180px]">
+                  {poiStatus === 'loading' && (
+                    <div className="text-muted-foreground">🔄 Načítám POI…</div>
+                  )}
                   {poiStatus === 'success' && (
                     <>
-                      <div>API vrátilo: <span className="text-foreground font-medium">{poiCounts.raw}</span></div>
-                      <div>Po filtru 2 km: <span className="text-foreground font-medium">{poiCounts.filtered}</span></div>
-                      <div>Vrcholy: <span className="text-foreground font-medium">{poiCounts.peaks}</span></div>
-                      <div>Obce: <span className="text-foreground font-medium">{poiCounts.places}</span></div>
+                      <div className="font-medium">⛰️ {poiCounts.peaks} · 🏘️ {poiCounts.places}</div>
+                      <div className="text-muted-foreground">API vrátilo: <span className="text-foreground">{poiCounts.raw}</span></div>
+                      <div className="text-muted-foreground">Po filtru 2 km: <span className="text-foreground">{poiCounts.filtered}</span></div>
                       {poiCounts.filtered === 0 && poiCounts.raw > 0 && (
-                        <div className="text-amber-600 pt-1">Žádný POI není do 2 km od trasy</div>
+                        <div className="text-warning pt-1">Žádný POI není do 2 km od trasy</div>
                       )}
                       {poiCounts.raw === 0 && (
-                        <div className="text-amber-600 pt-1">Overpass API nevrátilo nic pro tuto oblast</div>
+                        <div className="text-warning pt-1">Overpass API nevrátilo nic</div>
                       )}
                     </>
                   )}
-                  {poiStatus === 'error' && poiError && (
-                    <div className="text-destructive break-all max-w-[240px]">{poiError}</div>
+                  {poiStatus === 'error' && (
+                    <div className="text-destructive break-words max-w-[220px]">
+                      {poiError || 'Chyba načítání POI'}
+                    </div>
                   )}
                 </div>
               )}
