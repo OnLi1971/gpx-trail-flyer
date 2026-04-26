@@ -3,6 +3,7 @@ import { Map, NavigationControl, Marker, LngLatBounds, MapMouseEvent } from 'map
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint, AnimationSettings } from '@/types/gpx';
 import { PhotoViewModal } from './PhotoViewModal';
+import { PhotoPiP } from './PhotoPiP';
 import { ManualPhotoDialog } from './ManualPhotoDialog';
 import { ElevationChart } from './ElevationChart';
 import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug } from 'lucide-react';
