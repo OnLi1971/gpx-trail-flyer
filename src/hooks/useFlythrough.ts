@@ -147,8 +147,9 @@ export function useFlythrough(
       }
 
       const speed = flySpeedRef.current;
-      const step = Math.max(1, Math.floor(speed / 20));
-      const duration = Math.max(50, 800 - (speed * 7.5));
+      // 3x faster max: bigger steps and shorter duration
+      const step = Math.max(1, Math.floor(speed / 10));
+      const duration = Math.max(16, 800 - (speed * 7.7));
 
       const currentPoint = track.points[currentIndex];
       const nextIndex = Math.min(currentIndex + step, totalPoints - 1);
@@ -208,20 +209,23 @@ export function useFlythrough(
     };
 
     const startPoint = track.points[0];
-    const initialStep = Math.max(1, Math.floor(flySpeedRef.current / 20));
+    const initialStep = Math.max(1, Math.floor(flySpeedRef.current / 10));
     const secondPoint = track.points[Math.min(initialStep, totalPoints - 1)];
     const initialBearing = calculateBearing(startPoint, secondPoint);
+
+    // Use current pitch (don't force 60)
+    const startPitch = mapPitch > 0 ? mapPitch : 60;
 
     map.current.flyTo({
       center: [startPoint.lon, startPoint.lat],
       zoom: 15,
-      pitch: 60,
+      pitch: startPitch,
       bearing: initialBearing,
       duration: 2000,
       essential: true,
     });
 
-    setMapPitchState(60);
+    setMapPitchState(startPitch);
 
     flyStartTimeoutRef.current = setTimeout(() => {
       flyAnimationRef.current = requestAnimationFrame(animateStep);
