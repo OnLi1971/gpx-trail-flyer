@@ -3,6 +3,7 @@ import { Map, NavigationControl, Marker, LngLatBounds, MapMouseEvent } from 'map
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint, AnimationSettings } from '@/types/gpx';
 import { PhotoViewModal } from './PhotoViewModal';
+import { PhotoPiP } from './PhotoPiP';
 import { ManualPhotoDialog } from './ManualPhotoDialog';
 import { ElevationChart } from './ElevationChart';
 import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug } from 'lucide-react';
@@ -46,7 +47,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   // Hooks — order matters: flythrough first (produces flyingIndex)
   const flythrough = useFlythrough(map, gpxData);
-  const photoMarkers = usePhotoMarkers(map, gpxData, photos, onAddPhotos, currentPosition, animationSettings);
+  const photoMarkers = usePhotoMarkers(
+    map, gpxData, photos, onAddPhotos, currentPosition, animationSettings,
+    flythrough.flyingIndex, flythrough.isFlying,
+  );
   const elevationData = useElevationData(
     gpxData, photos, currentPosition,
     flythrough.flyingIndex,
@@ -412,6 +416,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               )}
             </div>
           )}
+
+          {/* Picture-in-picture náhled fotky během 3D průletu */}
+          {flythrough.isFlying && <PhotoPiP photo={photoMarkers.nearbyPhoto} />}
         </div>
 
         {/* 3D Controls */}

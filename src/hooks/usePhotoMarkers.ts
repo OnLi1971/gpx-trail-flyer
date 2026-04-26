@@ -10,14 +10,19 @@ export function usePhotoMarkers(
   photos: PhotoPoint[],
   onAddPhotos: (newPhotos: PhotoPoint[]) => void,
   currentPosition: number,
-  animationSettings: AnimationSettings
+  animationSettings: AnimationSettings,
+  flyingIndex: number | null = null,
+  isFlying: boolean = false
 ) {
   const [viewPhoto, setViewPhoto] = useState<PhotoPoint | null>(null);
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
   const [originalMapState, setOriginalMapState] = useState<{ center: [number, number]; zoom: number } | null>(null);
   const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
+  // PiP náhled aktivní pouze během 3D průletu
+  const [nearbyPhoto, setNearbyPhoto] = useState<PhotoPoint | null>(null);
 
   const photoMarkersRef = useRef<Marker[]>([]);
+  const photoMarkerMapRef = useRef<Record<string, HTMLDivElement>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadCancelRef = useRef(false);
 
@@ -55,6 +60,7 @@ export function usePhotoMarkers(
 
     photoMarkersRef.current.forEach(marker => marker.remove());
     photoMarkersRef.current = [];
+    photoMarkerMapRef.current = {};
 
     photos.forEach(photo => {
       const container = document.createElement('div');
@@ -63,7 +69,7 @@ export function usePhotoMarkers(
       container.setAttribute('data-photo-id', photo.id);
 
       const thumb = document.createElement('div');
-      thumb.style.cssText = 'width:44px;height:44px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden;background:#1e293b;transition:transform 0.2s ease;';
+      thumb.style.cssText = 'width:44px;height:44px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden;background:#1e293b;transition:transform 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease;';
 
       const img = document.createElement('img');
       img.src = photo.photo;
@@ -97,8 +103,25 @@ export function usePhotoMarkers(
         .addTo(map.current!);
 
       photoMarkersRef.current.push(marker);
+      photoMarkerMapRef.current[photo.id] = thumb;
     });
   }, [photos, map]);
+
+  // Pulse glow na aktivní fotce (PiP nebo modal)
+  useEffect(() => {
+    const activeId = nearbyPhoto?.id ?? activePhotoId;
+    Object.entries(photoMarkerMapRef.current).forEach(([id, thumb]) => {
+      if (id === activeId) {
+        thumb.style.borderColor = 'hsl(var(--primary))';
+        thumb.style.boxShadow = '0 0 0 4px hsl(var(--primary) / 0.4), 0 2px 12px hsl(var(--primary) / 0.6)';
+        thumb.style.transform = 'scale(1.2)';
+      } else {
+        thumb.style.borderColor = 'white';
+        thumb.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+        thumb.style.transform = 'scale(1)';
+      }
+    });
+  }, [nearbyPhoto, activePhotoId, photos]);
 
   // Auto-open photo when animation arrives near it
   useEffect(() => {
@@ -125,6 +148,34 @@ export function usePhotoMarkers(
       }
     });
   }, [currentPosition, gpxData, photos, isPhotoViewOpen, activePhotoId, animationSettings.threshold]);
+
+  // PiP náhled během 3D průletu — sleduje aktuální flyingIndex
+  useEffect(() => {
+    if (!isFlying || flyingIndex === null || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) {
+      setNearbyPhoto(null);
+      return;
+    }
+    const track = gpxData.tracks[0];
+    const point = track.points[flyingIndex];
+    if (!point) return;
+
+    // Větší práh než pro modal — fotka se má objevit dřív a zůstat déle
+    const threshold = animationSettings.threshold * 3;
+
+    let closest: { photo: PhotoPoint; dist: number } | null = null;
+    photos.forEach(photo => {
+      const latDiff = Math.abs(photo.lat - point.lat);
+      const lonDiff = Math.abs(photo.lon - point.lon);
+      if (latDiff < threshold && lonDiff < threshold) {
+        const dist = latDiff + lonDiff;
+        if (!closest || dist < closest.dist) {
+          closest = { photo, dist };
+        }
+      }
+    });
+
+    setNearbyPhoto(closest ? closest.photo : null);
+  }, [flyingIndex, isFlying, gpxData, photos, animationSettings.threshold]);
 
   const handleArrivedPhoto = useCallback((photo: PhotoPoint) => {
     if (!map.current) return;
@@ -219,5 +270,6 @@ export function usePhotoMarkers(
     handleBulkPhotoUpload,
     fileInputRef,
     triggerUpload,
+    nearbyPhoto,
   };
 }
