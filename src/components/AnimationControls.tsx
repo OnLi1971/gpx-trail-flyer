@@ -2,8 +2,8 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, RotateCcw, MapPin } from 'lucide-react';
-import { GPXData } from '@/types/gpx';
+import { Play, Pause, RotateCcw, MapPin, Camera, Clock } from 'lucide-react';
+import { GPXData, AnimationSettings } from '@/types/gpx';
 
 interface AnimationControlsProps {
   gpxData: GPXData | null;
@@ -12,6 +12,8 @@ interface AnimationControlsProps {
   onPlayPause: () => void;
   onReset: () => void;
   onPositionChange: (position: number) => void;
+  animationSettings: AnimationSettings;
+  onAnimationSettingsChange: (settings: AnimationSettings) => void;
 }
 
 export const AnimationControls: React.FC<AnimationControlsProps> = ({
