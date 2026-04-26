@@ -60,6 +60,7 @@ export function usePhotoMarkers(
 
     photoMarkersRef.current.forEach(marker => marker.remove());
     photoMarkersRef.current = [];
+    photoMarkerMapRef.current = {};
 
     photos.forEach(photo => {
       const container = document.createElement('div');
@@ -68,7 +69,7 @@ export function usePhotoMarkers(
       container.setAttribute('data-photo-id', photo.id);
 
       const thumb = document.createElement('div');
-      thumb.style.cssText = 'width:44px;height:44px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden;background:#1e293b;transition:transform 0.2s ease;';
+      thumb.style.cssText = 'width:44px;height:44px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden;background:#1e293b;transition:transform 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease;';
 
       const img = document.createElement('img');
       img.src = photo.photo;
@@ -102,8 +103,25 @@ export function usePhotoMarkers(
         .addTo(map.current!);
 
       photoMarkersRef.current.push(marker);
+      photoMarkerMapRef.current[photo.id] = thumb;
     });
   }, [photos, map]);
+
+  // Pulse glow na aktivní fotce (PiP nebo modal)
+  useEffect(() => {
+    const activeId = nearbyPhoto?.id ?? activePhotoId;
+    Object.entries(photoMarkerMapRef.current).forEach(([id, thumb]) => {
+      if (id === activeId) {
+        thumb.style.borderColor = 'hsl(var(--primary))';
+        thumb.style.boxShadow = '0 0 0 4px hsl(var(--primary) / 0.4), 0 2px 12px hsl(var(--primary) / 0.6)';
+        thumb.style.transform = 'scale(1.2)';
+      } else {
+        thumb.style.borderColor = 'white';
+        thumb.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
+        thumb.style.transform = 'scale(1)';
+      }
+    });
+  }, [nearbyPhoto, activePhotoId, photos]);
 
   // Auto-open photo when animation arrives near it
   useEffect(() => {
