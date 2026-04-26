@@ -396,10 +396,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                       <div className="text-muted-foreground">API vrátilo: <span className="text-foreground">{poiCounts.raw}</span></div>
                       <div className="text-muted-foreground">Po filtru 2 km: <span className="text-foreground">{poiCounts.filtered}</span></div>
                       {poiCounts.filtered === 0 && poiCounts.raw > 0 && (
-                        <div className="text-warning pt-1">Žádný POI není do 2 km od trasy</div>
+                        <div className="text-destructive pt-1">Žádný POI není do 2 km od trasy</div>
                       )}
                       {poiCounts.raw === 0 && (
-                        <div className="text-warning pt-1">Overpass API nevrátilo nic</div>
+                        <div className="text-destructive pt-1">Overpass API nevrátilo nic</div>
                       )}
                     </>
                   )}
