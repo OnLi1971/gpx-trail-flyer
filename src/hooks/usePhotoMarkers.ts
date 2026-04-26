@@ -207,10 +207,21 @@ export function usePhotoMarkers(
     setTimeout(() => {
       setViewPhoto(photo);
       setIsPhotoViewOpen(true);
+      // Auto-close po nastavené době
+      if (animationSettings.autoCloseDelay > 0) {
+        if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = setTimeout(() => {
+          handlePhotoClose();
+        }, animationSettings.autoCloseDelay);
+      }
     }, animationSettings.modalDelay);
   }, [map, animationSettings]);
 
   const handlePhotoClose = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
     setIsPhotoViewOpen(false);
     setViewPhoto(null);
     setActivePhotoId(null);
