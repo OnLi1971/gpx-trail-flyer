@@ -34,7 +34,7 @@ export async function extractPhotoGPS(file: File): Promise<PhotoGPSResult | null
   }
 }
 
-function compressImage(file: File): Promise<string | null> {
+export function compressImage(file: File): Promise<string | null> {
   return new Promise((resolve) => {
     if (file.size > 50 * 1024 * 1024) {
       console.warn(`${file.name} je příliš velká (${(file.size / 1024 / 1024).toFixed(1)} MB), přeskakuji`);
