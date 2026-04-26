@@ -281,6 +281,73 @@ export default function SharedTrail() {
           onAddPhotos={(newPhotos) => setPhotos((prev) => [...prev, ...newPhotos])}
           readOnly={!isOwner}
         />
+
+        {isOwner && photos.length > 0 && (
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                Fotky na trase
+                <span className="text-muted-foreground font-normal">({photos.length})</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {photos.map((photo) => {
+                  const isUnsaved = !savedPhotoIds.has(photo.id);
+                  return (
+                    <div key={photo.id} className="group relative aspect-square rounded-md overflow-hidden border bg-muted">
+                      <img
+                        src={photo.photo}
+                        alt={photo.description || 'Fotka z trasy'}
+                        className="w-full h-full object-cover"
+                        draggable={false}
+                      />
+                      {isUnsaved && (
+                        <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] font-medium px-1.5 py-0.5 rounded">
+                          Neuloženo
+                        </div>
+                      )}
+                      {photo.description && (
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent text-white text-xs px-2 py-1 truncate">
+                          {photo.description}
+                        </div>
+                      )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <button
+                            type="button"
+                            className="absolute top-1 right-1 w-7 h-7 rounded-full bg-background/90 hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                            aria-label="Smazat fotku"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Smazat fotku?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {isUnsaved
+                                ? 'Fotka ještě nebyla uložena, jen ji odebereš z mapy.'
+                                : 'Fotka bude trvale smazána z cloudu i mapy. Tuto akci nelze vrátit.'}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeletePhoto(photo)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Smazat
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
