@@ -268,13 +268,34 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
   }, [gpxData]);
 
+  // Click-to-add-photo mode
+  useEffect(() => {
+    if (!map.current || !addPhotoMode) return;
+    const m = map.current;
+    const canvas = m.getCanvas();
+    canvas.style.cursor = 'crosshair';
+
+    const handleClick = (e: MapMouseEvent) => {
+      setPendingCoords({ lat: e.lngLat.lat, lon: e.lngLat.lng });
+      setIsDialogOpen(true);
+      setAddPhotoMode(false);
+    };
+
+    m.on('click', handleClick);
+
+    return () => {
+      m.off('click', handleClick);
+      canvas.style.cursor = '';
+    };
+  }, [addPhotoMode]);
+
   return (
     <>
       <div className="relative w-full rounded-lg overflow-hidden shadow-lg">
         {/* Main map container */}
         <div className="relative w-full h-[500px]">
           <div ref={mapContainer} className="absolute inset-0" />
-          <div className="absolute top-2 left-2 z-10">
+          <div className="absolute top-2 left-2 z-10 flex gap-2">
             <input
               ref={photoMarkers.fileInputRef}
               type="file"
@@ -293,11 +314,35 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               variant="secondary"
               className="gap-2 shadow-md"
               onClick={photoMarkers.triggerUpload}
+              disabled={addPhotoMode}
             >
               <Camera className="w-4 h-4" />
               Přidat fotky
             </Button>
+            <Button
+              size="sm"
+              variant={addPhotoMode ? 'default' : 'secondary'}
+              className="gap-2 shadow-md"
+              onClick={() => setAddPhotoMode((v) => !v)}
+            >
+              <MapPin className="w-4 h-4" />
+              {addPhotoMode ? 'Zrušit' : 'Přidat klikem'}
+            </Button>
           </div>
+
+          {addPhotoMode && (
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium animate-fade-in">
+              <MapPin className="w-4 h-4" />
+              Klikni na mapu pro umístění fotky
+              <button
+                onClick={() => setAddPhotoMode(false)}
+                className="ml-2 hover:opacity-70"
+                aria-label="Zrušit"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 3D Controls */}
