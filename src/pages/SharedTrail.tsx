@@ -180,6 +180,42 @@ export default function SharedTrail() {
     }
   };
 
+  // Odvodí cestu v storage z public URL
+  const storagePathFromUrl = (url: string): string | null => {
+    const marker = '/trail-photos/';
+    const idx = url.indexOf(marker);
+    if (idx === -1) return null;
+    return decodeURIComponent(url.slice(idx + marker.length).split('?')[0]);
+  };
+
+  const handleDeletePhoto = async (photo: PhotoPoint) => {
+    // Nová (neuložená) fotka — stačí lokálně
+    if (!savedPhotoIds.has(photo.id)) {
+      setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+      return;
+    }
+    if (!isOwner) return;
+    try {
+      // Smazat soubor ze storage (best-effort)
+      const path = storagePathFromUrl(photo.photo);
+      if (path) {
+        await supabase.storage.from('trail-photos').remove([path]);
+      }
+      // Smazat DB řádek
+      const { error } = await supabase.from('trail_photos').delete().eq('id', photo.id);
+      if (error) throw error;
+      setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+      setSavedPhotoIds((prev) => {
+        const next = new Set(prev);
+        next.delete(photo.id);
+        return next;
+      });
+      toast.success('Fotka smazána');
+    } catch (err: any) {
+      toast.error(`Nepodařilo se smazat: ${err.message || err}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
