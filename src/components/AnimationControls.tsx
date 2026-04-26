@@ -105,16 +105,16 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>Vzdálenost spuštění</span>
-                  <span>{(animationSettings.threshold * 111).toFixed(2)} km</span>
+                  <span>{Math.round(animationSettings.threshold * 111000)} m</span>
                 </div>
                 <Slider
-                  value={[animationSettings.threshold * 1000]}
+                  value={[Math.round(animationSettings.threshold * 111000)]}
                   onValueChange={(v) =>
-                    onAnimationSettingsChange({ ...animationSettings, threshold: v[0] / 1000 })
+                    onAnimationSettingsChange({ ...animationSettings, threshold: v[0] / 111000 })
                   }
-                  min={1}
-                  max={30}
-                  step={1}
+                  min={20}
+                  max={500}
+                  step={10}
                   className="w-full"
                 />
               </div>
