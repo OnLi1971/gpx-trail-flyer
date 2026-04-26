@@ -47,7 +47,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   // Hooks — order matters: flythrough first (produces flyingIndex)
   const flythrough = useFlythrough(map, gpxData);
-  const photoMarkers = usePhotoMarkers(map, gpxData, photos, onAddPhotos, currentPosition, animationSettings);
+  const photoMarkers = usePhotoMarkers(
+    map, gpxData, photos, onAddPhotos, currentPosition, animationSettings,
+    flythrough.flyingIndex, flythrough.isFlying,
+  );
   const elevationData = useElevationData(
     gpxData, photos, currentPosition,
     flythrough.flyingIndex,
