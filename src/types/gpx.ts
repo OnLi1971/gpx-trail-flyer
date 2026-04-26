@@ -39,12 +39,14 @@ export interface AnimationSettings {
   flyToDuration: number;
   modalDelay: number;
   zoomBackDuration: number;
+  autoCloseDelay: number; // jak dlouho zůstane modal otevřený (ms), 0 = nezavírat automaticky
 }
 
 export const defaultAnimationSettings: AnimationSettings = {
-  threshold: 0.01,
+  threshold: 0.005,
   zoomFactor: 1.5,
   flyToDuration: 1500,
   modalDelay: 2000,
-  zoomBackDuration: 1000
+  zoomBackDuration: 1000,
+  autoCloseDelay: 4000,
 };

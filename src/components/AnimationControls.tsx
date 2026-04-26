@@ -2,8 +2,8 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, RotateCcw, MapPin } from 'lucide-react';
-import { GPXData } from '@/types/gpx';
+import { Play, Pause, RotateCcw, MapPin, Camera, Clock } from 'lucide-react';
+import { GPXData, AnimationSettings } from '@/types/gpx';
 
 interface AnimationControlsProps {
   gpxData: GPXData | null;
@@ -12,6 +12,8 @@ interface AnimationControlsProps {
   onPlayPause: () => void;
   onReset: () => void;
   onPositionChange: (position: number) => void;
+  animationSettings?: AnimationSettings;
+  onAnimationSettingsChange?: (settings: AnimationSettings) => void;
 }
 
 export const AnimationControls: React.FC<AnimationControlsProps> = ({
@@ -21,6 +23,8 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
   onPlayPause,
   onReset,
   onPositionChange,
+  animationSettings,
+  onAnimationSettingsChange,
 }) => {
   if (!gpxData || gpxData.tracks.length === 0) {
     return null;
@@ -89,6 +93,57 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
               className="w-full"
             />
           </div>
+
+          {/* Photo trigger settings — pouze v editor módu */}
+          {animationSettings && onAnimationSettingsChange && (
+            <div className="space-y-3 pt-2 border-t">
+              <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                <Camera className="w-3.5 h-3.5" />
+                Zobrazení fotek
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Vzdálenost spuštění</span>
+                  <span>{(animationSettings.threshold * 111).toFixed(2)} km</span>
+                </div>
+                <Slider
+                  value={[animationSettings.threshold * 1000]}
+                  onValueChange={(v) =>
+                    onAnimationSettingsChange({ ...animationSettings, threshold: v[0] / 1000 })
+                  }
+                  min={1}
+                  max={30}
+                  step={1}
+                  className="w-full"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" />
+                    Doba zobrazení
+                  </span>
+                  <span>
+                    {animationSettings.autoCloseDelay === 0
+                      ? 'Ručně zavřít'
+                      : `${(animationSettings.autoCloseDelay / 1000).toFixed(1)} s`}
+                  </span>
+                </div>
+                <Slider
+                  value={[animationSettings.autoCloseDelay]}
+                  onValueChange={(v) =>
+                    onAnimationSettingsChange({ ...animationSettings, autoCloseDelay: v[0] })
+                  }
+                  min={0}
+                  max={15000}
+                  step={500}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          )}
 
           {/* Control Buttons */}
           <div className="flex items-center justify-center gap-2">

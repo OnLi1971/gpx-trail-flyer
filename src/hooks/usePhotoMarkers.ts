@@ -20,6 +20,9 @@ export function usePhotoMarkers(
   const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
   // PiP náhled aktivní pouze během 3D průletu
   const [nearbyPhoto, setNearbyPhoto] = useState<PhotoPoint | null>(null);
+  // Sleduje fotky, které už byly v této session zobrazeny — neotevřou se znovu
+  const shownPhotosRef = useRef<Set<string>>(new Set());
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const photoMarkersRef = useRef<Marker[]>([]);
   const photoMarkerMapRef = useRef<Record<string, HTMLDivElement>>({});
@@ -123,6 +126,13 @@ export function usePhotoMarkers(
     });
   }, [nearbyPhoto, activePhotoId, photos]);
 
+  // Reset zobrazených fotek při návratu na začátek
+  useEffect(() => {
+    if (currentPosition < 1) {
+      shownPhotosRef.current.clear();
+    }
+  }, [currentPosition]);
+
   // Auto-open photo when animation arrives near it
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) return;
@@ -134,6 +144,7 @@ export function usePhotoMarkers(
     const threshold = animationSettings.threshold;
 
     photos.forEach(photo => {
+      if (shownPhotosRef.current.has(photo.id)) return;
       const latDiff = Math.abs(photo.lat - point.lat);
       const lonDiff = Math.abs(photo.lon - point.lon);
 
@@ -143,6 +154,7 @@ export function usePhotoMarkers(
         !isPhotoViewOpen &&
         activePhotoId === null
       ) {
+        shownPhotosRef.current.add(photo.id);
         setActivePhotoId(photo.id);
         handleArrivedPhoto(photo);
       }
@@ -177,6 +189,8 @@ export function usePhotoMarkers(
     setNearbyPhoto(closest ? closest.photo : null);
   }, [flyingIndex, isFlying, gpxData, photos, animationSettings.threshold]);
 
+  const handlePhotoCloseRef = useRef<() => void>(() => {});
+
   const handleArrivedPhoto = useCallback((photo: PhotoPoint) => {
     if (!map.current) return;
     if (!map.current.isStyleLoaded()) return;
@@ -195,10 +209,21 @@ export function usePhotoMarkers(
     setTimeout(() => {
       setViewPhoto(photo);
       setIsPhotoViewOpen(true);
+      // Auto-close po nastavené době
+      if (animationSettings.autoCloseDelay > 0) {
+        if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = setTimeout(() => {
+          handlePhotoCloseRef.current();
+        }, animationSettings.autoCloseDelay);
+      }
     }, animationSettings.modalDelay);
   }, [map, animationSettings]);
 
   const handlePhotoClose = useCallback(() => {
+    if (autoCloseTimerRef.current) {
+      clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
     setIsPhotoViewOpen(false);
     setViewPhoto(null);
     setActivePhotoId(null);
@@ -211,6 +236,11 @@ export function usePhotoMarkers(
       setOriginalMapState(null);
     }
   }, [map, originalMapState, animationSettings.zoomBackDuration]);
+
+  // Synchronizace ref s nejnovější verzí callbacku
+  useEffect(() => {
+    handlePhotoCloseRef.current = handlePhotoClose;
+  }, [handlePhotoClose]);
 
   const handleBulkPhotoUpload = useCallback(async (files: FileList) => {
     const fileArray = Array.from(files);
