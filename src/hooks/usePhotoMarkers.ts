@@ -19,6 +19,15 @@ export function usePhotoMarkers(
 
   const photoMarkersRef = useRef<Marker[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadCancelRef = useRef(false);
+
+  // Cancel pending uploads when GPX changes
+  useEffect(() => {
+    uploadCancelRef.current = true;
+    return () => {
+      uploadCancelRef.current = false;
+    };
+  }, [gpxData]);
 
   // Create photo markers on map
   useEffect(() => {
@@ -155,13 +164,16 @@ export function usePhotoMarkers(
   const handleBulkPhotoUpload = useCallback(async (files: FileList) => {
     const fileArray = Array.from(files);
     toast.info(`Zpracovávám ${fileArray.length} fotek...`);
+    uploadCancelRef.current = false;
     const newPhotos: PhotoPoint[] = [];
     const skippedNames: string[] = [];
 
     const BATCH_SIZE = 3;
     for (let i = 0; i < fileArray.length; i += BATCH_SIZE) {
+      if (uploadCancelRef.current) break;
       const batch = fileArray.slice(i, i + BATCH_SIZE);
       const results = await Promise.all(batch.map(file => extractPhotoGPS(file)));
+      if (uploadCancelRef.current) break;
 
       results.forEach((result, idx) => {
         const file = batch[idx];
@@ -180,13 +192,14 @@ export function usePhotoMarkers(
       });
     }
 
+    if (uploadCancelRef.current) return;
+
     if (newPhotos.length > 0) {
       onAddPhotos(newPhotos);
       toast.success(`Přidáno ${newPhotos.length} fotek na mapu`);
     }
 
     if (skippedNames.length > 0) {
-      console.warn('Fotky bez GPS:', skippedNames);
       toast.warning(`${skippedNames.length} fotek nemá GPS a byly přeskočeny`);
     }
 
