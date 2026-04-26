@@ -270,5 +270,6 @@ export function usePhotoMarkers(
     handleBulkPhotoUpload,
     fileInputRef,
     triggerUpload,
+    nearbyPhoto,
   };
 }
