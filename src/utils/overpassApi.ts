@@ -25,12 +25,15 @@ export async function fetchPeaksAndPlaces(bounds: {
   const bbox = `${south},${west},${north},${east}`;
 
   const query = `
-[out:json][timeout:10];
+[out:json][timeout:15];
 (
   node["natural"="peak"]["name"](${bbox});
-  node["place"~"city|town|village"]["name"](${bbox});
 );
-out body 50;
+out body 100;
+(
+  node["place"~"city|town|village|hamlet"]["name"](${bbox});
+);
+out body 200;
 `;
 
   try {
@@ -47,7 +50,7 @@ out body 50;
 
     const data = await response.json();
 
-    return (data.elements || []).map((el: any) => {
+    const result: POIPoint[] = (data.elements || []).map((el: any) => {
       const isPeak = el.tags?.natural === 'peak';
       return {
         name: el.tags?.name || '',
@@ -58,6 +61,11 @@ out body 50;
         placeType: !isPeak ? el.tags?.place : undefined,
       } as POIPoint;
     }).filter((p: POIPoint) => p.name);
+
+    const peaks = result.filter(p => p.type === 'peak').length;
+    const places = result.filter(p => p.type === 'place').length;
+    console.log(`[Overpass] Loaded ${result.length} POIs (${peaks} peaks, ${places} places)`);
+    return result;
   } catch (err) {
     console.warn('Failed to fetch POIs from Overpass:', err);
     return [];
@@ -72,11 +80,13 @@ export function filterPOIsNearTrack(
 ): POIPoint[] {
   const threshold = maxDistKm / 111; // rough degree threshold
 
-  return pois.filter(poi =>
+  const filtered = pois.filter(poi =>
     trackPoints.some(tp => {
       const dLat = poi.lat - tp.lat;
       const dLon = poi.lon - tp.lon;
       return Math.sqrt(dLat * dLat + dLon * dLon) < threshold;
     })
   );
+  console.log(`[Overpass] After ${maxDistKm}km filter: ${filtered.length}/${pois.length} POIs near track`);
+  return filtered;
 }

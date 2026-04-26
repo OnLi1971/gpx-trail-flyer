@@ -1,46 +1,28 @@
-## Přidání fotky klikem na mapu
 
-Vrátím funkcionalitu, kdy uživatel klikne na libovolné místo na mapě a otevře se dialog pro výběr fotky + popisu. Fotka se umístí na zvolené souřadnice (nezávisle na EXIF GPS).
+## POI markery (vrcholy + obce) zase chybí
 
-### UX flow
+### Diagnóza
 
-1. Vedle tlačítka **„Přidat fotky"** přidám tlačítko **„Přidat klikem"** (toggle).
-2. Když je toggle aktivní:
-   - Kurzor nad mapou se změní na `crosshair`.
-   - Nahoře nad mapou se zobrazí pruh: *„Klikni na mapu pro umístění fotky"* + tlačítko Zrušit.
-3. Po kliknutí na mapu se zachytí `lng/lat` a otevře se dialog `ManualPhotoDialog`:
-   - File input (jediná fotka)
-   - Textarea pro popis (volitelný)
-   - Tlačítka „Přidat" / „Zrušit"
-4. Po potvrzení se fotka zkomprimuje (stejný `compressImage` jako u bulk uploadu) a přidá do `photos` přes `onAddPhotos`.
-5. Toggle se vypne, kurzor se vrátí na default.
+V `overpassApi.ts`:
+- `out body 50;` — Overpass vrátí **max 50** elementů celkem pro celou bbox. Pro delší trasy se po filtraci `filterPOIsNearTrack` (2 km od trasy) může stát, že žádný relevantní vrchol neprojde — vrchy jsou často mimo úzký pás kolem trasy, ale obce dominují počtem.
+- Query nepokrývá `place=hamlet` (malé osady) — v horách často jediné, co je v okolí.
 
-### Změny
+### Změny v `src/utils/overpassApi.ts`
 
-**`src/components/ManualPhotoDialog.tsx`** (nový, ~80 řádků)
-- Props: `isOpen`, `onClose`, `coords: {lat, lon} | null`, `onConfirm: (photo: PhotoPoint) => void`
-- File input + textarea + preview thumbnail
-- Komprese fotky před vrácením (volá `compressImage` z `exifReader.ts`)
+- Zvýšit limit z `out body 50;` na `out body 300;`
+- Rozšířit place regex: `place~"city|town|village|hamlet"`
+- Rozdělit limity v query — peaks zvlášť (až 100), places zvlášť (až 200), aby vrcholy nebyly přebity obcemi
 
-**`src/utils/exifReader.ts`**
-- Exportovat `compressImage` (teď je jen lokální)
+```
+node["natural"="peak"]["name"](${bbox});
+out body 100;
+node["place"~"city|town|village|hamlet"]["name"](${bbox});
+out body 200;
+```
 
-**`src/components/TrailMap.tsx`**
-- Nový state `addPhotoMode: boolean` a `pendingCoords: {lat,lon} | null`
-- Nový useEffect: když je `addPhotoMode` aktivní, navěsit `map.on('click', ...)` který zachytí souřadnice a otevře dialog. Cleanup odebere listener a vrátí kurzor.
-- Změna kurzoru přes `map.getCanvas().style.cursor = 'crosshair'`.
-- Tlačítko „Přidat klikem" vedle „Přidat fotky".
-- Render `<ManualPhotoDialog>` na konci.
-- Banner nad mapou když je mód aktivní.
+- Přidat `console.log` po načtení: počet peaks, počet places, počet po filtraci — pro snadné ověření v konzoli
 
-### Žádný dopad na
+### Bez změny
 
-- Bulk EXIF upload (`handleBulkPhotoUpload`) — funguje dál stejně
-- Auto-open fotek při animaci — používá stejný `photos` array
-- POI markery, flythrough, elevation chart
-
-### Pořadí implementace
-
-1. Export `compressImage` z `exifReader.ts`
-2. Vytvořit `ManualPhotoDialog.tsx`
-3. Doplnit logiku do `TrailMap.tsx` (state, click handler, tlačítko, banner, dialog render)
+- `TrailMap.tsx` POI rendering zůstává — kód markerů je správný
+- Threshold 2 km zůstává (rozumný kompromis mezi šumem a pokrytím)
