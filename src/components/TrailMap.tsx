@@ -197,9 +197,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (track.points.length === 0) return;
 
     const loadPOIs = async () => {
+      setPoiStatus('loading');
+      setPoiError(null);
       try {
         const pois = await fetchPeaksAndPlaces(gpxData.bounds);
         const nearbyPois = filterPOIsNearTrack(pois, track.points, 2);
+
+        const peaks = nearbyPois.filter(p => p.type === 'peak').length;
+        const places = nearbyPois.filter(p => p.type === 'place').length;
+        setPoiCounts({ peaks, places, raw: pois.length, filtered: nearbyPois.length });
+        setPoiStatus('success');
 
         if (nearbyPois.length > 0) {
           console.log('[POI] First markers:', nearbyPois.slice(0, 3).map(p => `${p.name} (${p.type}) @ ${p.lat.toFixed(4)},${p.lon.toFixed(4)}`));
@@ -268,6 +275,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         });
       } catch (err) {
         console.warn('POI loading failed:', err);
+        setPoiStatus('error');
+        setPoiError(err instanceof Error ? err.message : 'Neznámá chyba');
       }
     };
 
