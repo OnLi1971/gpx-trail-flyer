@@ -149,6 +149,34 @@ export function usePhotoMarkers(
     });
   }, [currentPosition, gpxData, photos, isPhotoViewOpen, activePhotoId, animationSettings.threshold]);
 
+  // PiP náhled během 3D průletu — sleduje aktuální flyingIndex
+  useEffect(() => {
+    if (!isFlying || flyingIndex === null || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) {
+      setNearbyPhoto(null);
+      return;
+    }
+    const track = gpxData.tracks[0];
+    const point = track.points[flyingIndex];
+    if (!point) return;
+
+    // Větší práh než pro modal — fotka se má objevit dřív a zůstat déle
+    const threshold = animationSettings.threshold * 3;
+
+    let closest: { photo: PhotoPoint; dist: number } | null = null;
+    photos.forEach(photo => {
+      const latDiff = Math.abs(photo.lat - point.lat);
+      const lonDiff = Math.abs(photo.lon - point.lon);
+      if (latDiff < threshold && lonDiff < threshold) {
+        const dist = latDiff + lonDiff;
+        if (!closest || dist < closest.dist) {
+          closest = { photo, dist };
+        }
+      }
+    });
+
+    setNearbyPhoto(closest ? closest.photo : null);
+  }, [flyingIndex, isFlying, gpxData, photos, animationSettings.threshold]);
+
   const handleArrivedPhoto = useCallback((photo: PhotoPoint) => {
     if (!map.current) return;
     if (!map.current.isStyleLoaded()) return;
