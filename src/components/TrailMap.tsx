@@ -416,6 +416,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               )}
             </div>
           )}
+
+          {/* Picture-in-picture náhled fotky během 3D průletu */}
+          {flythrough.isFlying && <PhotoPiP photo={photoMarkers.nearbyPhoto} />}
         </div>
 
         {/* 3D Controls */}
