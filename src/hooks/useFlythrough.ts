@@ -147,8 +147,9 @@ export function useFlythrough(
       }
 
       const speed = flySpeedRef.current;
-      const step = Math.max(1, Math.floor(speed / 20));
-      const duration = Math.max(50, 800 - (speed * 7.5));
+      // 3x faster max: bigger steps and shorter duration
+      const step = Math.max(1, Math.floor(speed / 10));
+      const duration = Math.max(16, 800 - (speed * 7.7));
 
       const currentPoint = track.points[currentIndex];
       const nextIndex = Math.min(currentIndex + step, totalPoints - 1);
