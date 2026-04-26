@@ -8,7 +8,12 @@ import { AnimationControls } from '@/components/AnimationControls';
 import { GPXData, PhotoPoint, defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Mountain, Save } from 'lucide-react';
+import { Loader2, Mountain, Save, Trash2, Image as ImageIcon } from 'lucide-react';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 
 const ANIMATION_DURATION = 10000;
@@ -175,6 +180,42 @@ export default function SharedTrail() {
     }
   };
 
+  // Odvodí cestu v storage z public URL
+  const storagePathFromUrl = (url: string): string | null => {
+    const marker = '/trail-photos/';
+    const idx = url.indexOf(marker);
+    if (idx === -1) return null;
+    return decodeURIComponent(url.slice(idx + marker.length).split('?')[0]);
+  };
+
+  const handleDeletePhoto = async (photo: PhotoPoint) => {
+    // Nová (neuložená) fotka — stačí lokálně
+    if (!savedPhotoIds.has(photo.id)) {
+      setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+      return;
+    }
+    if (!isOwner) return;
+    try {
+      // Smazat soubor ze storage (best-effort)
+      const path = storagePathFromUrl(photo.photo);
+      if (path) {
+        await supabase.storage.from('trail-photos').remove([path]);
+      }
+      // Smazat DB řádek
+      const { error } = await supabase.from('trail_photos').delete().eq('id', photo.id);
+      if (error) throw error;
+      setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
+      setSavedPhotoIds((prev) => {
+        const next = new Set(prev);
+        next.delete(photo.id);
+        return next;
+      });
+      toast.success('Fotka smazána');
+    } catch (err: any) {
+      toast.error(`Nepodařilo se smazat: ${err.message || err}`);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -240,6 +281,73 @@ export default function SharedTrail() {
           onAddPhotos={(newPhotos) => setPhotos((prev) => [...prev, ...newPhotos])}
           readOnly={!isOwner}
         />
+
+        {isOwner && photos.length > 0 && (
+          <Card>
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                Fotky na trase
+                <span className="text-muted-foreground font-normal">({photos.length})</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                {photos.map((photo) => {
+                  const isUnsaved = !savedPhotoIds.has(photo.id);
+                  return (
+                    <div key={photo.id} className="group relative aspect-square rounded-md overflow-hidden border bg-muted">
+                      <img
+                        src={photo.photo}
+                        alt={photo.description || 'Fotka z trasy'}
+                        className="w-full h-full object-cover"
+                        draggable={false}
+                      />
+                      {isUnsaved && (
+                        <div className="absolute top-1 left-1 bg-primary text-primary-foreground text-[10px] font-medium px-1.5 py-0.5 rounded">
+                          Neuloženo
+                        </div>
+                      )}
+                      {photo.description && (
+                        <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent text-white text-xs px-2 py-1 truncate">
+                          {photo.description}
+                        </div>
+                      )}
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <button
+                            type="button"
+                            className="absolute top-1 right-1 w-7 h-7 rounded-full bg-background/90 hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                            aria-label="Smazat fotku"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Smazat fotku?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {isUnsaved
+                                ? 'Fotka ještě nebyla uložena, jen ji odebereš z mapy.'
+                                : 'Fotka bude trvale smazána z cloudu i mapy. Tuto akci nelze vrátit.'}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Zrušit</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeletePhoto(photo)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              Smazat
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
