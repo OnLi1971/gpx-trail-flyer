@@ -126,6 +126,13 @@ export function usePhotoMarkers(
     });
   }, [nearbyPhoto, activePhotoId, photos]);
 
+  // Reset zobrazených fotek při návratu na začátek
+  useEffect(() => {
+    if (currentPosition < 1) {
+      shownPhotosRef.current.clear();
+    }
+  }, [currentPosition]);
+
   // Auto-open photo when animation arrives near it
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) return;
@@ -137,6 +144,7 @@ export function usePhotoMarkers(
     const threshold = animationSettings.threshold;
 
     photos.forEach(photo => {
+      if (shownPhotosRef.current.has(photo.id)) return;
       const latDiff = Math.abs(photo.lat - point.lat);
       const lonDiff = Math.abs(photo.lon - point.lon);
 
@@ -146,6 +154,7 @@ export function usePhotoMarkers(
         !isPhotoViewOpen &&
         activePhotoId === null
       ) {
+        shownPhotosRef.current.add(photo.id);
         setActivePhotoId(photo.id);
         handleArrivedPhoto(photo);
       }
