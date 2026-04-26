@@ -38,6 +38,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [pendingCoords, setPendingCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
+  // POI debug state (visible on mobile)
+  const [poiStatus, setPoiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [poiCounts, setPoiCounts] = useState({ peaks: 0, places: 0, raw: 0, filtered: 0 });
+  const [poiError, setPoiError] = useState<string | null>(null);
+  const [poiPanelExpanded, setPoiPanelExpanded] = useState(false);
+
   // Hooks — order matters: flythrough first (produces flyingIndex)
   const flythrough = useFlythrough(map, gpxData);
   const photoMarkers = usePhotoMarkers(map, gpxData, photos, onAddPhotos, currentPosition, animationSettings);
