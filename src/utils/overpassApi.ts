@@ -7,7 +7,11 @@ export interface POIPoint {
   placeType?: string; // city, town, village
 }
 
-const OVERPASS_API = 'https://overpass-api.de/api/interpreter';
+const OVERPASS_ENDPOINTS = [
+  'https://overpass-api.de/api/interpreter',
+  'https://overpass.kumi.systems/api/interpreter',
+  'https://overpass.private.coffee/api/interpreter',
+];
 
 export async function fetchPeaksAndPlaces(bounds: {
   minLat: number;
@@ -24,52 +28,57 @@ export async function fetchPeaksAndPlaces(bounds: {
 
   const bbox = `${south},${west},${north},${east}`;
 
-  const query = `
-[out:json][timeout:15];
+  // Single union query — both peaks and places in one (...); group, single out body
+  const query = `[out:json][timeout:25];
 (
   node["natural"="peak"]["name"](${bbox});
+  node["place"~"^(city|town|village|hamlet)$"]["name"](${bbox});
 );
-out body 100;
-(
-  node["place"~"city|town|village|hamlet"]["name"](${bbox});
-);
-out body 200;
-`;
+out body 300;`;
 
-  try {
-    const response = await fetch(OVERPASS_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `data=${encodeURIComponent(query)}`,
-    });
+  let lastError: unknown = null;
+  for (const endpoint of OVERPASS_ENDPOINTS) {
+    try {
+      console.log(`[Overpass] Trying ${endpoint}`);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `data=${encodeURIComponent(query)}`,
+      });
 
-    if (!response.ok) {
-      console.warn('Overpass API error:', response.status);
-      return [];
+      if (!response.ok) {
+        console.warn(`[Overpass] ${endpoint} returned ${response.status}`);
+        lastError = new Error(`HTTP ${response.status}`);
+        continue;
+      }
+
+      const data = await response.json();
+      const elementCount = data.elements?.length ?? 0;
+      console.log(`[Overpass] ${endpoint} returned ${elementCount} raw elements`);
+
+      const result: POIPoint[] = (data.elements || []).map((el: any) => {
+        const isPeak = el.tags?.natural === 'peak';
+        return {
+          name: el.tags?.name || '',
+          lat: el.lat,
+          lon: el.lon,
+          ele: isPeak && el.tags?.ele ? Math.round(parseFloat(el.tags.ele)) : undefined,
+          type: isPeak ? 'peak' : 'place',
+          placeType: !isPeak ? el.tags?.place : undefined,
+        } as POIPoint;
+      }).filter((p: POIPoint) => p.name);
+
+      const peaks = result.filter(p => p.type === 'peak').length;
+      const places = result.filter(p => p.type === 'place').length;
+      console.log(`[Overpass] Loaded ${result.length} POIs (${peaks} peaks, ${places} places) from ${endpoint}`);
+      return result;
+    } catch (err) {
+      console.warn(`[Overpass] ${endpoint} failed:`, err);
+      lastError = err;
     }
-
-    const data = await response.json();
-
-    const result: POIPoint[] = (data.elements || []).map((el: any) => {
-      const isPeak = el.tags?.natural === 'peak';
-      return {
-        name: el.tags?.name || '',
-        lat: el.lat,
-        lon: el.lon,
-        ele: isPeak && el.tags?.ele ? Math.round(parseFloat(el.tags.ele)) : undefined,
-        type: isPeak ? 'peak' : 'place',
-        placeType: !isPeak ? el.tags?.place : undefined,
-      } as POIPoint;
-    }).filter((p: POIPoint) => p.name);
-
-    const peaks = result.filter(p => p.type === 'peak').length;
-    const places = result.filter(p => p.type === 'place').length;
-    console.log(`[Overpass] Loaded ${result.length} POIs (${peaks} peaks, ${places} places)`);
-    return result;
-  } catch (err) {
-    console.warn('Failed to fetch POIs from Overpass:', err);
-    return [];
   }
+
+  throw new Error(`Všechny Overpass servery selhaly. ${lastError instanceof Error ? lastError.message : ''}`);
 }
 
 /** Filter POIs to those within ~maxDistKm of any track point */
