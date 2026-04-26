@@ -42,12 +42,9 @@ export function usePhotoMarkers(
     if (!map.current) return;
 
     if (!photos.length) {
-      if (map.current.getLayer('photo-markers')) {
-        map.current.removeLayer('photo-markers');
-      }
-      if (map.current.getSource('photo-markers')) {
-        map.current.removeSource('photo-markers');
-      }
+      photoMarkersRef.current.forEach(marker => marker.remove());
+      photoMarkersRef.current = [];
+      photoMarkerMapRef.current = {};
       return;
     }
 
