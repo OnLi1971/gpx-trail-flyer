@@ -189,6 +189,8 @@ export function usePhotoMarkers(
     setNearbyPhoto(closest ? closest.photo : null);
   }, [flyingIndex, isFlying, gpxData, photos, animationSettings.threshold]);
 
+  const handlePhotoCloseRef = useRef<() => void>(() => {});
+
   const handleArrivedPhoto = useCallback((photo: PhotoPoint) => {
     if (!map.current) return;
     if (!map.current.isStyleLoaded()) return;
@@ -211,7 +213,7 @@ export function usePhotoMarkers(
       if (animationSettings.autoCloseDelay > 0) {
         if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
         autoCloseTimerRef.current = setTimeout(() => {
-          handlePhotoClose();
+          handlePhotoCloseRef.current();
         }, animationSettings.autoCloseDelay);
       }
     }, animationSettings.modalDelay);
@@ -234,6 +236,11 @@ export function usePhotoMarkers(
       setOriginalMapState(null);
     }
   }, [map, originalMapState, animationSettings.zoomBackDuration]);
+
+  // Synchronizace ref s nejnovější verzí callbacku
+  useEffect(() => {
+    handlePhotoCloseRef.current = handlePhotoClose;
+  }, [handlePhotoClose]);
 
   const handleBulkPhotoUpload = useCallback(async (files: FileList) => {
     const fileArray = Array.from(files);
