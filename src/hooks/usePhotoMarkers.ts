@@ -10,14 +10,19 @@ export function usePhotoMarkers(
   photos: PhotoPoint[],
   onAddPhotos: (newPhotos: PhotoPoint[]) => void,
   currentPosition: number,
-  animationSettings: AnimationSettings
+  animationSettings: AnimationSettings,
+  flyingIndex: number | null = null,
+  isFlying: boolean = false
 ) {
   const [viewPhoto, setViewPhoto] = useState<PhotoPoint | null>(null);
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
   const [originalMapState, setOriginalMapState] = useState<{ center: [number, number]; zoom: number } | null>(null);
   const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
+  // PiP náhled aktivní pouze během 3D průletu
+  const [nearbyPhoto, setNearbyPhoto] = useState<PhotoPoint | null>(null);
 
   const photoMarkersRef = useRef<Marker[]>([]);
+  const photoMarkerMapRef = useRef<Record<string, HTMLDivElement>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadCancelRef = useRef(false);
 
