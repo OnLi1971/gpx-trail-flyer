@@ -484,6 +484,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         isOpen={photoMarkers.isPhotoViewOpen}
         onClose={photoMarkers.handlePhotoClose}
       />
+
+      <ManualPhotoDialog
+        isOpen={isDialogOpen}
+        onClose={() => {
+          setIsDialogOpen(false);
+          setPendingCoords(null);
+        }}
+        coords={pendingCoords}
+        onConfirm={(photo) => onAddPhotos([photo])}
+      />
     </>
   );
 };
