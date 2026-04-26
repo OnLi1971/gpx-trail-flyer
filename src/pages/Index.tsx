@@ -27,6 +27,7 @@ const Index = () => {
   const [currentPosition, setCurrentPosition] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
+  const [animationSettings, setAnimationSettings] = useState<AnimationSettings>(defaultAnimationSettings);
 
   const handleFileUpload = useCallback((content: string, filename: string) => {
     setIsLoading(true);
