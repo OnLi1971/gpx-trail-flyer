@@ -50,7 +50,7 @@ out body 200;
 
     const data = await response.json();
 
-    return (data.elements || []).map((el: any) => {
+    const result: POIPoint[] = (data.elements || []).map((el: any) => {
       const isPeak = el.tags?.natural === 'peak';
       return {
         name: el.tags?.name || '',
@@ -61,6 +61,11 @@ out body 200;
         placeType: !isPeak ? el.tags?.place : undefined,
       } as POIPoint;
     }).filter((p: POIPoint) => p.name);
+
+    const peaks = result.filter(p => p.type === 'peak').length;
+    const places = result.filter(p => p.type === 'place').length;
+    console.log(`[Overpass] Loaded ${result.length} POIs (${peaks} peaks, ${places} places)`);
+    return result;
   } catch (err) {
     console.warn('Failed to fetch POIs from Overpass:', err);
     return [];
