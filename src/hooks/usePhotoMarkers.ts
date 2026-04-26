@@ -20,6 +20,9 @@ export function usePhotoMarkers(
   const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
   // PiP náhled aktivní pouze během 3D průletu
   const [nearbyPhoto, setNearbyPhoto] = useState<PhotoPoint | null>(null);
+  // Sleduje fotky, které už byly v této session zobrazeny — neotevřou se znovu
+  const shownPhotosRef = useRef<Set<string>>(new Set());
+  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const photoMarkersRef = useRef<Marker[]>([]);
   const photoMarkerMapRef = useRef<Record<string, HTMLDivElement>>({});
