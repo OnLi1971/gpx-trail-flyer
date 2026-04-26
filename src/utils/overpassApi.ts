@@ -39,7 +39,6 @@ out body 300;`;
   let lastError: unknown = null;
   for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
-      console.log(`[Overpass] Trying ${endpoint}`);
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -47,14 +46,11 @@ out body 300;`;
       });
 
       if (!response.ok) {
-        console.warn(`[Overpass] ${endpoint} returned ${response.status}`);
         lastError = new Error(`HTTP ${response.status}`);
         continue;
       }
 
       const data = await response.json();
-      const elementCount = data.elements?.length ?? 0;
-      console.log(`[Overpass] ${endpoint} returned ${elementCount} raw elements`);
 
       const result: POIPoint[] = (data.elements || []).map((el: any) => {
         const isPeak = el.tags?.natural === 'peak';
@@ -68,12 +64,8 @@ out body 300;`;
         } as POIPoint;
       }).filter((p: POIPoint) => p.name);
 
-      const peaks = result.filter(p => p.type === 'peak').length;
-      const places = result.filter(p => p.type === 'place').length;
-      console.log(`[Overpass] Loaded ${result.length} POIs (${peaks} peaks, ${places} places) from ${endpoint}`);
       return result;
     } catch (err) {
-      console.warn(`[Overpass] ${endpoint} failed:`, err);
       lastError = err;
     }
   }
@@ -89,13 +81,11 @@ export function filterPOIsNearTrack(
 ): POIPoint[] {
   const threshold = maxDistKm / 111; // rough degree threshold
 
-  const filtered = pois.filter(poi =>
+  return pois.filter(poi =>
     trackPoints.some(tp => {
       const dLat = poi.lat - tp.lat;
       const dLon = poi.lon - tp.lon;
       return Math.sqrt(dLat * dLat + dLon * dLon) < threshold;
     })
   );
-  console.log(`[Overpass] After ${maxDistKm}km filter: ${filtered.length}/${pois.length} POIs near track`);
-  return filtered;
 }
