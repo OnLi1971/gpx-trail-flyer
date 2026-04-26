@@ -1,28 +1,40 @@
-
-## POI markery (vrcholy + obce) zase chybí
+## Oprava POI tyček (vrcholy + obce)
 
 ### Diagnóza
+Markery se generují, ale jsou špatně viditelné/umístěné kvůli:
+- HTML markery v MapLibre nemají depth-test → při 3D náklonu jsou schované za terénem nebo špatně zarovnané
+- `pointer-events: none` brání kliknutí
+- Z-index může kolidovat s ostatními vrstvami
+- Nepřehledné na 2D mapě (malé, splývající)
 
-V `overpassApi.ts`:
-- `out body 50;` — Overpass vrátí **max 50** elementů celkem pro celou bbox. Pro delší trasy se po filtraci `filterPOIsNearTrack` (2 km od trasy) může stát, že žádný relevantní vrchol neprojde — vrchy jsou často mimo úzký pás kolem trasy, ale obce dominují počtem.
-- Query nepokrývá `place=hamlet` (malé osady) — v horách často jediné, co je v okolí.
+### Změny v `src/components/TrailMap.tsx` — POI rendering blok
 
-### Změny v `src/utils/overpassApi.ts`
+**Vizuál vrcholů:**
+- Větší ikona ⛰️ (16px), tučnější rámeček, výraznější hnědá barva
+- Delší tyčka (28px) s gradientem (tmavší dole)
+- Větší tečka u základny (8px)
+- `z-index: 5` na celém elementu
 
-- Zvýšit limit z `out body 50;` na `out body 300;`
-- Rozšířit place regex: `place~"city|town|village|hamlet"`
-- Rozdělit limity v query — peaks zvlášť (až 100), places zvlášť (až 200), aby vrcholy nebyly přebity obcemi
+**Vizuál obcí:**
+- Bílé pozadí s vyšší opacitou (0.95)
+- Tečka u základny i pro obce (4px, šedá)
+- Krátká tyčka (12px)
 
-```
-node["natural"="peak"]["name"](${bbox});
-out body 100;
-node["place"~"city|town|village|hamlet"]["name"](${bbox});
-out body 200;
-```
+**Pointer events:**
+- Povolit `pointer-events: auto` na bublině (tooltip-like) pro budoucí interakci
+- Tyčka a tečka zůstávají `none`
 
-- Přidat `console.log` po načtení: počet peaks, počet places, počet po filtraci — pro snadné ověření v konzoli
+**MapLibre options:**
+- Přidat `pitchAlignment: 'map'` na vrchol tyčky? — Ne, HTML markery to neumí. Místo toho zachovat `anchor: 'bottom'` a přijmout, že při velkém pitchu mohou být schované za kopci (omezení MapLibre HTML markerů).
+
+### Diagnostika
+- Po načtení vypsat do konzole první 3 POI s lat/lon, abychom ověřili, že se vůbec přidávají na správné místo
+- Zkontrolovat v konzoli logy `[Overpass]` — pokud `After 2km filter: 0/X`, je problém v datech, ne v renderingu
 
 ### Bez změny
+- `overpassApi.ts` — query je v pořádku po minulém fixu
+- Filtrace 2 km zůstává
+- Anchor `bottom` zůstává
 
-- `TrailMap.tsx` POI rendering zůstává — kód markerů je správný
-- Threshold 2 km zůstává (rozumný kompromis mezi šumem a pokrytím)
+### Co tím nevyřešíme
+3D náklon přes 45° může stále některé tyčky schovat za kopci — to je omezení HTML markerů v MapLibre. Pokud bude vadit, dalším krokem by byl převod POI na nativní symbol layer (text + ikona z geojson sourcu), který respektuje terrain depth.
