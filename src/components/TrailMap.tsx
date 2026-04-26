@@ -367,6 +367,49 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               </button>
             </div>
           )}
+
+          {/* POI debug panel — visible on mobile, helps diagnose missing markers */}
+          {gpxData && poiStatus !== 'idle' && (
+            <div
+              className="absolute bottom-2 left-2 z-10 bg-background/90 backdrop-blur-sm border rounded-md shadow-md text-xs select-none"
+              onClick={() => setPoiPanelExpanded((v) => !v)}
+            >
+              <div className="px-2.5 py-1.5 flex items-center gap-2 cursor-pointer">
+                {poiStatus === 'loading' && (
+                  <span className="text-muted-foreground">🔄 Načítám POI…</span>
+                )}
+                {poiStatus === 'success' && (
+                  <span className="font-medium">
+                    ⛰️ {poiCounts.peaks} · 🏘️ {poiCounts.places}
+                  </span>
+                )}
+                {poiStatus === 'error' && (
+                  <span className="text-destructive font-medium">⚠️ POI chyba</span>
+                )}
+              </div>
+              {poiPanelExpanded && (
+                <div className="border-t px-2.5 py-1.5 space-y-0.5 text-muted-foreground">
+                  {poiStatus === 'success' && (
+                    <>
+                      <div>API vrátilo: <span className="text-foreground font-medium">{poiCounts.raw}</span></div>
+                      <div>Po filtru 2 km: <span className="text-foreground font-medium">{poiCounts.filtered}</span></div>
+                      <div>Vrcholy: <span className="text-foreground font-medium">{poiCounts.peaks}</span></div>
+                      <div>Obce: <span className="text-foreground font-medium">{poiCounts.places}</span></div>
+                      {poiCounts.filtered === 0 && poiCounts.raw > 0 && (
+                        <div className="text-amber-600 pt-1">Žádný POI není do 2 km od trasy</div>
+                      )}
+                      {poiCounts.raw === 0 && (
+                        <div className="text-amber-600 pt-1">Overpass API nevrátilo nic pro tuto oblast</div>
+                      )}
+                    </>
+                  )}
+                  {poiStatus === 'error' && poiError && (
+                    <div className="text-destructive break-all max-w-[240px]">{poiError}</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 3D Controls */}
