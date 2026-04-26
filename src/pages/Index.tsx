@@ -5,7 +5,7 @@ import { TrailMap } from '@/components/TrailMap';
 import { AnimationControls } from '@/components/AnimationControls';
 import { AppHeader } from '@/components/AppHeader';
 import { SaveTrailDialog } from '@/components/SaveTrailDialog';
-import { defaultAnimationSettings } from '@/types/gpx';
+import { defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
 import { GPXParser } from '@/utils/gpxParser';
 import { GPXData, PhotoPoint } from '@/types/gpx';
 import { toast } from 'sonner';
@@ -15,7 +15,6 @@ import { Button } from '@/components/ui/button';
 import { Mountain, Route, Timer, Loader2, LogIn } from 'lucide-react';
 
 const ANIMATION_DURATION = 10000;
-const animationSettings = defaultAnimationSettings;
 
 const Index = () => {
   const { user } = useAuth();
