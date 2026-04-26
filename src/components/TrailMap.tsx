@@ -435,7 +435,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               value={[flythrough.mapPitch]}
               onValueChange={(value) => flythrough.setMapPitch(value[0])}
               min={0}
-              max={60}
+              max={85}
               step={1}
               className="flex-1"
               disabled={flythrough.isFlying}
