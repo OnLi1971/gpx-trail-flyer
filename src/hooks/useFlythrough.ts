@@ -223,7 +223,7 @@ export function useFlythrough(
 
     setMapPitchState(60);
 
-    setTimeout(() => {
+    flyStartTimeoutRef.current = setTimeout(() => {
       flyAnimationRef.current = requestAnimationFrame(animateStep);
     }, 2000);
   }, [map, gpxData, mapPitch, stopFlythrough]);
