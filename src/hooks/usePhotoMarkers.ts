@@ -18,8 +18,7 @@ export function usePhotoMarkers(
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
   const [originalMapState, setOriginalMapState] = useState<{ center: [number, number]; zoom: number } | null>(null);
   const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
-  // PiP náhled aktivní pouze během 3D průletu
-  const [nearbyPhoto, setNearbyPhoto] = useState<PhotoPoint | null>(null);
+  // (PiP odebráno — fotka se otevírá přímo fullscreen modalem)
   // Sleduje fotky, které už byly v této session zobrazeny — neotevřou se znovu
   const shownPhotosRef = useRef<Set<string>>(new Set());
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -295,6 +294,5 @@ export function usePhotoMarkers(
     handleBulkPhotoUpload,
     fileInputRef,
     triggerUpload,
-    nearbyPhoto,
   };
 }
