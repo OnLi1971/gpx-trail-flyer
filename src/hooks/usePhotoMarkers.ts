@@ -24,9 +24,18 @@ export function usePhotoMarkers(
   const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const photoMarkersRef = useRef<Marker[]>([]);
+  const photoMarkerContainerRef = useRef<Record<string, HTMLDivElement>>({});
   const photoMarkerMapRef = useRef<Record<string, HTMLDivElement>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadCancelRef = useRef(false);
+  // Fronta fotek čekajících na zobrazení (modal je právě otevřený nebo tracker fotku přejel)
+  const pendingQueueRef = useRef<PhotoPoint[]>([]);
+  // Aktuální settings v refu — closure handleArrivedPhoto se nepřegeneruje při každém posunu slideru
+  const animationSettingsRef = useRef(animationSettings);
+  useEffect(() => { animationSettingsRef.current = animationSettings; }, [animationSettings]);
+  // Snapshot isFlying pro fallback auto-close
+  const isFlyingRef = useRef(isFlying);
+  useEffect(() => { isFlyingRef.current = isFlying; }, [isFlying]);
 
   // Cancel pending uploads when GPX changes
   useEffect(() => {
