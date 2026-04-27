@@ -154,7 +154,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       return;
     }
     const canvas = map.current.getCanvas();
-    const ok = recorder.startRecording(canvas, 30);
+    const overlay = mapContainer.current;
+    if (!overlay) return;
+    const ok = recorder.startRecording(canvas, overlay, 25);
     if (!ok) {
       toast.error('Nahrávání se nepodařilo spustit.');
       return;
