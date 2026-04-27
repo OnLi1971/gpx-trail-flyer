@@ -38,6 +38,8 @@ interface TrailMapProps {
   cachedPois?: import('@/utils/overpassApi').POIPoint[] | null;
   /** Zavolá se po úspěšném (znovu)načtení POI z Overpassu — vlastník je může uložit */
   onPoisFetched?: (pois: import('@/utils/overpassApi').POIPoint[]) => void;
+  /** Notifikace o stavu průletu — pro nadřazenou komponentu (časový editor fotek) */
+  onFlyStateChange?: (state: { isFlying: boolean; flyDurationSec: number; flyStartTimestamp: number | null }) => void;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({
@@ -51,6 +53,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   onPoiSettingsChange,
   cachedPois = null,
   onPoisFetched,
+  onFlyStateChange,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
@@ -123,7 +126,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const photoMarkers = usePhotoMarkers(
     map, gpxData, photos, onAddPhotos, currentPosition, animationSettings,
     flythrough.flyingIndex, flythrough.isFlying,
+    flythrough.flyStartTimestamp, flythrough.flyDurationSec,
   );
+
+  // Notify parent o stavu průletu (pro PhotoTimeEditor)
+  useEffect(() => {
+    if (!onFlyStateChange) return;
+    onFlyStateChange({
+      isFlying: flythrough.isFlying,
+      flyDurationSec: flythrough.flyDurationSec,
+      flyStartTimestamp: flythrough.flyStartTimestamp,
+    });
+  }, [flythrough.isFlying, flythrough.flyDurationSec, flythrough.flyStartTimestamp, onFlyStateChange]);
   const elevationData = useElevationData(
     gpxData, photos, currentPosition,
     flythrough.flyingIndex,
