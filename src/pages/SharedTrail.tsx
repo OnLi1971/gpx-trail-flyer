@@ -42,6 +42,12 @@ export default function SharedTrail() {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [animationSettings, setAnimationSettings] = useState<AnimationSettings>(defaultAnimationSettings);
 
+  // POI nastavení – načtené z DB a aktuálně držené
+  const [initialPoi, setInitialPoi] = useState<PoiSettings | null>(null);
+  const [currentPoi, setCurrentPoi] = useState<PoiSettings | null>(null);
+  const [savedPoi, setSavedPoi] = useState<PoiSettings | null>(null);
+  const [savingPoi, setSavingPoi] = useState(false);
+
   const isOwner = !!user && !!ownerId && user.id === ownerId;
 
   useEffect(() => {
