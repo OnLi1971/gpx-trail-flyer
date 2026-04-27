@@ -109,6 +109,35 @@ const Index = () => {
     setSaveOpen(true);
   };
 
+  // Při přidání fotek automaticky rozprostřít triggerSec rovnoměrně
+  const handleAddPhotos = useCallback((newPhotos: PhotoPoint[]) => {
+    setPhotos((prev) => {
+      const combined = [...prev, ...newPhotos];
+      const N = combined.length;
+      const dur = flyDurationSec || 60;
+      // Pokud fotka nemá triggerSec, dopočítej rovnoměrné rozprostření
+      return combined.map((p, i) => {
+        if (p.triggerSec !== undefined) return p;
+        return { ...p, triggerSec: ((i + 1) / (N + 1)) * dur };
+      });
+    });
+  }, [flyDurationSec]);
+
+  const handleChangeTriggerSec = useCallback((id: string, sec: number) => {
+    setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, triggerSec: sec } : p)));
+  }, []);
+
+  const handleRemovePhoto = useCallback((id: string) => {
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const handleFlyStateChange = useCallback(
+    (state: { isFlying: boolean; flyDurationSec: number; flyStartTimestamp: number | null }) => {
+      setFlyDurationSec(state.flyDurationSec);
+    },
+    []
+  );
+
   return (
     <div className="min-h-screen bg-background">
       <AppHeader onSaveClick={handleSaveClick} canSave={!!gpxData} />
