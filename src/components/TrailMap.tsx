@@ -54,7 +54,15 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // POI density — separate limits for peaks (hory) and places (města)
   const [peakLimit, setPeakLimit] = useState(25);
   const [placeLimit, setPlaceLimit] = useState(15);
+  // Manual peak selection
+  const [peakSelectionMode, setPeakSelectionMode] = useState<'auto' | 'manual'>('auto');
+  const [selectedPeakKeys, setSelectedPeakKeys] = useState<Set<string>>(new Set());
+  const [peakSearch, setPeakSearch] = useState('');
   const allNearbyPoisRef = useRef<import('@/utils/overpassApi').POIPoint[]>([]);
+
+  // Helper: stable key per peak
+  const peakKey = (p: import('@/utils/overpassApi').POIPoint) =>
+    `${p.name}@${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
 
   // Hooks — order matters: flythrough first (produces flyingIndex)
   const flythrough = useFlythrough(map, gpxData);
