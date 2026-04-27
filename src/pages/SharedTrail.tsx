@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { AppHeader } from '@/components/AppHeader';
 import { TrailMap, PoiSettings } from '@/components/TrailMap';
+import type { POIPoint } from '@/utils/overpassApi';
 import { AnimationControls } from '@/components/AnimationControls';
 import { GPXData, PhotoPoint, defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
 import { Card, CardContent } from '@/components/ui/card';
