@@ -632,7 +632,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
           {/* Elevation chart overlay */}
           {gpxData && (
-            <div className="absolute bottom-2 left-2 right-2 z-10 pointer-events-none">
+            <div className={`absolute z-10 pointer-events-none ${presentationMode ? 'bottom-6 left-6 right-6' : 'bottom-2 left-2 right-2'}`}>
               <div className="pointer-events-auto">
                 <ElevationChart
                   chartData={elevationData.chartData}
