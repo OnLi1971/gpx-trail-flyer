@@ -328,12 +328,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
   }, [gpxData, renderPoiMarkers]);
 
-  // Re-render markers when limit changes (without re-fetching)
+  // Re-render markers when limits change (without re-fetching)
   useEffect(() => {
     if (allNearbyPoisRef.current.length > 0) {
       renderPoiMarkers(allNearbyPoisRef.current);
     }
-  }, [poiLimit, renderPoiMarkers]);
+  }, [peakLimit, placeLimit, renderPoiMarkers]);
 
   // Click-to-add-photo mode
   useEffect(() => {
