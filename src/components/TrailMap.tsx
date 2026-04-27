@@ -298,7 +298,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       poiMarkersRef.current.push(marker);
     });
-  }, [peakLimit, placeLimit]);
+  }, [peakLimit, placeLimit, peakSelectionMode, selectedPeakKeys]);
 
   // POI fetch — only on gpx change
   useEffect(() => {
