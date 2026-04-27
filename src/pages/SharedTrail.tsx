@@ -56,7 +56,7 @@ export default function SharedTrail() {
       setLoading(true);
       const { data: trail, error: tErr } = await supabase
         .from('trails')
-        .select('id, name, gpx_data, user_id')
+        .select('id, name, gpx_data, user_id, peak_limit, place_limit, peak_selection_mode, selected_peak_keys')
         .eq('slug', slug)
         .maybeSingle();
 
