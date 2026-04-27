@@ -193,23 +193,26 @@ export function usePhotoMarkers(
     });
     const currentZoom = map.current.getZoom();
     const newZoom = Math.min(currentZoom * animationSettings.zoomFactor, 18);
+
+    // Otevřít modal okamžitě (tracker už je u fotky díky Haversine prahu)
+    setViewPhoto(photo);
+    setIsPhotoViewOpen(true);
+
+    // Plynule zoomnout na fotku
     map.current.flyTo({
       center: [photo.lon, photo.lat],
       zoom: newZoom,
       duration: animationSettings.flyToDuration,
       essential: true,
     });
-    setTimeout(() => {
-      setViewPhoto(photo);
-      setIsPhotoViewOpen(true);
-      // Auto-close po nastavené době
-      if (animationSettings.autoCloseDelay > 0) {
-        if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
-        autoCloseTimerRef.current = setTimeout(() => {
-          handlePhotoCloseRef.current();
-        }, animationSettings.autoCloseDelay);
-      }
-    }, animationSettings.modalDelay);
+
+    // Auto-close timer běží od TEĎ — fotka je vidět celé 4 s
+    if (animationSettings.autoCloseDelay > 0) {
+      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = setTimeout(() => {
+        handlePhotoCloseRef.current();
+      }, animationSettings.autoCloseDelay);
+    }
   }, [map, animationSettings]);
 
   const handlePhotoClose = useCallback(() => {
