@@ -555,7 +555,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                       size="sm"
                       variant="outline"
                       className="h-7 px-2 gap-1 text-xs mt-1"
-                      onClick={() => loadPOIs()}
+                      onClick={() => loadPOIs(true)}
                     >
                       <RefreshCw className="w-3 h-3" />
                       Zkusit znovu
