@@ -57,6 +57,7 @@ export type Database = {
       }
       trails: {
         Row: {
+          cached_pois: Json | null
           created_at: string
           gpx_data: Json
           id: string
@@ -65,12 +66,14 @@ export type Database = {
           peak_limit: number
           peak_selection_mode: string
           place_limit: number
+          pois_cached_at: string | null
           selected_peak_keys: Json
           slug: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          cached_pois?: Json | null
           created_at?: string
           gpx_data: Json
           id?: string
@@ -79,12 +82,14 @@ export type Database = {
           peak_limit?: number
           peak_selection_mode?: string
           place_limit?: number
+          pois_cached_at?: string | null
           selected_peak_keys?: Json
           slug: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          cached_pois?: Json | null
           created_at?: string
           gpx_data?: Json
           id?: string
@@ -93,6 +98,7 @@ export type Database = {
           peak_limit?: number
           peak_selection_mode?: string
           place_limit?: number
+          pois_cached_at?: string | null
           selected_peak_keys?: Json
           slug?: string
           updated_at?: string
