@@ -1112,15 +1112,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           )}
         </div>
 
-        {/* Elevation chart */}
-        {gpxData && (
-          <ElevationChart
-            chartData={elevationData.chartData}
-            currentChartPoint={elevationData.currentChartPoint}
-            photosOnChart={elevationData.photosOnChart}
-            onPhotoKmChange={onPhotoKmChange}
-          />
-        )}
       </div>
 
       <PhotoViewModal
