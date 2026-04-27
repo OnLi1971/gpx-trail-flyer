@@ -383,6 +383,8 @@ export default function SharedTrail() {
           readOnly={!isOwner}
           initialPoiSettings={initialPoi}
           onPoiSettingsChange={setCurrentPoi}
+          cachedPois={cachedPois}
+          onPoisFetched={handlePoisFetched}
         />
 
         {isOwner && photos.length > 0 && (
