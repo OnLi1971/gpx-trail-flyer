@@ -234,6 +234,38 @@ export default function SharedTrail() {
     }
   };
 
+  // Porovnání nastavení POI – jestli je něco neuloženo
+  const poiDirty = !!isOwner && !!currentPoi && !!savedPoi && (
+    currentPoi.peakLimit !== savedPoi.peakLimit ||
+    currentPoi.placeLimit !== savedPoi.placeLimit ||
+    currentPoi.peakSelectionMode !== savedPoi.peakSelectionMode ||
+    currentPoi.selectedPeakKeys.length !== savedPoi.selectedPeakKeys.length ||
+    currentPoi.selectedPeakKeys.some((k) => !savedPoi.selectedPeakKeys.includes(k))
+  );
+
+  const handleSavePoi = async () => {
+    if (!isOwner || !trailId || !currentPoi) return;
+    setSavingPoi(true);
+    try {
+      const { error } = await supabase
+        .from('trails')
+        .update({
+          peak_limit: currentPoi.peakLimit,
+          place_limit: currentPoi.placeLimit,
+          peak_selection_mode: currentPoi.peakSelectionMode,
+          selected_peak_keys: currentPoi.selectedPeakKeys as any,
+        })
+        .eq('id', trailId);
+      if (error) throw error;
+      setSavedPoi(currentPoi);
+      toast.success('Nastavení POI uloženo');
+    } catch (err: any) {
+      toast.error(`Nepodařilo se uložit: ${err.message || err}`);
+    } finally {
+      setSavingPoi(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
