@@ -230,13 +230,15 @@ const Index = () => {
                   photos={photos}
                   onAddPhotos={handleAddPhotos}
                   onFlyStateChange={handleFlyStateChange}
+                  onPhotoKmChange={handleChangePhotoKm}
                 />
 
                 <PhotoTimeEditor
                   photos={photos}
-                  flyDurationSec={flyDurationSec}
-                  onChangeTriggerSec={handleChangeTriggerSec}
+                  totalKm={totalKm}
+                  onChangePhotoKm={handleChangePhotoKm}
                   onRemove={handleRemovePhoto}
+                  onRedistribute={handleRedistribute}
                 />
             </div>
 
