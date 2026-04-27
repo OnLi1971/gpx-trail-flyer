@@ -130,7 +130,24 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // Hooks — order matters: flythrough first (produces flyingIndex)
   const recorder = useFlythroughRecorder();
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
+  const [presentationMode, setPresentationMode] = useState(false);
   const isRecordingRef = useRef(false);
+
+  // Resize mapy + ESC pro ukončení prezentačního módu
+  useEffect(() => {
+    if (!map.current) return;
+    const t = setTimeout(() => map.current?.resize(), 60);
+    return () => clearTimeout(t);
+  }, [presentationMode]);
+
+  useEffect(() => {
+    if (!presentationMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPresentationMode(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [presentationMode]);
 
   const flythrough = useFlythrough(map, gpxData, (reason) => {
     // Pokud nahráváme, zastav nahrávání a otevři dialog s náhledem
