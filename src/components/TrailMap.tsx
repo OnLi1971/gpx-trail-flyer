@@ -6,7 +6,7 @@ import { PhotoViewModal } from './PhotoViewModal';
 
 import { ManualPhotoDialog } from './ManualPhotoDialog';
 import { ElevationChart } from './ElevationChart';
-import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot, Maximize2, Minimize2 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -130,7 +130,24 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // Hooks — order matters: flythrough first (produces flyingIndex)
   const recorder = useFlythroughRecorder();
   const [videoDialogOpen, setVideoDialogOpen] = useState(false);
+  const [presentationMode, setPresentationMode] = useState(false);
   const isRecordingRef = useRef(false);
+
+  // Resize mapy + ESC pro ukončení prezentačního módu
+  useEffect(() => {
+    if (!map.current) return;
+    const t = setTimeout(() => map.current?.resize(), 60);
+    return () => clearTimeout(t);
+  }, [presentationMode]);
+
+  useEffect(() => {
+    if (!presentationMode) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPresentationMode(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [presentationMode]);
 
   const flythrough = useFlythrough(map, gpxData, (reason) => {
     // Pokud nahráváme, zastav nahrávání a otevři dialog s náhledem
@@ -606,9 +623,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   return (
     <>
-      <div className="relative w-full rounded-lg overflow-hidden shadow-lg">
+      <div className={presentationMode
+        ? "fixed inset-0 z-[100] bg-background overflow-hidden"
+        : "relative w-full rounded-lg overflow-hidden shadow-lg"}>
         {/* Main map container */}
-        <div className="relative w-full h-[500px]">
+        <div className={`relative w-full ${presentationMode ? 'h-screen' : 'h-[500px]'}`}>
           <div ref={mapContainer} className="absolute inset-0" />
 
           {/* Elevation chart overlay */}
@@ -623,7 +642,23 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               </div>
             </div>
           )}
-          {!readOnly && (
+
+          {/* Fullscreen / Presentation toggle */}
+          {gpxData && (
+            <div className="absolute top-2 right-2 z-20">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-2 shadow-md"
+                onClick={() => setPresentationMode((v) => !v)}
+                title={presentationMode ? 'Ukončit prezentaci (Esc)' : 'Prezentační mód'}
+              >
+                {presentationMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                {presentationMode ? 'Ukončit' : 'Prezentace'}
+              </Button>
+            </div>
+          )}
+          {!readOnly && !presentationMode && (
             <div className="absolute top-2 left-2 z-10 flex gap-2">
               <input
                 ref={photoMarkers.fileInputRef}
@@ -758,6 +793,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         </div>
 
         {/* 3D Controls */}
+        {!presentationMode && (
         <div className="bg-muted/50 border-t p-4 space-y-3">
           {/* Pitch slider */}
           <div className="flex items-center gap-3">
@@ -1111,6 +1147,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </>
           )}
         </div>
+        )}
 
       </div>
 
