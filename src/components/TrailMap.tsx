@@ -6,7 +6,7 @@ import { PhotoViewModal } from './PhotoViewModal';
 
 import { ManualPhotoDialog } from './ManualPhotoDialog';
 import { ElevationChart } from './ElevationChart';
-import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -17,6 +17,9 @@ import { fetchPeaksAndPlaces, filterPOIsNearTrack } from '@/utils/overpassApi';
 import { useFlythrough } from '@/hooks/useFlythrough';
 import { usePhotoMarkers } from '@/hooks/usePhotoMarkers';
 import { useElevationData } from '@/hooks/useElevationData';
+import { useFlythroughRecorder } from '@/hooks/useFlythroughRecorder';
+import { VideoPreviewDialog } from './VideoPreviewDialog';
+import { toast } from 'sonner';
 
 export interface PoiSettings {
   peakLimit: number;
@@ -125,8 +128,52 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     `${p.name}@${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
 
   // Hooks — order matters: flythrough first (produces flyingIndex)
-  const flythrough = useFlythrough(map, gpxData);
+  const recorder = useFlythroughRecorder();
+  const [videoDialogOpen, setVideoDialogOpen] = useState(false);
+  const isRecordingRef = useRef(false);
+
+  const flythrough = useFlythrough(map, gpxData, (reason) => {
+    // Pokud nahráváme, zastav nahrávání a otevři dialog s náhledem
+    if (isRecordingRef.current) {
+      isRecordingRef.current = false;
+      recorder.stopRecording();
+      // dialog otevřeme po onstop callbacku — ten naplní recorded
+      setTimeout(() => setVideoDialogOpen(true), 300);
+    }
+  });
   const photoMarkers = usePhotoMarkers(map, gpxData, photos, onAddPhotos);
+
+  const handleStartRecording = useCallback(() => {
+    if (!map.current) return;
+    if (!recorder.isSupported) {
+      toast.error('Tvůj prohlížeč nepodporuje nahrávání videa. Zkus Chrome, Firefox nebo Edge na desktopu.');
+      return;
+    }
+    if (flythrough.isFlying) {
+      toast.error('Nejdřív zastav probíhající průlet.');
+      return;
+    }
+    const canvas = map.current.getCanvas();
+    const ok = recorder.startRecording(canvas, 30);
+    if (!ok) {
+      toast.error('Nahrávání se nepodařilo spustit.');
+      return;
+    }
+    isRecordingRef.current = true;
+    toast.info('Nahrávám průlet — nepřepínej záložku!', { duration: 4000 });
+    // krátká prodleva, ať recorder dostane první frame
+    setTimeout(() => flythrough.startFlythrough(), 200);
+  }, [recorder, flythrough]);
+
+  const handleStopRecording = useCallback(() => {
+    isRecordingRef.current = false;
+    if (flythrough.isFlying) {
+      flythrough.stopFlythrough('stopped');
+    } else {
+      recorder.stopRecording();
+      setTimeout(() => setVideoDialogOpen(true), 300);
+    }
+  }, [flythrough, recorder]);
 
   // Notify parent o stavu průletu (pro PhotoTimeEditor)
   useEffect(() => {
