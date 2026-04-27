@@ -1,65 +1,63 @@
-## Co se změní
+## Problém
 
-Tvůj návrh dává velký smysl — **kilometry trasy** jsou intuitivnější než sekundy průletu (sekundy se mění s rychlostí animace, km jsou pevné). A modré tečky ve výškovém profilu jsou ideální místo, kde s fotkami pohybovat **přímo myší**.
+Fotky teď fungují přes „trigger + modal": když průlet dorazí k jejich km, schovají se markery, kamera odzoomuje, otevře se modal s fotkou, pak zase zpět. To je křehké (timing, zoom, pořadí, autoclose) a vizuálně se chovají úplně jinak než vrcholy, které prostě **stojí** nad trasou jako popisek na tyčce a drží pozici po celou animaci.
 
-### 1. Nový model: `triggerKm` místo `triggerSec`
+## Řešení: fotky jako POI vrcholy
 
-V `src/types/gpx.ts` přejmenovat:
-- `triggerSec?: number` → `triggerKm?: number` (vzdálenost od startu trasy v km)
+Zahodíme celé „trigger + modal" chování pro fotky během průletu. Fotka bude **statický marker** přesně toho stylu jako vrchol — kartička (obdélník s miniaturou + popisem) sedící na konci tyčky, tyčka jde kolmo dolů na bod trasy daný `triggerKm`. Marker je viditelný pořád: před průletem, během 3D průletu i po. MapLibre marker držený na `[lon, lat]` automaticky drží svou geo-pozici, když se kamera hýbe a naklání — přesně jako to dělají vrcholy.
 
-Trigger se počítá z **ujeté vzdálenosti**, ne z času. Funguje stejně při jakékoliv rychlosti průletu i při ručním tažení slideru.
-
-### 2. Logika v `usePhotoMarkers.ts`
-
-- Místo `(elapsedSec >= photo.triggerSec)` porovnávat `currentKm >= photo.triggerKm`.
-- `currentKm` = pozice na trase odvozená z `flyingIndex` nebo `currentPosition` (procentuálně × `track.totalDistance`).
-- Značky fotek na mapě umístit na bod trasy odpovídající `triggerKm` (najít nejbližší bod podle kumulované vzdálenosti).
-- Odstranit závislost na `flyDurationSec` a `flyStartTimestamp` u triggeru (zůstanou jen pro autozavírání modalu).
-
-### 3. Drag & drop ve výškovém profilu (`ElevationChart.tsx`)
-
-Modré tečky (`ReferenceDot` pro fotky) udělat **interaktivní**:
-- Po `mousedown` na tečce začne drag, sleduje se pohyb myši nad chart oblastí.
-- Z X souřadnice myši dopočítat km (přes scale Recharts) a volat nový callback `onPhotoKmChange(id, km)`.
-- Hover nad tečkou: tooltip s názvem fotky + miniaturou.
-- Klik (bez tažení) otevře modal s fotkou.
-- Vizuál: tečky o něco větší (r=6), `cursor: grab` / `grabbing`.
-
-### 4. Zjednodušený `PhotoTimeEditor` → `PhotoListEditor`
-
-Místo slideru sekund:
-- U každé fotky pole **„km"** (number input, 0 – `totalDistanceKm`, krok 0.1).
-- Tlačítko „Rozprostřít rovnoměrně" (přepočítá všechny fotky).
-- Tlačítko smazat.
-- Slider odstranit — pohyb se dělá přímo v grafu, tady je jen přesné doladění čísla.
-
-Toto vyřeší tvůj první problém („nevidím, jak nastavit čas") — bude to jednoduchý seznam s číslem v km.
-
-### 5. Auto-rozprostření při uploadu
-
-V `Index.tsx` při přidání fotek bez `triggerKm`:
-```
-photo.triggerKm = ((i + 1) / (N + 1)) * totalDistanceKm
+```text
+   ┌─────────────────────────┐
+   │ [img]  Vrchol Sněžka    │   ← kartička (obdélník)
+   │        u jezera         │
+   └────────────┬────────────┘
+                │                  ← tyčka
+                │
+                •                  ← bod na trase (triggerKm)
+   ═══════════════════════════     ← trasa
 ```
 
-### 6. Kompatibilita
+## Co se mění
 
-- `flyDurationSec` zůstává jen pro autozavírání modalu (sekundy zobrazení).
-- Stará data s `triggerSec` se při načtení převedou: `triggerKm = (triggerSec / flyDurationSec) * totalKm` (jednorázová migrace v Indexu).
+### 1. `usePhotoMarkers.ts` — markery jako POI
+
+- Marker fotky překreslit ve stylu peak POI: bílá karta s miniaturou (~48×48 px) vlevo, vpravo popis fotky. Border + shadow + zaoblení jako vrchol. Pod kartou tyčka (gradient/jemná čára) + tečka na trase. `anchor: 'bottom'`, `pointerEvents: 'none'` na tyčce, `auto` na kartě (pro klik).
+- **Marker je viditelný vždy** — odstranit `display:none` při `isFlying` a celý effect, který display přepíná.
+- Pozice markeru = bod trasy nalezený přes `indexAtKm(cumKm, triggerKm)` (zachováno).
+- Klik na kartu = otevře `PhotoViewModal` (manuální prohlížení mimo animaci). Žádné auto-otevření.
+
+### 2. Odstranit trigger logiku
+
+- Smazat effect „Trigger podle ujeté vzdálenosti (km)" (řádky ~200–230).
+- Smazat `handleArrivedPhoto`, `handlePhotoClose` chain pro auto-otevírání během průletu, `pendingQueueRef`, `shownPhotosRef`, `autoCloseTimerRef`, `originalMapState`, `activePhotoId`, `flyTo` na fotku.
+- Zachovat: `viewPhoto`, `isPhotoViewOpen`, `handlePhotoClose` — ale jen jako jednoduchý open/close pro klik na marker.
+- Z parametrů hooku odstranit `flyingIndex`, `isFlying`, `_flyStartTimestamp`, `_flyDurationSec`, `currentPosition`, `animationSettings` (nejsou už potřeba).
+
+### 3. `PhotoPiP.tsx`
+
+- Komponenta zůstane jako je (nepoužitá pro auto-trigger). Pokud ji nikdo neimportuje, smazat.
+
+### 4. `TrailMap.tsx`
+
+- Volání `usePhotoMarkers(...)` zjednodušit — bez flythrough a position parametrů.
+- `onFlyStateChange` zůstává (potřebuje ho `PhotoTimeEditor` rodič? — zkontrolovat; pokud jen pro starý editor sekund, dá se i ponechat, neškodí).
+
+### 5. Bez změny
+
+- `triggerKm` v `PhotoPoint` zůstává — určuje, **kam na trase** marker patří.
+- `PhotoTimeEditor` (km input + drag tečky v ElevationChart) zůstává — slouží k přesnému umístění markeru na trasu.
+- `Index.tsx`, `SharedTrail.tsx` — žádné změny propsů kromě toho, že některé už nebudou potřeba.
+
+## Efekt pro uživatele
+
+- Fotky se na mapě objeví hned po nahrání jako pěkné kartičky na tyčkách, stejně jako vrcholy.
+- Během 3D průletu **zůstanou viset** nad trasou na svých místech, kamera kolem nich přeletí a uvidíš je v kontextu krajiny.
+- Klik na kartu fotky kdykoliv otevře plný náhled (modal).
+- Žádné nečekané zoomy, žádné modaly skákající uprostřed průletu, žádný timing bug.
 
 ## Soubory k úpravě
 
-- `src/types/gpx.ts` — `triggerSec` → `triggerKm`
-- `src/hooks/usePhotoMarkers.ts` — trigger podle km, pozice značek podle km
-- `src/components/ElevationChart.tsx` — draggable tečky + hover tooltip + onClick
-- `src/components/PhotoTimeEditor.tsx` → přejmenovat/přepracovat na seznam s km
-- `src/hooks/useElevationData.ts` — `chartDistance` použít přímo `triggerKm` (ne hledat nejbližší GPS bod)
-- `src/pages/Index.tsx` — propsy, handler `handleChangePhotoKm`, propojení do TrailMap kvůli draggu
-- `src/components/TrailMap.tsx` — předat `onPhotoKmChange` do ElevationChart
-- `src/pages/SharedTrail.tsx` — stejné drobné úpravy
-
-## Výsledek
-
-- V grafu výšky chytíš modrou tečku a **přesuneš ji**, kam chceš → fotka se tam spustí.
-- Pod mapou seznam fotek s polem „km" pro přesné nastavení.
-- Trigger je nezávislý na rychlosti animace — stejná pozice na trase = stejná fotka.
+- `src/hooks/usePhotoMarkers.ts` — přepsat marker styl, smazat trigger logiku
+- `src/components/TrailMap.tsx` — zjednodušit volání hooku
+- `src/components/PhotoPiP.tsx` — pravděpodobně smazat
+- (volitelně) `src/types/gpx.ts` — `autoCloseDelay` v animationSettings už není pro fotky relevantní, ale necháme
