@@ -479,21 +479,40 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.mapPitch}°</span>
           </div>
 
-          {/* POI density slider */}
-          {gpxData && poiCounts.filtered > 0 && (
+          {/* POI density — peaks (hory) */}
+          {gpxData && poiCounts.peaks > 0 && (
             <div className="flex items-center gap-3">
-              <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs font-medium text-muted-foreground w-20">Hustota POI</span>
+              <Mountain className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Hory (POI)</span>
               <Slider
-                value={[poiLimit]}
-                onValueChange={(value) => setPoiLimit(value[0])}
+                value={[peakLimit]}
+                onValueChange={(value) => setPeakLimit(value[0])}
                 min={0}
-                max={Math.max(poiCounts.filtered, 10)}
+                max={Math.max(poiCounts.peaks, 5)}
                 step={1}
                 className="flex-1"
               />
               <span className="text-xs text-muted-foreground w-10 text-right">
-                {Math.min(poiLimit, poiCounts.filtered)}/{poiCounts.filtered}
+                {Math.min(peakLimit, poiCounts.peaks)}/{poiCounts.peaks}
+              </span>
+            </div>
+          )}
+
+          {/* POI density — places (města) */}
+          {gpxData && poiCounts.places > 0 && (
+            <div className="flex items-center gap-3">
+              <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Města (POI)</span>
+              <Slider
+                value={[placeLimit]}
+                onValueChange={(value) => setPlaceLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.places, 5)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(placeLimit, poiCounts.places)}/{poiCounts.places}
               </span>
             </div>
           )}
