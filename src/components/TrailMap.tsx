@@ -1053,6 +1053,27 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   )}
                 </Button>
 
+                <Button
+                  size="sm"
+                  variant={recorder.isRecording ? 'destructive' : 'outline'}
+                  onClick={recorder.isRecording ? handleStopRecording : handleStartRecording}
+                  className="gap-2"
+                  disabled={!recorder.isSupported && !recorder.isRecording}
+                  title={recorder.isSupported ? 'Nahraj průlet jako video pro sdílení' : 'Tvůj prohlížeč nepodporuje nahrávání'}
+                >
+                  {recorder.isRecording ? (
+                    <>
+                      <CircleDot className="w-4 h-4 text-red-200 animate-pulse" />
+                      Nahrávám…
+                    </>
+                  ) : (
+                    <>
+                      <Video className="w-4 h-4" />
+                      Nahrát průlet
+                    </>
+                  )}
+                </Button>
+
                 {flythrough.isFlying && flythrough.currentGrade !== null && (
                   <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-medium text-sm ${
                     flythrough.currentGrade > 2
@@ -1101,6 +1122,17 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         }}
         coords={pendingCoords}
         onConfirm={(photo) => onAddPhotos([photo])}
+      />
+
+      <VideoPreviewDialog
+        open={videoDialogOpen}
+        onOpenChange={(o) => {
+          setVideoDialogOpen(o);
+          if (!o) recorder.clearRecorded();
+        }}
+        videoUrl={recorder.recorded?.url ?? null}
+        videoBlob={recorder.recorded?.blob ?? null}
+        extension={recorder.recorded?.extension ?? 'webm'}
       />
     </>
   );
