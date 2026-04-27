@@ -63,13 +63,27 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [poiPanelExpanded, setPoiPanelExpanded] = useState(false);
 
   // POI density — separate limits for peaks (hory) and places (města)
-  const [peakLimit, setPeakLimit] = useState(25);
-  const [placeLimit, setPlaceLimit] = useState(15);
+  const [peakLimit, setPeakLimit] = useState(initialPoiSettings?.peakLimit ?? 25);
+  const [placeLimit, setPlaceLimit] = useState(initialPoiSettings?.placeLimit ?? 15);
   // Manual peak selection
-  const [peakSelectionMode, setPeakSelectionMode] = useState<'auto' | 'manual'>('auto');
-  const [selectedPeakKeys, setSelectedPeakKeys] = useState<Set<string>>(new Set());
+  const [peakSelectionMode, setPeakSelectionMode] = useState<'auto' | 'manual'>(initialPoiSettings?.peakSelectionMode ?? 'auto');
+  const [selectedPeakKeys, setSelectedPeakKeys] = useState<Set<string>>(
+    new Set(initialPoiSettings?.selectedPeakKeys ?? [])
+  );
   const [peakSearch, setPeakSearch] = useState('');
   const allNearbyPoisRef = useRef<import('@/utils/overpassApi').POIPoint[]>([]);
+  const hasInitialPoiRef = useRef<boolean>(!!initialPoiSettings);
+
+  // Emit POI settings to parent when they change
+  useEffect(() => {
+    if (!onPoiSettingsChange) return;
+    onPoiSettingsChange({
+      peakLimit,
+      placeLimit,
+      peakSelectionMode,
+      selectedPeakKeys: [...selectedPeakKeys],
+    });
+  }, [peakLimit, placeLimit, peakSelectionMode, selectedPeakKeys, onPoiSettingsChange]);
 
   // Helper: stable key per peak
   const peakKey = (p: import('@/utils/overpassApi').POIPoint) =>
