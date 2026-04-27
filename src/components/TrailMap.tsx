@@ -126,11 +126,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   // Hooks — order matters: flythrough first (produces flyingIndex)
   const flythrough = useFlythrough(map, gpxData);
-  const photoMarkers = usePhotoMarkers(
-    map, gpxData, photos, onAddPhotos, currentPosition, animationSettings,
-    flythrough.flyingIndex, flythrough.isFlying,
-    flythrough.flyStartTimestamp, flythrough.flyDurationSec,
-  );
+  const photoMarkers = usePhotoMarkers(map, gpxData, photos, onAddPhotos);
 
   // Notify parent o stavu průletu (pro PhotoTimeEditor)
   useEffect(() => {
