@@ -47,8 +47,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [poiError, setPoiError] = useState<string | null>(null);
   const [poiPanelExpanded, setPoiPanelExpanded] = useState(false);
 
-  // POI density — max number of POIs shown on the map
-  const [poiLimit, setPoiLimit] = useState(40);
+  // POI density — separate limits for peaks (hory) and places (města)
+  const [peakLimit, setPeakLimit] = useState(25);
+  const [placeLimit, setPlaceLimit] = useState(15);
   const allNearbyPoisRef = useRef<import('@/utils/overpassApi').POIPoint[]>([]);
 
   // Hooks — order matters: flythrough first (produces flyingIndex)
@@ -204,18 +205,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const renderPoiMarkers = React.useCallback((pois: import('@/utils/overpassApi').POIPoint[]) => {
     if (!map.current) return;
 
-    // Priority sort: peaks first, then places by importance (city > town > village > hamlet)
-    const placeRank: Record<string, number> = { city: 0, town: 1, village: 2, hamlet: 3 };
-    const sorted = [...pois].sort((a, b) => {
-      if (a.type === 'peak' && b.type !== 'peak') return -1;
-      if (b.type === 'peak' && a.type !== 'peak') return 1;
-      if (a.type === 'peak' && b.type === 'peak') {
-        return (b.ele ?? 0) - (a.ele ?? 0);
-      }
-      return (placeRank[a.placeType ?? 'hamlet'] ?? 9) - (placeRank[b.placeType ?? 'hamlet'] ?? 9);
-    });
+    // Split into peaks and places
+    const peaks = pois.filter(p => p.type === 'peak');
+    const places = pois.filter(p => p.type !== 'peak');
 
-    const limited = sorted.slice(0, poiLimit);
+    // Sort peaks by elevation desc
+    peaks.sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
+
+    // Sort places by importance (city > town > village > hamlet)
+    const placeRank: Record<string, number> = { city: 0, town: 1, village: 2, hamlet: 3 };
+    places.sort((a, b) =>
+      (placeRank[a.placeType ?? 'hamlet'] ?? 9) - (placeRank[b.placeType ?? 'hamlet'] ?? 9)
+    );
+
+    const limited = [...peaks.slice(0, peakLimit), ...places.slice(0, placeLimit)];
 
     poiMarkersRef.current.forEach(m => m.remove());
     poiMarkersRef.current = [];
@@ -278,7 +281,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       poiMarkersRef.current.push(marker);
     });
-  }, [poiLimit]);
+  }, [peakLimit, placeLimit]);
 
   // POI fetch — only on gpx change
   useEffect(() => {
@@ -325,12 +328,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
   }, [gpxData, renderPoiMarkers]);
 
-  // Re-render markers when limit changes (without re-fetching)
+  // Re-render markers when limits change (without re-fetching)
   useEffect(() => {
     if (allNearbyPoisRef.current.length > 0) {
       renderPoiMarkers(allNearbyPoisRef.current);
     }
-  }, [poiLimit, renderPoiMarkers]);
+  }, [peakLimit, placeLimit, renderPoiMarkers]);
 
   // Click-to-add-photo mode
   useEffect(() => {
@@ -476,21 +479,40 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.mapPitch}°</span>
           </div>
 
-          {/* POI density slider */}
-          {gpxData && poiCounts.filtered > 0 && (
+          {/* POI density — peaks (hory) */}
+          {gpxData && poiCounts.peaks > 0 && (
             <div className="flex items-center gap-3">
-              <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs font-medium text-muted-foreground w-20">Hustota POI</span>
+              <Mountain className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Hory (POI)</span>
               <Slider
-                value={[poiLimit]}
-                onValueChange={(value) => setPoiLimit(value[0])}
+                value={[peakLimit]}
+                onValueChange={(value) => setPeakLimit(value[0])}
                 min={0}
-                max={Math.max(poiCounts.filtered, 10)}
+                max={Math.max(poiCounts.peaks, 5)}
                 step={1}
                 className="flex-1"
               />
               <span className="text-xs text-muted-foreground w-10 text-right">
-                {Math.min(poiLimit, poiCounts.filtered)}/{poiCounts.filtered}
+                {Math.min(peakLimit, poiCounts.peaks)}/{poiCounts.peaks}
+              </span>
+            </div>
+          )}
+
+          {/* POI density — places (města) */}
+          {gpxData && poiCounts.places > 0 && (
+            <div className="flex items-center gap-3">
+              <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Města (POI)</span>
+              <Slider
+                value={[placeLimit]}
+                onValueChange={(value) => setPlaceLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.places, 5)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(placeLimit, poiCounts.places)}/{poiCounts.places}
               </span>
             </div>
           )}
