@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, MutableRefObject } from 'react';
 import { Map, Marker } from 'maplibre-gl';
-import { GPXData, PhotoPoint, AnimationSettings } from '@/types/gpx';
+import { GPXData, PhotoPoint } from '@/types/gpx';
 import { extractPhotoGPS } from '@/utils/exifReader';
 import { toast } from 'sonner';
 
@@ -24,12 +24,11 @@ function buildCumulativeKm(points: { lat: number; lon: number }[]): number[] {
   return out;
 }
 
-/** Najdi index bodu trasy nejbližší dané vzdálenosti v km. */
+/** Najdi index bodu trasy nejbližší dané vzdálenosti v km (binární vyhledávání). */
 function indexAtKm(cumKm: number[], targetKm: number): number {
   if (cumKm.length === 0) return 0;
   if (targetKm <= 0) return 0;
   if (targetKm >= cumKm[cumKm.length - 1]) return cumKm.length - 1;
-  // binární vyhledávání
   let lo = 0, hi = cumKm.length - 1;
   while (lo < hi) {
     const mid = (lo + hi) >> 1;
@@ -38,35 +37,23 @@ function indexAtKm(cumKm: number[], targetKm: number): number {
   return lo;
 }
 
+/**
+ * Fotky jako statické POI markery — kartička na tyčce nad bodem trasy
+ * odpovídajícím triggerKm. Viditelné vždy (i během 3D průletu),
+ * MapLibre Marker drží svou geo-pozici. Klik = otevření modalu.
+ */
 export function usePhotoMarkers(
   map: MutableRefObject<Map | null>,
   gpxData: GPXData | null,
   photos: PhotoPoint[],
   onAddPhotos: (newPhotos: PhotoPoint[]) => void,
-  currentPosition: number,
-  animationSettings: AnimationSettings,
-  flyingIndex: number | null = null,
-  isFlying: boolean = false,
-  _flyStartTimestamp: number | null = null,
-  _flyDurationSec: number = 60,
 ) {
   const [viewPhoto, setViewPhoto] = useState<PhotoPoint | null>(null);
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
-  const [originalMapState, setOriginalMapState] = useState<{ center: [number, number]; zoom: number } | null>(null);
-  const [activePhotoId, setActivePhotoId] = useState<string | null>(null);
-  const shownPhotosRef = useRef<Set<string>>(new Set());
-  const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const photoMarkersRef = useRef<Marker[]>([]);
-  const photoMarkerContainerRef = useRef<Record<string, HTMLDivElement>>({});
-  const photoMarkerMapRef = useRef<Record<string, HTMLDivElement>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadCancelRef = useRef(false);
-  const pendingQueueRef = useRef<PhotoPoint[]>([]);
-  const animationSettingsRef = useRef(animationSettings);
-  useEffect(() => { animationSettingsRef.current = animationSettings; }, [animationSettings]);
-  const isFlyingRef = useRef(isFlying);
-  useEffect(() => { isFlyingRef.current = isFlying; }, [isFlying]);
 
   // Cancel pending uploads when GPX changes
   useEffect(() => {
@@ -79,33 +66,26 @@ export function usePhotoMarkers(
   const trackPoints = gpxData && gpxData.tracks.length > 0 ? gpxData.tracks[0].points : [];
   const totalKm = gpxData && gpxData.tracks.length > 0 ? gpxData.tracks[0].totalDistance / 1000 : 0;
 
-  // Kumulovaná vzdálenost pro každý bod — přepočítáme jen při změně trasy
+  // Kumulovaná vzdálenost pro každý bod
   const cumKmRef = useRef<number[]>([]);
   useEffect(() => {
     cumKmRef.current = buildCumulativeKm(trackPoints);
   }, [gpxData]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Vykreslení značek fotek na mapě — pozice odpovídá triggerKm na trase
+  // Vykreslení statických markerů fotek — styl jako POI vrcholy
   useEffect(() => {
     if (!map.current) return;
 
-    if (!photos.length) {
-      photoMarkersRef.current.forEach(marker => marker.remove());
-      photoMarkersRef.current = [];
-      photoMarkerMapRef.current = {};
-      photoMarkerContainerRef.current = {};
-      return;
-    }
-
+    // Cleanup
     photoMarkersRef.current.forEach(marker => marker.remove());
     photoMarkersRef.current = [];
-    photoMarkerMapRef.current = {};
-    photoMarkerContainerRef.current = {};
+
+    if (!photos.length) return;
 
     const cumKm = cumKmRef.current;
 
     photos.forEach(photo => {
-      // Pozice značky: pokud má fotka triggerKm a máme trasu, sedí přesně na trase.
+      // Pozice markeru: snap na trasu podle triggerKm (jinak originální GPS)
       let lat = photo.lat;
       let lon = photo.lon;
       if (photo.triggerKm !== undefined && trackPoints.length > 0 && cumKm.length > 0) {
@@ -114,205 +94,81 @@ export function usePhotoMarkers(
         if (p) { lat = p.lat; lon = p.lon; }
       }
 
-      const container = document.createElement('div');
-      container.style.cssText = `display:${isFlying ? 'none' : 'flex'};flex-direction:column;align-items:center;cursor:pointer;width:44px;z-index:10;position:relative;`;
-      container.setAttribute('data-photo-marker', 'true');
-      container.setAttribute('data-photo-id', photo.id);
+      const el = document.createElement('div');
+      el.style.cssText = 'display:flex;flex-direction:column;align-items:center;pointer-events:none;z-index:6;';
+      el.setAttribute('data-photo-marker', 'true');
+      el.setAttribute('data-photo-id', photo.id);
+
+      // Karta (obdélník: miniatura + popis) — styl jako peak POI
+      const card = document.createElement('div');
+      card.style.cssText = [
+        'background:rgba(255,255,255,0.97)',
+        'border:2px solid hsl(217 91% 60%)',
+        'border-radius:8px',
+        'padding:3px 8px 3px 3px',
+        'display:flex',
+        'align-items:center',
+        'gap:6px',
+        'box-shadow:0 2px 6px rgba(0,0,0,0.25)',
+        'pointer-events:auto',
+        'cursor:pointer',
+        'max-width:200px',
+        'transition:transform 0.15s ease, box-shadow 0.15s ease',
+      ].join(';');
 
       const thumb = document.createElement('div');
-      thumb.style.cssText = 'width:44px;height:44px;border-radius:50%;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3);overflow:hidden;background:#1e293b;transition:transform 0.2s ease, box-shadow 0.3s ease, border-color 0.3s ease;';
-
+      thumb.style.cssText = 'width:32px;height:32px;border-radius:4px;overflow:hidden;background:#1e293b;flex-shrink:0;';
       const img = document.createElement('img');
       img.src = photo.photo;
-      img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;display:block;';
       img.draggable = false;
       thumb.appendChild(img);
 
+      const label = document.createElement('div');
+      label.style.cssText = 'font-size:11px;font-weight:600;color:hsl(222 47% 20%);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px;';
+      label.textContent = photo.description || 'Fotka';
+
+      card.appendChild(thumb);
+      card.appendChild(label);
+
+      // Tyčka + tečka na trase
       const pole = document.createElement('div');
-      pole.style.cssText = 'width:2px;height:16px;background:white;box-shadow:0 1px 3px rgba(0,0,0,0.3);';
+      pole.style.cssText = 'width:2px;height:28px;background:linear-gradient(to bottom, hsl(217 91% 60%), hsl(217 91% 40%));';
 
       const dot = document.createElement('div');
-      dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:white;box-shadow:0 1px 3px rgba(0,0,0,0.3);';
+      dot.style.cssText = 'width:8px;height:8px;border-radius:50%;background:hsl(217 91% 40%);box-shadow:0 1px 3px rgba(0,0,0,0.4);';
 
-      container.appendChild(thumb);
-      container.appendChild(pole);
-      container.appendChild(dot);
+      el.appendChild(card);
+      el.appendChild(pole);
+      el.appendChild(dot);
 
-      container.addEventListener('mouseenter', () => {
-        thumb.style.transform = 'scale(1.3)';
+      // Hover + klik
+      card.addEventListener('mouseenter', () => {
+        card.style.transform = 'scale(1.05)';
+        card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.35)';
       });
-      container.addEventListener('mouseleave', () => {
-        thumb.style.transform = 'scale(1)';
+      card.addEventListener('mouseleave', () => {
+        card.style.transform = 'scale(1)';
+        card.style.boxShadow = '0 2px 6px rgba(0,0,0,0.25)';
+      });
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setViewPhoto(photo);
+        setIsPhotoViewOpen(true);
       });
 
-      if (photo.description) {
-        container.title = photo.description;
-      }
-
-      const marker = new Marker({ element: container, anchor: 'bottom' })
+      const marker = new Marker({ element: el, anchor: 'bottom' })
         .setLngLat([lon, lat])
         .addTo(map.current!);
 
       photoMarkersRef.current.push(marker);
-      photoMarkerMapRef.current[photo.id] = thumb;
-      photoMarkerContainerRef.current[photo.id] = container;
     });
-  }, [photos, map, isFlying, gpxData]);
-
-  // Skrýt photo markery během 3D průletu
-  useEffect(() => {
-    Object.values(photoMarkerContainerRef.current).forEach(container => {
-      container.style.display = isFlying ? 'none' : 'flex';
-    });
-  }, [isFlying]);
-
-  // Pulse glow na aktivní fotce (modal otevřený)
-  useEffect(() => {
-    Object.entries(photoMarkerMapRef.current).forEach(([id, thumb]) => {
-      if (id === activePhotoId) {
-        thumb.style.borderColor = 'hsl(var(--primary))';
-        thumb.style.boxShadow = '0 0 0 4px hsl(var(--primary) / 0.4), 0 2px 12px hsl(var(--primary) / 0.6)';
-        thumb.style.transform = 'scale(1.2)';
-      } else {
-        thumb.style.borderColor = 'white';
-        thumb.style.boxShadow = '0 2px 8px rgba(0,0,0,0.3)';
-        thumb.style.transform = 'scale(1)';
-      }
-    });
-  }, [activePhotoId, photos]);
-
-  // Reset zobrazených fotek při návratu na začátek
-  useEffect(() => {
-    if (currentPosition < 1 && !isFlying) {
-      shownPhotosRef.current.clear();
-      pendingQueueRef.current = [];
-    }
-  }, [currentPosition, isFlying]);
-
-  // Reset při startu nového průletu
-  useEffect(() => {
-    if (isFlying) {
-      shownPhotosRef.current.clear();
-      pendingQueueRef.current = [];
-    }
-  }, [isFlying]);
-
-  // Trigger podle ujeté vzdálenosti (km)
-  useEffect(() => {
-    if (!map.current || photos.length === 0 || trackPoints.length === 0) return;
-    const cumKm = cumKmRef.current;
-    if (cumKm.length === 0) return;
-
-    // Aktuální km — z flyingIndex (3D průlet) nebo z currentPosition (slider/2D animace)
-    let currentKm: number;
-    if (flyingIndex !== null && flyingIndex >= 0 && flyingIndex < cumKm.length) {
-      currentKm = cumKm[flyingIndex];
-    } else {
-      const idx = Math.floor((currentPosition / 100) * (trackPoints.length - 1));
-      currentKm = cumKm[Math.max(0, Math.min(cumKm.length - 1, idx))];
-    }
-
-    photos.forEach(photo => {
-      if (photo.triggerKm === undefined) return;
-      if (shownPhotosRef.current.has(photo.id)) return;
-      if (pendingQueueRef.current.some(p => p.id === photo.id)) return;
-      if (currentKm >= photo.triggerKm) {
-        shownPhotosRef.current.add(photo.id);
-        pendingQueueRef.current.push(photo);
-      }
-    });
-
-    if (!isPhotoViewOpen && activePhotoId === null && pendingQueueRef.current.length > 0) {
-      const next = pendingQueueRef.current.shift()!;
-      setActivePhotoId(next.id);
-      handleArrivedPhotoRef.current(next);
-    }
-  }, [photos, flyingIndex, currentPosition, isPhotoViewOpen, activePhotoId, map, gpxData]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const handlePhotoCloseRef = useRef<() => void>(() => {});
-  const handleArrivedPhotoRef = useRef<(p: PhotoPoint) => void>(() => {});
-
-  const handleArrivedPhoto = useCallback((photo: PhotoPoint) => {
-    if (!map.current) return;
-    if (!map.current.isStyleLoaded()) return;
-    const settings = animationSettingsRef.current;
-    setOriginalMapState({
-      center: [map.current.getCenter().lng, map.current.getCenter().lat],
-      zoom: map.current.getZoom(),
-    });
-    const currentZoom = map.current.getZoom();
-    const newZoom = Math.min(currentZoom * settings.zoomFactor, 18);
-
-    // Cíl flyTo: bod na trase odpovídající triggerKm, pokud existuje
-    let centerLat = photo.lat;
-    let centerLon = photo.lon;
-    if (photo.triggerKm !== undefined && trackPoints.length > 0 && cumKmRef.current.length > 0) {
-      const idx = indexAtKm(cumKmRef.current, photo.triggerKm);
-      const p = trackPoints[idx];
-      if (p) { centerLat = p.lat; centerLon = p.lon; }
-    }
-
-    setViewPhoto(photo);
-    setIsPhotoViewOpen(true);
-
-    map.current.flyTo({
-      center: [centerLon, centerLat],
-      zoom: newZoom,
-      duration: settings.flyToDuration,
-      essential: true,
-    });
-
-    let delay = settings.autoCloseDelay;
-    if (delay <= 0 && isFlyingRef.current) delay = 4000;
-
-    if (delay > 0) {
-      if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
-      autoCloseTimerRef.current = setTimeout(() => {
-        handlePhotoCloseRef.current();
-      }, delay);
-    }
-  }, [map, gpxData]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    handleArrivedPhotoRef.current = handleArrivedPhoto;
-  }, [handleArrivedPhoto]);
+  }, [photos, map, gpxData]);
 
   const handlePhotoClose = useCallback(() => {
-    if (autoCloseTimerRef.current) {
-      clearTimeout(autoCloseTimerRef.current);
-      autoCloseTimerRef.current = null;
-    }
     setIsPhotoViewOpen(false);
     setViewPhoto(null);
-    setActivePhotoId(null);
-    const settings = animationSettingsRef.current;
-    if (map.current && originalMapState) {
-      map.current.flyTo({
-        center: originalMapState.center,
-        zoom: originalMapState.zoom,
-        duration: settings.zoomBackDuration,
-      });
-      setOriginalMapState(null);
-    }
-
-    if (pendingQueueRef.current.length > 0) {
-      const next = pendingQueueRef.current.shift()!;
-      setTimeout(() => {
-        setActivePhotoId(next.id);
-        handleArrivedPhotoRef.current(next);
-      }, 80);
-    }
-  }, [map, originalMapState]);
-
-  useEffect(() => {
-    handlePhotoCloseRef.current = handlePhotoClose;
-  }, [handlePhotoClose]);
-
-  // Reset fronty při změně GPX/počtu fotek
-  useEffect(() => {
-    pendingQueueRef.current = [];
-    shownPhotosRef.current.clear();
-  }, [gpxData, photos.length]);
+  }, []);
 
   const handleBulkPhotoUpload = useCallback(async (files: FileList) => {
     const fileArray = Array.from(files);
