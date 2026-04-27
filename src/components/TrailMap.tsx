@@ -205,18 +205,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const renderPoiMarkers = React.useCallback((pois: import('@/utils/overpassApi').POIPoint[]) => {
     if (!map.current) return;
 
-    // Priority sort: peaks first, then places by importance (city > town > village > hamlet)
-    const placeRank: Record<string, number> = { city: 0, town: 1, village: 2, hamlet: 3 };
-    const sorted = [...pois].sort((a, b) => {
-      if (a.type === 'peak' && b.type !== 'peak') return -1;
-      if (b.type === 'peak' && a.type !== 'peak') return 1;
-      if (a.type === 'peak' && b.type === 'peak') {
-        return (b.ele ?? 0) - (a.ele ?? 0);
-      }
-      return (placeRank[a.placeType ?? 'hamlet'] ?? 9) - (placeRank[b.placeType ?? 'hamlet'] ?? 9);
-    });
+    // Split into peaks and places
+    const peaks = pois.filter(p => p.type === 'peak');
+    const places = pois.filter(p => p.type !== 'peak');
 
-    const limited = sorted.slice(0, poiLimit);
+    // Sort peaks by elevation desc
+    peaks.sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
+
+    // Sort places by importance (city > town > village > hamlet)
+    const placeRank: Record<string, number> = { city: 0, town: 1, village: 2, hamlet: 3 };
+    places.sort((a, b) =>
+      (placeRank[a.placeType ?? 'hamlet'] ?? 9) - (placeRank[b.placeType ?? 'hamlet'] ?? 9)
+    );
+
+    const limited = [...peaks.slice(0, peakLimit), ...places.slice(0, placeLimit)];
 
     poiMarkersRef.current.forEach(m => m.remove());
     poiMarkersRef.current = [];
@@ -279,7 +281,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       poiMarkersRef.current.push(marker);
     });
-  }, [poiLimit]);
+  }, [peakLimit, placeLimit]);
 
   // POI fetch — only on gpx change
   useEffect(() => {
