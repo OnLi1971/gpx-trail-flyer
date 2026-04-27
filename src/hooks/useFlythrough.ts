@@ -167,7 +167,7 @@ export function useFlythrough(
 
     const animateStep = () => {
       if (!map.current || currentIndex >= totalPoints - 1) {
-        stopFlythrough();
+        stopFlythrough('finished');
         return;
       }
 
