@@ -74,7 +74,7 @@ export function usePhotoMarkers(
 
     photos.forEach(photo => {
       const container = document.createElement('div');
-      container.style.cssText = 'display:flex;flex-direction:column;align-items:center;cursor:pointer;width:44px;z-index:10;position:relative;';
+      container.style.cssText = `display:${isFlying ? 'none' : 'flex'};flex-direction:column;align-items:center;cursor:pointer;width:44px;z-index:10;position:relative;`;
       container.setAttribute('data-photo-marker', 'true');
       container.setAttribute('data-photo-id', photo.id);
 
@@ -114,8 +114,17 @@ export function usePhotoMarkers(
 
       photoMarkersRef.current.push(marker);
       photoMarkerMapRef.current[photo.id] = thumb;
+      photoMarkerContainerRef.current[photo.id] = container;
     });
-  }, [photos, map]);
+  }, [photos, map, isFlying]);
+
+  // Skrýt photo markery během 3D průletu — v 3D pitchi „plavou" mimo svou pozici
+  // a fotka se stejně zobrazuje fullscreen modalem.
+  useEffect(() => {
+    Object.values(photoMarkerContainerRef.current).forEach(container => {
+      container.style.display = isFlying ? 'none' : 'flex';
+    });
+  }, [isFlying]);
 
   // Pulse glow na aktivní fotce (modal otevřený)
   useEffect(() => {
