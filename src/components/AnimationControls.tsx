@@ -113,8 +113,8 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
                     onAnimationSettingsChange({ ...animationSettings, threshold: v[0] / 111000 })
                   }
                   min={10}
-                  max={200}
-                  step={5}
+                  max={500}
+                  step={10}
                   className="w-full"
                 />
               </div>

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, MutableRefObject } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo, MutableRefObject } from 'react';
 import { Map, Marker } from 'maplibre-gl';
 import { GPXData, PhotoPoint, AnimationSettings } from '@/types/gpx';
 import { extractPhotoGPS } from '@/utils/exifReader';
@@ -139,36 +139,89 @@ export function usePhotoMarkers(
     return 2 * R * Math.asin(Math.sqrt(x));
   }, []);
 
-  // Práh příchodu k fotce (m). Bere se přímo z UI slideru (animationSettings.threshold ve stupních).
-  const arrivalRadiusMeters = useCallback(() => {
+  // Práh přípustného offsetu fotky od trasy (m). Bere se přímo z UI slideru.
+  const arrivalRadiusMeters = useMemo(() => {
     const meters = animationSettings.threshold * 111000; // 1 deg ≈ 111 km
     return Math.min(500, Math.max(10, meters));
   }, [animationSettings.threshold]);
 
-  // Sjednocená detekce: použije se pro live (currentPosition) i pro 3D průlet (flyingIndex)
+  // Pro každou fotku najdi index nejbližšího bodu trasy + min vzdálenost.
+  // Počítá se jen při změně gpxData/photos, ne při každém kroku průletu.
+  const photoTrackMap = useMemo(() => {
+    const result: Record<string, { nearestIndex: number; distMeters: number }> = {};
+    if (!gpxData || gpxData.tracks.length === 0) return result;
+    const points = gpxData.tracks[0].points;
+    if (points.length === 0) return result;
+
+    photos.forEach(photo => {
+      let bestIdx = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < points.length; i++) {
+        const d = distanceMeters(photo, points[i]);
+        if (d < bestDist) {
+          bestDist = d;
+          bestIdx = i;
+        }
+      }
+      result[photo.id] = { nearestIndex: bestIdx, distMeters: bestDist };
+    });
+    return result;
+  }, [gpxData, photos, distanceMeters]);
+
+  // Diagnostika: upozorni na fotky, které jsou dál od trasy než dovoluje slider.
+  const warnedPhotosRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!gpxData || photos.length === 0) return;
+    photos.forEach(photo => {
+      const meta = photoTrackMap[photo.id];
+      if (!meta) return;
+      if (meta.distMeters > arrivalRadiusMeters && !warnedPhotosRef.current.has(photo.id)) {
+        warnedPhotosRef.current.add(photo.id);
+        const label = photo.description || 'Fotka';
+        toast.warning(
+          `${label} je ${Math.round(meta.distMeters)} m od trasy — zvyš „Vzdálenost spuštění" nad ${Math.round(meta.distMeters)} m, aby se zobrazila.`
+        );
+      }
+    });
+  }, [photoTrackMap, arrivalRadiusMeters, gpxData, photos]);
+
+  // Reset warningů při změně GPX/fotek (nový soubor → nové warningy)
+  useEffect(() => {
+    warnedPhotosRef.current.clear();
+  }, [gpxData, photos.length]);
+
+  // Sjednocená detekce: spustí fotku, když tracker dorazí k bodu trasy nejbližšímu fotce.
+  // Tím obejdeme přeskakování bodů během 3D průletu (krok může být 5+ bodů).
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) return;
     if (isPhotoViewOpen || activePhotoId !== null) return;
 
     const track = gpxData.tracks[0];
-    let pointIndex: number;
+    let currentIndex: number;
     if (isFlying && flyingIndex !== null) {
-      pointIndex = flyingIndex;
+      currentIndex = flyingIndex;
     } else {
-      pointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
+      currentIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
     }
-    const point = track.points[pointIndex];
-    if (!point) return;
 
-    const radius = arrivalRadiusMeters();
+    // Tolerance v indexech — průlet skáče po krocích, potřebujeme okno
+    const triggerWindow = 5;
 
-    // Najdi nejbližší ještě nezobrazenou fotku v okruhu
-    let arrived: { photo: PhotoPoint; dist: number } | null = null;
+    let arrived: { photo: PhotoPoint; delta: number } | null = null;
     photos.forEach(photo => {
       if (shownPhotosRef.current.has(photo.id)) return;
-      const dist = distanceMeters(photo, point);
-      if (dist <= radius && (!arrived || dist < arrived.dist)) {
-        arrived = { photo, dist };
+      const meta = photoTrackMap[photo.id];
+      if (!meta) return;
+      // Fotka mimo dosah slideru → nepouštět (uživatel byl varován)
+      if (meta.distMeters > arrivalRadiusMeters) return;
+      // Spusti, jakmile tracker projíždí blízko nejbližšího bodu k fotce
+      // (a nepustil ho nedávno — kontroluje se až jako dorazil, ne před)
+      if (currentIndex >= meta.nearestIndex - triggerWindow &&
+          currentIndex <= meta.nearestIndex + triggerWindow) {
+        const delta = Math.abs(currentIndex - meta.nearestIndex);
+        if (!arrived || delta < arrived.delta) {
+          arrived = { photo, delta };
+        }
       }
     });
 
@@ -177,7 +230,7 @@ export function usePhotoMarkers(
       setActivePhotoId(arrived.photo.id);
       handleArrivedPhoto(arrived.photo);
     }
-  }, [currentPosition, flyingIndex, isFlying, gpxData, photos, isPhotoViewOpen, activePhotoId, distanceMeters, arrivalRadiusMeters]);
+  }, [currentPosition, flyingIndex, isFlying, gpxData, photos, isPhotoViewOpen, activePhotoId, photoTrackMap, arrivalRadiusMeters]);
 
   const handlePhotoCloseRef = useRef<() => void>(() => {});
 
