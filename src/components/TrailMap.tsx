@@ -34,6 +34,10 @@ interface TrailMapProps {
   readOnly?: boolean;
   initialPoiSettings?: PoiSettings | null;
   onPoiSettingsChange?: (settings: PoiSettings) => void;
+  /** Předem uložená POI z DB — pokud jsou, Overpass se nevolá */
+  cachedPois?: import('@/utils/overpassApi').POIPoint[] | null;
+  /** Zavolá se po úspěšném (znovu)načtení POI z Overpassu — vlastník je může uložit */
+  onPoisFetched?: (pois: import('@/utils/overpassApi').POIPoint[]) => void;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({
@@ -45,6 +49,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   readOnly = false,
   initialPoiSettings = null,
   onPoiSettingsChange,
+  cachedPois = null,
+  onPoisFetched,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
