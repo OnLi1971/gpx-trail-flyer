@@ -77,28 +77,46 @@ export function useElevationData(
       });
     }
 
-    // Photo positions on chart
+    // Photo positions on chart — primárně podle triggerKm, fallback podle GPS
+    const totalKm = track.totalDistance / 1000;
     const photosOnChart: PhotoOnChart[] = photos.map(photo => {
-      let closestPoint = track.points[0];
-      let minDist = Number.MAX_VALUE;
+      let chartDistance: number;
+      let pointIndex: number;
 
-      track.points.forEach(point => {
-        const dist = Math.sqrt(
-          Math.pow(point.lat - photo.lat, 2) + Math.pow(point.lon - photo.lon, 2)
-        );
-        if (dist < minDist) {
-          minDist = dist;
-          closestPoint = point;
-        }
-      });
+      if (photo.triggerKm !== undefined && totalKm > 0) {
+        chartDistance = Math.max(0, Math.min(totalKm, photo.triggerKm));
+        // Najdi originalIndex bodu odpovídající tomu km (lineární odhad)
+        pointIndex = Math.round((chartDistance / totalKm) * (track.points.length - 1));
+      } else {
+        // Fallback — nejbližší GPS bod
+        let closestPoint = track.points[0];
+        let minDist = Number.MAX_VALUE;
+        track.points.forEach(point => {
+          const dist = Math.sqrt(
+            Math.pow(point.lat - photo.lat, 2) + Math.pow(point.lon - photo.lon, 2)
+          );
+          if (dist < minDist) {
+            minDist = dist;
+            closestPoint = point;
+          }
+        });
+        pointIndex = track.points.indexOf(closestPoint);
+        const chartPoint = chartData.find(data => data.originalIndex === pointIndex);
+        chartDistance = chartPoint?.distance || 0;
+      }
 
-      const pointIndex = track.points.indexOf(closestPoint);
-      const chartPoint = chartData.find(data => data.originalIndex === pointIndex);
+      // Najdi nejbližší chart bod pro elevaci
+      let chartElevation = 0;
+      let bestDiff = Infinity;
+      for (const cp of chartData) {
+        const diff = Math.abs(cp.originalIndex - pointIndex);
+        if (diff < bestDiff) { bestDiff = diff; chartElevation = cp.elevation; }
+      }
 
       return {
         id: photo.id,
-        chartDistance: chartPoint?.distance || 0,
-        chartElevation: chartPoint?.elevation || closestPoint.ele || 0,
+        chartDistance,
+        chartElevation,
       };
     });
 
