@@ -319,10 +319,15 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         const nearbyPois = filterPOIsNearTrack(pois, track.points, 2);
         allNearbyPoisRef.current = nearbyPois;
 
-        const peaks = nearbyPois.filter(p => p.type === 'peak').length;
-        const places = nearbyPois.filter(p => p.type === 'place').length;
-        setPoiCounts({ peaks, places, raw: pois.length, filtered: nearbyPois.length });
+        const peakList = nearbyPois.filter(p => p.type === 'peak');
+        const placeList = nearbyPois.filter(p => p.type === 'place');
+        setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: pois.length, filtered: nearbyPois.length });
         setPoiStatus('success');
+
+        // Pre-select top peaks for manual mode (sorted by elevation)
+        const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
+        setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
+        setPeakSelectionMode('auto');
 
         renderPoiMarkers(nearbyPois);
       } catch (err) {
