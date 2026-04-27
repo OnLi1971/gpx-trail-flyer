@@ -62,6 +62,10 @@ export type Database = {
           id: string
           is_public: boolean
           name: string
+          peak_limit: number
+          peak_selection_mode: string
+          place_limit: number
+          selected_peak_keys: Json
           slug: string
           updated_at: string
           user_id: string
@@ -72,6 +76,10 @@ export type Database = {
           id?: string
           is_public?: boolean
           name: string
+          peak_limit?: number
+          peak_selection_mode?: string
+          place_limit?: number
+          selected_peak_keys?: Json
           slug: string
           updated_at?: string
           user_id: string
@@ -82,6 +90,10 @@ export type Database = {
           id?: string
           is_public?: boolean
           name?: string
+          peak_limit?: number
+          peak_selection_mode?: string
+          place_limit?: number
+          selected_peak_keys?: Json
           slug?: string
           updated_at?: string
           user_id?: string

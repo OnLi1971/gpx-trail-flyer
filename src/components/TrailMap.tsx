@@ -18,6 +18,13 @@ import { useFlythrough } from '@/hooks/useFlythrough';
 import { usePhotoMarkers } from '@/hooks/usePhotoMarkers';
 import { useElevationData } from '@/hooks/useElevationData';
 
+export interface PoiSettings {
+  peakLimit: number;
+  placeLimit: number;
+  peakSelectionMode: 'auto' | 'manual';
+  selectedPeakKeys: string[];
+}
+
 interface TrailMapProps {
   gpxData: GPXData | null;
   currentPosition: number;
@@ -25,6 +32,8 @@ interface TrailMapProps {
   onAddPhotos: (newPhotos: PhotoPoint[]) => void;
   animationSettings: AnimationSettings;
   readOnly?: boolean;
+  initialPoiSettings?: PoiSettings | null;
+  onPoiSettingsChange?: (settings: PoiSettings) => void;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({
@@ -34,6 +43,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   onAddPhotos,
   animationSettings,
   readOnly = false,
+  initialPoiSettings = null,
+  onPoiSettingsChange,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
@@ -52,13 +63,27 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [poiPanelExpanded, setPoiPanelExpanded] = useState(false);
 
   // POI density — separate limits for peaks (hory) and places (města)
-  const [peakLimit, setPeakLimit] = useState(25);
-  const [placeLimit, setPlaceLimit] = useState(15);
+  const [peakLimit, setPeakLimit] = useState(initialPoiSettings?.peakLimit ?? 25);
+  const [placeLimit, setPlaceLimit] = useState(initialPoiSettings?.placeLimit ?? 15);
   // Manual peak selection
-  const [peakSelectionMode, setPeakSelectionMode] = useState<'auto' | 'manual'>('auto');
-  const [selectedPeakKeys, setSelectedPeakKeys] = useState<Set<string>>(new Set());
+  const [peakSelectionMode, setPeakSelectionMode] = useState<'auto' | 'manual'>(initialPoiSettings?.peakSelectionMode ?? 'auto');
+  const [selectedPeakKeys, setSelectedPeakKeys] = useState<Set<string>>(
+    new Set(initialPoiSettings?.selectedPeakKeys ?? [])
+  );
   const [peakSearch, setPeakSearch] = useState('');
   const allNearbyPoisRef = useRef<import('@/utils/overpassApi').POIPoint[]>([]);
+  const hasInitialPoiRef = useRef<boolean>(!!initialPoiSettings);
+
+  // Emit POI settings to parent when they change
+  useEffect(() => {
+    if (!onPoiSettingsChange) return;
+    onPoiSettingsChange({
+      peakLimit,
+      placeLimit,
+      peakSelectionMode,
+      selectedPeakKeys: [...selectedPeakKeys],
+    });
+  }, [peakLimit, placeLimit, peakSelectionMode, selectedPeakKeys, onPoiSettingsChange]);
 
   // Helper: stable key per peak
   const peakKey = (p: import('@/utils/overpassApi').POIPoint) =>
@@ -324,10 +349,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: pois.length, filtered: nearbyPois.length });
         setPoiStatus('success');
 
-        // Pre-select top peaks for manual mode (sorted by elevation)
-        const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
-        setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
-        setPeakSelectionMode('auto');
+        // Pre-select top peaks for manual mode (sorted by elevation) — jen pokud nemáme uložená nastavení
+        if (!hasInitialPoiRef.current) {
+          const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
+          setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
+          setPeakSelectionMode('auto');
+        }
+        // Pro další gpx změny v rámci téže instance už znovu defaultovat
+        hasInitialPoiRef.current = false;
 
         renderPoiMarkers(nearbyPois);
       } catch (err) {

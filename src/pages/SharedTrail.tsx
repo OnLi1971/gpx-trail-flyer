@@ -1,14 +1,14 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { AppHeader } from '@/components/AppHeader';
-import { TrailMap } from '@/components/TrailMap';
+import { TrailMap, PoiSettings } from '@/components/TrailMap';
 import { AnimationControls } from '@/components/AnimationControls';
 import { GPXData, PhotoPoint, defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Mountain, Save, Trash2, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Mountain, Save, Trash2, Image as ImageIcon, Settings2, Check } from 'lucide-react';
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
@@ -42,6 +42,12 @@ export default function SharedTrail() {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [animationSettings, setAnimationSettings] = useState<AnimationSettings>(defaultAnimationSettings);
 
+  // POI nastavení – načtené z DB a aktuálně držené
+  const [initialPoi, setInitialPoi] = useState<PoiSettings | null>(null);
+  const [currentPoi, setCurrentPoi] = useState<PoiSettings | null>(null);
+  const [savedPoi, setSavedPoi] = useState<PoiSettings | null>(null);
+  const [savingPoi, setSavingPoi] = useState(false);
+
   const isOwner = !!user && !!ownerId && user.id === ownerId;
 
   useEffect(() => {
@@ -50,7 +56,7 @@ export default function SharedTrail() {
       setLoading(true);
       const { data: trail, error: tErr } = await supabase
         .from('trails')
-        .select('id, name, gpx_data, user_id')
+        .select('id, name, gpx_data, user_id, peak_limit, place_limit, peak_selection_mode, selected_peak_keys')
         .eq('slug', slug)
         .maybeSingle();
 
@@ -64,6 +70,18 @@ export default function SharedTrail() {
       setOwnerId(trail.user_id);
       setName(trail.name);
       setGpxData(trail.gpx_data as unknown as GPXData);
+
+      const poi: PoiSettings = {
+        peakLimit: (trail as any).peak_limit ?? 25,
+        placeLimit: (trail as any).place_limit ?? 15,
+        peakSelectionMode: ((trail as any).peak_selection_mode ?? 'auto') as 'auto' | 'manual',
+        selectedPeakKeys: Array.isArray((trail as any).selected_peak_keys)
+          ? ((trail as any).selected_peak_keys as string[])
+          : [],
+      };
+      setInitialPoi(poi);
+      setCurrentPoi(poi);
+      setSavedPoi(poi);
 
       const { data: photoRows } = await supabase
         .from('trail_photos')
@@ -216,6 +234,38 @@ export default function SharedTrail() {
     }
   };
 
+  // Porovnání nastavení POI – jestli je něco neuloženo
+  const poiDirty = !!isOwner && !!currentPoi && !!savedPoi && (
+    currentPoi.peakLimit !== savedPoi.peakLimit ||
+    currentPoi.placeLimit !== savedPoi.placeLimit ||
+    currentPoi.peakSelectionMode !== savedPoi.peakSelectionMode ||
+    currentPoi.selectedPeakKeys.length !== savedPoi.selectedPeakKeys.length ||
+    currentPoi.selectedPeakKeys.some((k) => !savedPoi.selectedPeakKeys.includes(k))
+  );
+
+  const handleSavePoi = async () => {
+    if (!isOwner || !trailId || !currentPoi) return;
+    setSavingPoi(true);
+    try {
+      const { error } = await supabase
+        .from('trails')
+        .update({
+          peak_limit: currentPoi.peakLimit,
+          place_limit: currentPoi.placeLimit,
+          peak_selection_mode: currentPoi.peakSelectionMode,
+          selected_peak_keys: currentPoi.selectedPeakKeys as any,
+        })
+        .eq('id', trailId);
+      if (error) throw error;
+      setSavedPoi(currentPoi);
+      toast.success('Nastavení POI uloženo');
+    } catch (err: any) {
+      toast.error(`Nepodařilo se uložit: ${err.message || err}`);
+    } finally {
+      setSavingPoi(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -255,11 +305,31 @@ export default function SharedTrail() {
               {isOwner ? 'Tvoje trasa — můžeš přidávat fotky a měnit nastavení' : 'Sdílená trasa'}
             </p>
           </div>
-          {isOwner && newPhotosCount > 0 && (
-            <Button onClick={handleSaveChanges} disabled={saving} className="gap-2">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Uložit {newPhotosCount} {newPhotosCount === 1 ? 'novou fotku' : 'nové fotky'}
-            </Button>
+          {isOwner && (
+            <div className="flex items-center gap-2">
+              {poiDirty && (
+                <Button
+                  onClick={handleSavePoi}
+                  disabled={savingPoi}
+                  variant="secondary"
+                  className="gap-2"
+                >
+                  {savingPoi ? <Loader2 className="w-4 h-4 animate-spin" /> : <Settings2 className="w-4 h-4" />}
+                  Uložit nastavení POI
+                </Button>
+              )}
+              {!poiDirty && savedPoi && (
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Check className="w-3 h-3" /> POI uloženo
+                </span>
+              )}
+              {newPhotosCount > 0 && (
+                <Button onClick={handleSaveChanges} disabled={saving} className="gap-2">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Uložit {newPhotosCount} {newPhotosCount === 1 ? 'novou fotku' : 'nové fotky'}
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
@@ -280,6 +350,8 @@ export default function SharedTrail() {
           photos={photos}
           onAddPhotos={(newPhotos) => setPhotos((prev) => [...prev, ...newPhotos])}
           readOnly={!isOwner}
+          initialPoiSettings={initialPoi}
+          onPoiSettingsChange={setCurrentPoi}
         />
 
         {isOwner && photos.length > 0 && (
