@@ -38,8 +38,11 @@ function calculateGrade(start: { lat: number; lon: number; ele?: number }, end: 
 
 export function useFlythrough(
   map: MutableRefObject<Map | null>,
-  gpxData: GPXData | null
+  gpxData: GPXData | null,
+  onComplete?: (reason: 'finished' | 'stopped') => void
 ) {
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
   const [isFlying, setIsFlying] = useState(false);
   const [flySpeed, setFlySpeedState] = useState(50);
   const [flyRotation, setFlyRotationState] = useState(50);
