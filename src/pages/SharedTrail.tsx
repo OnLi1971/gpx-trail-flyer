@@ -305,11 +305,31 @@ export default function SharedTrail() {
               {isOwner ? 'Tvoje trasa — můžeš přidávat fotky a měnit nastavení' : 'Sdílená trasa'}
             </p>
           </div>
-          {isOwner && newPhotosCount > 0 && (
-            <Button onClick={handleSaveChanges} disabled={saving} className="gap-2">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              Uložit {newPhotosCount} {newPhotosCount === 1 ? 'novou fotku' : 'nové fotky'}
-            </Button>
+          {isOwner && (
+            <div className="flex items-center gap-2">
+              {poiDirty && (
+                <Button
+                  onClick={handleSavePoi}
+                  disabled={savingPoi}
+                  variant="secondary"
+                  className="gap-2"
+                >
+                  {savingPoi ? <Loader2 className="w-4 h-4 animate-spin" /> : <Settings2 className="w-4 h-4" />}
+                  Uložit nastavení POI
+                </Button>
+              )}
+              {!poiDirty && savedPoi && (
+                <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                  <Check className="w-3 h-3" /> POI uloženo
+                </span>
+              )}
+              {newPhotosCount > 0 && (
+                <Button onClick={handleSaveChanges} disabled={saving} className="gap-2">
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  Uložit {newPhotosCount} {newPhotosCount === 1 ? 'novou fotku' : 'nové fotky'}
+                </Button>
+              )}
+            </div>
           )}
         </div>
 
@@ -330,6 +350,8 @@ export default function SharedTrail() {
           photos={photos}
           onAddPhotos={(newPhotos) => setPhotos((prev) => [...prev, ...newPhotos])}
           readOnly={!isOwner}
+          initialPoiSettings={initialPoi}
+          onPoiSettingsChange={setCurrentPoi}
         />
 
         {isOwner && photos.length > 0 && (
