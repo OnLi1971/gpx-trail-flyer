@@ -110,7 +110,8 @@ export default function SharedTrail() {
       }));
       // Auto-doplnit triggerKm pro fotky bez něj (rovnoměrné rozprostření podél trasy)
       const N = loadedRaw.length;
-      const totalKm = parsedData.tracks[0]?.totalDistance ? parsedData.tracks[0].totalDistance / 1000 : 1;
+      const _trackTotal = (trail.gpx_data as any)?.tracks?.[0]?.totalDistance ?? 0;
+      const totalKm = _trackTotal ? _trackTotal / 1000 : 1;
       const loaded: PhotoPoint[] = loadedRaw.map((p, i) => ({
         ...p,
         triggerKm: ((i + 1) / (N + 1)) * totalKm,
