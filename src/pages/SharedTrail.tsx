@@ -100,13 +100,20 @@ export default function SharedTrail() {
         .select('id, photo_url, description, lat, lon, photo_timestamp')
         .eq('trail_id', trail.id);
 
-      const loaded = (photoRows || []).map((p) => ({
+      const loadedRaw = (photoRows || []).map((p) => ({
         id: p.id,
         lat: p.lat,
         lon: p.lon,
         photo: p.photo_url,
         description: p.description || '',
         timestamp: Number(p.photo_timestamp),
+      }));
+      // Auto-doplnit triggerSec pro staré fotky bez něj (rovnoměrné rozprostření)
+      const N = loadedRaw.length;
+      const dur = 60; // default; po startu průletu se přepočítá v editoru/triggru
+      const loaded: PhotoPoint[] = loadedRaw.map((p, i) => ({
+        ...p,
+        triggerSec: ((i + 1) / (N + 1)) * dur,
       }));
       setPhotos(loaded);
       setSavedPhotoIds(new Set(loaded.map((p) => p.id)));
