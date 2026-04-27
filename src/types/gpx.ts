@@ -43,7 +43,7 @@ export interface AnimationSettings {
 }
 
 export const defaultAnimationSettings: AnimationSettings = {
-  threshold: 0.005,
+  threshold: 0.00045,
   zoomFactor: 1.5,
   flyToDuration: 1500,
   modalDelay: 2000,

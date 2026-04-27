@@ -139,11 +139,10 @@ export function usePhotoMarkers(
     return 2 * R * Math.asin(Math.sqrt(x));
   }, []);
 
-  // Práh příchodu k fotce (m). animationSettings.threshold (stupně) převedeme přibližně na metry,
-  // ale držíme tvrdou horní hranici 30 m, aby fotka nikdy neskočila dřív než tracker doopravdy dorazí.
+  // Práh příchodu k fotce (m). Bere se přímo z UI slideru (animationSettings.threshold ve stupních).
   const arrivalRadiusMeters = useCallback(() => {
-    const fromDeg = Math.max(10, animationSettings.threshold * 111000); // 1 deg ≈ 111 km
-    return Math.min(40, fromDeg, 30);
+    const meters = animationSettings.threshold * 111000; // 1 deg ≈ 111 km
+    return Math.min(500, Math.max(10, meters));
   }, [animationSettings.threshold]);
 
   // Sjednocená detekce: použije se pro live (currentPosition) i pro 3D průlet (flyingIndex)
