@@ -80,6 +80,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const allNearbyPoisRef = useRef<import('@/utils/overpassApi').POIPoint[]>([]);
   const hasInitialPoiRef = useRef<boolean>(!!initialPoiSettings);
 
+  // Custom peak (přidaný uživatelem)
+  const [customPeakName, setCustomPeakName] = useState('');
+  const [customPeakEle, setCustomPeakEle] = useState('');
+  const [customPeakLat, setCustomPeakLat] = useState('');
+  const [customPeakLon, setCustomPeakLon] = useState('');
+  const [pickingPeakOnMap, setPickingPeakOnMap] = useState(false);
+  const [customPeakError, setCustomPeakError] = useState<string | null>(null);
+  // Tick pro re-render po mutaci allNearbyPoisRef (přidání custom vrcholu)
+  const [poiVersion, setPoiVersion] = useState(0);
+
   // Emit POI settings to parent when they change
   useEffect(() => {
     if (!onPoiSettingsChange) return;
