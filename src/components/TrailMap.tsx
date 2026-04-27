@@ -349,10 +349,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: pois.length, filtered: nearbyPois.length });
         setPoiStatus('success');
 
-        // Pre-select top peaks for manual mode (sorted by elevation)
-        const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
-        setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
-        setPeakSelectionMode('auto');
+        // Pre-select top peaks for manual mode (sorted by elevation) — jen pokud nemáme uložená nastavení
+        if (!hasInitialPoiRef.current) {
+          const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
+          setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
+          setPeakSelectionMode('auto');
+        }
+        // Pro další gpx změny v rámci téže instance už znovu defaultovat
+        hasInitialPoiRef.current = false;
 
         renderPoiMarkers(nearbyPois);
       } catch (err) {
