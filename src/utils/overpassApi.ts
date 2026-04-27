@@ -74,6 +74,7 @@ out body 300;`;
     } catch (err) {
       lastError = err;
     }
+    }
   }
 
   throw new Error(`Všechny Overpass servery selhaly. ${lastError instanceof Error ? lastError.message : ''}`);
