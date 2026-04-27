@@ -1147,6 +1147,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </>
           )}
         </div>
+        )}
 
       </div>
 
