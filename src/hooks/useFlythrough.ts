@@ -38,8 +38,11 @@ function calculateGrade(start: { lat: number; lon: number; ele?: number }, end: 
 
 export function useFlythrough(
   map: MutableRefObject<Map | null>,
-  gpxData: GPXData | null
+  gpxData: GPXData | null,
+  onComplete?: (reason: 'finished' | 'stopped') => void
 ) {
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
   const [isFlying, setIsFlying] = useState(false);
   const [flySpeed, setFlySpeedState] = useState(50);
   const [flyRotation, setFlyRotationState] = useState(50);
@@ -107,7 +110,7 @@ export function useFlythrough(
     }
   }, [map]);
 
-  const stopFlythrough = useCallback(() => {
+  const stopFlythrough = useCallback((reason: 'finished' | 'stopped' = 'stopped') => {
     if (flyAnimationRef.current) {
       cancelAnimationFrame(flyAnimationRef.current);
       flyAnimationRef.current = null;
@@ -146,6 +149,8 @@ export function useFlythrough(
       });
       setMapPitchState(0);
     }
+
+    onCompleteRef.current?.(reason);
   }, [map, gpxData]);
 
   const startFlythrough = useCallback(() => {
@@ -162,7 +167,7 @@ export function useFlythrough(
 
     const animateStep = () => {
       if (!map.current || currentIndex >= totalPoints - 1) {
-        stopFlythrough();
+        stopFlythrough('finished');
         return;
       }
 

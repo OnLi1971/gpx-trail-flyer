@@ -1,63 +1,72 @@
-## Problém
+# Export animace jako video pro sdílení
 
-Fotky teď fungují přes „trigger + modal": když průlet dorazí k jejich km, schovají se markery, kamera odzoomuje, otevře se modal s fotkou, pak zase zpět. To je křehké (timing, zoom, pořadí, autoclose) a vizuálně se chovají úplně jinak než vrcholy, které prostě **stojí** nad trasou jako popisek na tyčce a drží pozici po celou animaci.
+Cíl: Po dokončení 3D průletu (nebo na vyžádání) získat MP4/WebM video, které jde stáhnout a nasdílet na Facebook, Instagram, atd.
 
-## Řešení: fotky jako POI vrcholy
+## Jak to bude fungovat (UX)
 
-Zahodíme celé „trigger + modal" chování pro fotky během průletu. Fotka bude **statický marker** přesně toho stylu jako vrchol — kartička (obdélník s miniaturou + popisem) sedící na konci tyčky, tyčka jde kolmo dolů na bod trasy daný `triggerKm`. Marker je viditelný pořád: před průletem, během 3D průletu i po. MapLibre marker držený na `[lon, lat]` automaticky drží svou geo-pozici, když se kamera hýbe a naklání — přesně jako to dělají vrcholy.
+1. V `AnimationControls` (vedle tlačítek 3D průletu) přibude tlačítko **„Nahrát průlet"** 🎥.
+2. Po kliknutí:
+   - Spustí se nahrávání obrazovky mapy (canvas MapLibre + překryvy fotek/POI markerů).
+   - Automaticky se spustí 3D průlet od začátku.
+   - Po doletění na konec trasy se nahrávání samo zastaví.
+3. Otevře se dialog s náhledem videa + tlačítka:
+   - **Stáhnout** (uloží `.webm` / `.mp4` lokálně)
+   - **Sdílet** (Web Share API → na mobilu nabídne FB/IG/WhatsApp; na desktopu fallback na stažení + zkopírování textu)
+4. Indikátor „REC ●" během nahrávání + progress bar.
 
-```text
-   ┌─────────────────────────┐
-   │ [img]  Vrchol Sněžka    │   ← kartička (obdélník)
-   │        u jezera         │
-   └────────────┬────────────┘
-                │                  ← tyčka
-                │
-                •                  ← bod na trase (triggerKm)
-   ═══════════════════════════     ← trasa
+## Technické řešení
+
+**Knihovny:** žádné nové. Použijeme nativní browser API:
+- `HTMLCanvasElement.captureStream(fps)` — získá MediaStream z MapLibre canvasu
+- `MediaRecorder` — zakóduje stream do WebM (VP9/VP8) nebo MP4 (kde to Safari podporuje)
+- `navigator.share()` — Web Share API pro sdílení souboru
+
+**Nový hook `src/hooks/useFlythroughRecorder.ts`:**
+```ts
+- startRecording(canvas, mimeType): vytvoří MediaRecorder, sbírá chunky
+- stopRecording(): vrací Blob + URL
+- isRecording, recordedBlob, recordedUrl
+- detekce podporovaného mimeType: video/mp4 → video/webm;codecs=vp9 → vp8
 ```
 
-## Co se mění
+**Úprava `useFlythrough.ts`:**
+- Přidáme callback `onFlythroughComplete` který se zavolá v `stopFlythrough` když průlet doběhl přirozeně (ne ručním stopem) → recorder pak zastaví nahrávání.
 
-### 1. `usePhotoMarkers.ts` — markery jako POI
+**Úprava `TrailMap.tsx`:**
+- Vystavíme ref na `map.getCanvas()` ven (přes `onMapReady` prop nebo forwarded ref), aby ho recorder mohl použít.
+- Při inicializaci mapy nastavíme `preserveDrawingBuffer: true` (nutné pro `captureStream` u některých GPU).
 
-- Marker fotky překreslit ve stylu peak POI: bílá karta s miniaturou (~48×48 px) vlevo, vpravo popis fotky. Border + shadow + zaoblení jako vrchol. Pod kartou tyčka (gradient/jemná čára) + tečka na trase. `anchor: 'bottom'`, `pointerEvents: 'none'` na tyčce, `auto` na kartě (pro klik).
-- **Marker je viditelný vždy** — odstranit `display:none` při `isFlying` a celý effect, který display přepíná.
-- Pozice markeru = bod trasy nalezený přes `indexAtKm(cumKm, triggerKm)` (zachováno).
-- Klik na kartu = otevře `PhotoViewModal` (manuální prohlížení mimo animaci). Žádné auto-otevření.
+**Nová komponenta `src/components/RecordFlythroughButton.tsx`:**
+- Tlačítko + stavový indikátor.
+- Orchestruje: start nahrávání → spuštění průletu → po skončení otevře `VideoPreviewDialog`.
 
-### 2. Odstranit trigger logiku
+**Nová komponenta `src/components/VideoPreviewDialog.tsx`:**
+- `<video controls src={url} />` náhled
+- Tlačítka **Stáhnout** a **Sdílet**
+- Sdílení: pokud `navigator.canShare({ files: [...] })` → použije Web Share API, jinak fallback na download + toast „Stáhni a nahraj na FB ručně".
 
-- Smazat effect „Trigger podle ujeté vzdálenosti (km)" (řádky ~200–230).
-- Smazat `handleArrivedPhoto`, `handlePhotoClose` chain pro auto-otevírání během průletu, `pendingQueueRef`, `shownPhotosRef`, `autoCloseTimerRef`, `originalMapState`, `activePhotoId`, `flyTo` na fotku.
-- Zachovat: `viewPhoto`, `isPhotoViewOpen`, `handlePhotoClose` — ale jen jako jednoduchý open/close pro klik na marker.
-- Z parametrů hooku odstranit `flyingIndex`, `isFlying`, `_flyStartTimestamp`, `_flyDurationSec`, `currentPosition`, `animationSettings` (nejsou už potřeba).
+**Integrace v `Index.tsx`:**
+- Přidat `RecordFlythroughButton` do `AnimationControls` propsu nebo vedle něj.
+- Předat ref na canvas a `startFlythrough` / callback na konec.
 
-### 3. `PhotoPiP.tsx`
+## Omezení (řekneme uživateli)
 
-- Komponenta zůstane jako je (nepoužitá pro auto-trigger). Pokud ji nikdo neimportuje, smazat.
+- **Nahrávání běží jen v záložce která je vidět** (browser pozastaví canvas pokud přepneš tab) → ukážeme upozornění „Nepřepínej záložku".
+- **Safari/iOS** má omezenou podporu `MediaRecorder` pro canvas — pro iOS uděláme fallback hlášku „Pro nahrávání použij Chrome/Firefox/Edge na desktopu".
+- Výstup bude **WebM** ve většině prohlížečů (FB ho přijímá, ale doporučíme uživateli „pokud chceš MP4, zkonvertuj online — třeba cloudconvert.com"). Volitelně později přidáme server-side konverzi přes edge function + ffmpeg.wasm.
+- Zvuk: zatím **bez zvuku** (je to jen vizualizace mapy). Můžeme později přidat hudbu na pozadí.
 
-### 4. `TrailMap.tsx`
+## Soubory k vytvoření / úpravě
 
-- Volání `usePhotoMarkers(...)` zjednodušit — bez flythrough a position parametrů.
-- `onFlyStateChange` zůstává (potřebuje ho `PhotoTimeEditor` rodič? — zkontrolovat; pokud jen pro starý editor sekund, dá se i ponechat, neškodí).
+- **nový** `src/hooks/useFlythroughRecorder.ts`
+- **nový** `src/components/RecordFlythroughButton.tsx`
+- **nový** `src/components/VideoPreviewDialog.tsx`
+- **úprava** `src/components/TrailMap.tsx` — `preserveDrawingBuffer: true`, vystavení canvas ref
+- **úprava** `src/hooks/useFlythrough.ts` — `onFlythroughComplete` callback
+- **úprava** `src/components/AnimationControls.tsx` — přidat tlačítko
+- **úprava** `src/pages/Index.tsx` — propojení
 
-### 5. Bez změny
+## Otevřené otázky (volitelné, mohu rozhodnout sám)
 
-- `triggerKm` v `PhotoPoint` zůstává — určuje, **kam na trase** marker patří.
-- `PhotoTimeEditor` (km input + drag tečky v ElevationChart) zůstává — slouží k přesnému umístění markeru na trasu.
-- `Index.tsx`, `SharedTrail.tsx` — žádné změny propsů kromě toho, že některé už nebudou potřeba.
-
-## Efekt pro uživatele
-
-- Fotky se na mapě objeví hned po nahrání jako pěkné kartičky na tyčkách, stejně jako vrcholy.
-- Během 3D průletu **zůstanou viset** nad trasou na svých místech, kamera kolem nich přeletí a uvidíš je v kontextu krajiny.
-- Klik na kartu fotky kdykoliv otevře plný náhled (modal).
-- Žádné nečekané zoomy, žádné modaly skákající uprostřed průletu, žádný timing bug.
-
-## Soubory k úpravě
-
-- `src/hooks/usePhotoMarkers.ts` — přepsat marker styl, smazat trigger logiku
-- `src/components/TrailMap.tsx` — zjednodušit volání hooku
-- `src/components/PhotoPiP.tsx` — pravděpodobně smazat
-- (volitelně) `src/types/gpx.ts` — `autoCloseDelay` v animationSettings už není pro fotky relevantní, ale necháme
+- **Rozlišení videa**: necháme nativní velikost canvasu (cca 1500×500 px) nebo přidat preset 1080×1080 (čtverec pro IG)? Defaultně necháme nativní, později můžeme přidat presety.
+- **FPS**: 30 fps default (kompromis mezi plynulostí a velikostí souboru).
