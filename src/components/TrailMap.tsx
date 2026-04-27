@@ -3,7 +3,7 @@ import { Map, NavigationControl, Marker, LngLatBounds, MapMouseEvent } from 'map
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint, AnimationSettings } from '@/types/gpx';
 import { PhotoViewModal } from './PhotoViewModal';
-import { PhotoPiP } from './PhotoPiP';
+
 import { ManualPhotoDialog } from './ManualPhotoDialog';
 import { ElevationChart } from './ElevationChart';
 import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair } from 'lucide-react';
@@ -677,8 +677,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
-          {/* Picture-in-picture náhled fotky během 3D průletu */}
-          {flythrough.isFlying && <PhotoPiP photo={photoMarkers.nearbyPhoto} />}
+          {/* PiP náhled odebrán — fotka se otevírá přímo fullscreen modalem v okamžiku příjezdu */}
         </div>
 
         {/* 3D Controls */}
