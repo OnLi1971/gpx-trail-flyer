@@ -8,40 +8,48 @@ interface PhotoViewModalProps {
   onClose: () => void;
 }
 
+/**
+ * Fullscreen photo overlay během průletu.
+ * Fotka přes celou obrazovku, jemný Ken Burns efekt přes CSS keyframes.
+ */
 export const PhotoViewModal: React.FC<PhotoViewModalProps> = ({
   photo,
   isOpen,
-  onClose
+  onClose,
 }) => {
   if (!photo) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-auto animate-fade-in" aria-describedby="photo-description">
-        <div className="space-y-4 animate-fade-in">
-          <img 
-            src={photo.photo} 
-            alt={photo.description || 'Fotka z trasy'} 
-            className="w-full max-h-96 object-contain rounded-lg animate-fade-in-slow animate-scale-in-slow"
+      <DialogContent
+        className="max-w-none w-screen h-screen p-0 border-0 bg-black rounded-none sm:rounded-none flex items-center justify-center [&>button]:text-white [&>button]:bg-black/40 [&>button]:rounded-full [&>button]:p-2 [&>button]:top-4 [&>button]:right-4"
+        aria-describedby="photo-description"
+      >
+        <div className="relative w-full h-full overflow-hidden bg-black flex items-center justify-center">
+          <img
+            key={photo.id}
+            src={photo.photo}
+            alt={photo.description || 'Fotka z trasy'}
+            className="w-full h-full object-contain animate-photo-kenburns"
             onError={(e) => {
               console.error('Image failed to load:', photo.photo);
-              e.currentTarget.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23cccccc"/><text x="50" y="50" text-anchor="middle" dy=".3em">Chyba</text></svg>';
+              e.currentTarget.src =
+                'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="%23222"/><text x="50" y="50" text-anchor="middle" dy=".3em" fill="white">Chyba</text></svg>';
             }}
           />
-          <div id="photo-description" className="animate-fade-in-text">
-            {photo.description ? (
-              <p className="text-sm text-foreground">
+          {photo.description && (
+            <div
+              id="photo-description"
+              className="absolute bottom-0 left-0 right-0 px-6 py-5 bg-gradient-to-t from-black/85 via-black/50 to-transparent"
+            >
+              <p className="text-white text-base sm:text-lg font-medium drop-shadow-lg">
                 {photo.description}
               </p>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">
-                Žádný popis
+              <p className="text-white/60 text-xs mt-1">
+                {photo.lat.toFixed(5)}, {photo.lon.toFixed(5)}
               </p>
-            )}
-            <div className="text-xs text-muted-foreground mt-2">
-              GPS: {photo.lat.toFixed(6)}, {photo.lon.toFixed(6)}
             </div>
-          </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
