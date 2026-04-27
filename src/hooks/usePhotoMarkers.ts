@@ -53,6 +53,7 @@ export function usePhotoMarkers(
       photoMarkersRef.current.forEach(marker => marker.remove());
       photoMarkersRef.current = [];
       photoMarkerMapRef.current = {};
+      photoMarkerContainerRef.current = {};
       return;
     }
 
@@ -69,6 +70,7 @@ export function usePhotoMarkers(
     photoMarkersRef.current.forEach(marker => marker.remove());
     photoMarkersRef.current = [];
     photoMarkerMapRef.current = {};
+    photoMarkerContainerRef.current = {};
 
     photos.forEach(photo => {
       const container = document.createElement('div');
