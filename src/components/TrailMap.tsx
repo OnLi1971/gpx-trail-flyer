@@ -503,20 +503,134 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
           {/* POI density — peaks (hory) */}
           {gpxData && poiCounts.peaks > 0 && (
-            <div className="flex items-center gap-3">
-              <Mountain className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs font-medium text-muted-foreground w-20">Hory (POI)</span>
-              <Slider
-                value={[peakLimit]}
-                onValueChange={(value) => setPeakLimit(value[0])}
-                min={0}
-                max={Math.max(poiCounts.peaks, 5)}
-                step={1}
-                className="flex-1"
-              />
-              <span className="text-xs text-muted-foreground w-10 text-right">
-                {Math.min(peakLimit, poiCounts.peaks)}/{poiCounts.peaks}
-              </span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <Mountain className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground w-20">Hory (POI)</span>
+                {peakSelectionMode === 'auto' ? (
+                  <Slider
+                    value={[peakLimit]}
+                    onValueChange={(value) => setPeakLimit(value[0])}
+                    min={0}
+                    max={Math.max(poiCounts.peaks, 5)}
+                    step={1}
+                    className="flex-1"
+                  />
+                ) : (
+                  <div className="flex-1 text-xs text-muted-foreground">
+                    Vybráno {[...selectedPeakKeys].filter(k =>
+                      allNearbyPoisRef.current.some(p => p.type === 'peak' && peakKey(p) === k)
+                    ).length} z {poiCounts.peaks}
+                  </div>
+                )}
+                <span className="text-xs text-muted-foreground w-10 text-right">
+                  {peakSelectionMode === 'auto'
+                    ? `${Math.min(peakLimit, poiCounts.peaks)}/${poiCounts.peaks}`
+                    : `${[...selectedPeakKeys].filter(k => allNearbyPoisRef.current.some(p => p.type === 'peak' && peakKey(p) === k)).length}/${poiCounts.peaks}`}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 pl-7">
+                <Button
+                  size="sm"
+                  variant={peakSelectionMode === 'auto' ? 'default' : 'outline'}
+                  className="h-7 text-xs"
+                  onClick={() => setPeakSelectionMode('auto')}
+                >
+                  Auto (top N)
+                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant={peakSelectionMode === 'manual' ? 'default' : 'outline'}
+                      className="h-7 text-xs gap-1"
+                      onClick={() => setPeakSelectionMode('manual')}
+                    >
+                      <ListChecks className="w-3.5 h-3.5" />
+                      Vybrat vrcholy
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="start">
+                    <div className="p-2 border-b space-y-2">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                        <Input
+                          value={peakSearch}
+                          onChange={(e) => setPeakSearch(e.target.value)}
+                          placeholder="Hledat vrchol…"
+                          className="h-8 pl-7 text-xs"
+                        />
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-xs flex-1"
+                          onClick={() => {
+                            const allKeys = allNearbyPoisRef.current
+                              .filter(p => p.type === 'peak')
+                              .map(peakKey);
+                            setSelectedPeakKeys(new Set(allKeys));
+                          }}
+                        >
+                          Vybrat vše
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-xs flex-1"
+                          onClick={() => setSelectedPeakKeys(new Set())}
+                        >
+                          Zrušit vše
+                        </Button>
+                      </div>
+                    </div>
+                    <ScrollArea className="h-72">
+                      <div className="p-1">
+                        {allNearbyPoisRef.current
+                          .filter(p => p.type === 'peak')
+                          .filter(p => !peakSearch || p.name.toLowerCase().includes(peakSearch.toLowerCase()))
+                          .sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0))
+                          .map(p => {
+                            const k = peakKey(p);
+                            const checked = selectedPeakKeys.has(k);
+                            return (
+                              <label
+                                key={k}
+                                className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-xs"
+                              >
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) => {
+                                    setSelectedPeakKeys(prev => {
+                                      const next = new Set(prev);
+                                      if (v) next.add(k); else next.delete(k);
+                                      return next;
+                                    });
+                                  }}
+                                />
+                                <span className="flex-1 truncate">{p.name}</span>
+                                {p.ele && (
+                                  <span className="text-muted-foreground tabular-nums">
+                                    {p.ele}&nbsp;m
+                                  </span>
+                                )}
+                              </label>
+                            );
+                          })}
+                        {allNearbyPoisRef.current.filter(p =>
+                          p.type === 'peak' &&
+                          (!peakSearch || p.name.toLowerCase().includes(peakSearch.toLowerCase()))
+                        ).length === 0 && (
+                          <div className="px-2 py-4 text-center text-xs text-muted-foreground">
+                            Žádný vrchol neodpovídá
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           )}
 
