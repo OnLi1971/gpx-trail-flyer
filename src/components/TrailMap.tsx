@@ -1037,6 +1037,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             chartData={elevationData.chartData}
             currentChartPoint={elevationData.currentChartPoint}
             photosOnChart={elevationData.photosOnChart}
+            onPhotoKmChange={onPhotoKmChange}
           />
         )}
       </div>
