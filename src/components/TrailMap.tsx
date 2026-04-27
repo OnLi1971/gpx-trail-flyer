@@ -623,9 +623,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   return (
     <>
-      <div className="relative w-full rounded-lg overflow-hidden shadow-lg">
+      <div className={presentationMode
+        ? "fixed inset-0 z-[100] bg-background overflow-hidden"
+        : "relative w-full rounded-lg overflow-hidden shadow-lg"}>
         {/* Main map container */}
-        <div className="relative w-full h-[500px]">
+        <div className={`relative w-full ${presentationMode ? 'h-screen' : 'h-[500px]'}`}>
           <div ref={mapContainer} className="absolute inset-0" />
 
           {/* Elevation chart overlay */}
