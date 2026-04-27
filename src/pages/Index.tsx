@@ -5,6 +5,7 @@ import { TrailMap } from '@/components/TrailMap';
 import { AnimationControls } from '@/components/AnimationControls';
 import { AppHeader } from '@/components/AppHeader';
 import { SaveTrailDialog } from '@/components/SaveTrailDialog';
+import { PhotoTimeEditor } from '@/components/PhotoTimeEditor';
 import { defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
 import { GPXParser } from '@/utils/gpxParser';
 import { GPXData, PhotoPoint } from '@/types/gpx';
@@ -28,6 +29,7 @@ const Index = () => {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [animationSettings, setAnimationSettings] = useState<AnimationSettings>(defaultAnimationSettings);
+  const [flyDurationSec, setFlyDurationSec] = useState(60);
 
   const handleFileUpload = useCallback((content: string, filename: string) => {
     setIsLoading(true);
