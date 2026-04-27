@@ -1,72 +1,41 @@
-# Export animace jako video pro sdílení
+## Cíl
 
-Cíl: Po dokončení 3D průletu (nebo na vyžádání) získat MP4/WebM video, které jde stáhnout a nasdílet na Facebook, Instagram, atd.
+1. Graf nadmořské výšky a km přesunout **dovnitř** mapy jako poloprůhledný overlay (dnes je pod mapou jako samostatný panel).
+2. Odstranit modré tečky fotek z grafu — graf bude ukazovat jen profil + červenou aktuální pozici.
 
-## Jak to bude fungovat (UX)
+## Změny
 
-1. V `AnimationControls` (vedle tlačítek 3D průletu) přibude tlačítko **„Nahrát průlet"** 🎥.
-2. Po kliknutí:
-   - Spustí se nahrávání obrazovky mapy (canvas MapLibre + překryvy fotek/POI markerů).
-   - Automaticky se spustí 3D průlet od začátku.
-   - Po doletění na konec trasy se nahrávání samo zastaví.
-3. Otevře se dialog s náhledem videa + tlačítka:
-   - **Stáhnout** (uloží `.webm` / `.mp4` lokálně)
-   - **Sdílet** (Web Share API → na mobilu nabídne FB/IG/WhatsApp; na desktopu fallback na stažení + zkopírování textu)
-4. Indikátor „REC ●" během nahrávání + progress bar.
+### `src/components/ElevationChart.tsx`
+- Odstranit veškerou logiku okolo modrých teček fotek: props `photosOnChart`, `onPhotoKmChange`, `ReferenceDot` mapování, drag handlery (`onPointerDown/Move/Up`, `xFromEvent`, `draggingId`) i nápovědu „Tip: modré tečky můžeš přetáhnout…".
+- Komponenta zůstane jen s `chartData` + `currentChartPoint` (červená tečka aktuální polohy).
+- Upravit obal pro overlay režim:
+  - Místo bílého panelu s `border-t-2` použít poloprůhledné pozadí `bg-white/80 backdrop-blur-md` se zaoblenými rohy a jemným stínem.
+  - Výška kompaktnější (≈ `h-28`), aby nezakrývala mapu.
+  - Volitelný prop `variant?: 'overlay' | 'panel'` pro budoucí flexibilitu (výchozí `overlay`).
 
-## Technické řešení
+### `src/components/TrailMap.tsx`
+- Přesunout `<ElevationChart …/>` z místa pod mapou (ř. 1102–1110) do kontejneru mapy `<div className="relative w-full h-[500px]">` (ř. 611) jako absolutně pozicovaný overlay:
+  - `absolute bottom-2 left-2 right-2 z-10 pointer-events-none` na obal, samotná karta s `pointer-events-auto`.
+  - Aby nebránila interakci s mapou všude jinde.
+- Odebrat předávání `photosOnChart` a `onPhotoKmChange` do grafu (přetahování fotek se nadále dělá v `PhotoTimeEditor` pod mapou — beze změny).
 
-**Knihovny:** žádné nové. Použijeme nativní browser API:
-- `HTMLCanvasElement.captureStream(fps)` — získá MediaStream z MapLibre canvasu
-- `MediaRecorder` — zakóduje stream do WebM (VP9/VP8) nebo MP4 (kde to Safari podporuje)
-- `navigator.share()` — Web Share API pro sdílení souboru
+### `src/hooks/useElevationData.ts`
+- Pole `photosOnChart` můžeme nechat ve výpočtu (používá se případně jinde) nebo zjednodušit. Doporučení: nechat hook beze změny, jen ho v `TrailMap` ignorovat — bezpečné a minimálně invazivní.
 
-**Nový hook `src/hooks/useFlythroughRecorder.ts`:**
-```ts
-- startRecording(canvas, mimeType): vytvoří MediaRecorder, sbírá chunky
-- stopRecording(): vrací Blob + URL
-- isRecording, recordedBlob, recordedUrl
-- detekce podporovaného mimeType: video/mp4 → video/webm;codecs=vp9 → vp8
+## Vizuální výsledek
+
+```text
+┌──────────────────────────────────────────┐
+│  MAPA (3D / 2D)             [3D] [Rec]   │
+│                                          │
+│         🚴 ━━━━━━━━━━━ 🏔                │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │ ╱╲    profil výšky      ●          │  │  ← overlay graf
+│  │╱  ╲__╱╲___________╱╲___╱           │  │     (poloprůhledný)
+│  │ 0km          15km         30km     │  │
+│  └────────────────────────────────────┘  │
+└──────────────────────────────────────────┘
 ```
 
-**Úprava `useFlythrough.ts`:**
-- Přidáme callback `onFlythroughComplete` který se zavolá v `stopFlythrough` když průlet doběhl přirozeně (ne ručním stopem) → recorder pak zastaví nahrávání.
-
-**Úprava `TrailMap.tsx`:**
-- Vystavíme ref na `map.getCanvas()` ven (přes `onMapReady` prop nebo forwarded ref), aby ho recorder mohl použít.
-- Při inicializaci mapy nastavíme `preserveDrawingBuffer: true` (nutné pro `captureStream` u některých GPU).
-
-**Nová komponenta `src/components/RecordFlythroughButton.tsx`:**
-- Tlačítko + stavový indikátor.
-- Orchestruje: start nahrávání → spuštění průletu → po skončení otevře `VideoPreviewDialog`.
-
-**Nová komponenta `src/components/VideoPreviewDialog.tsx`:**
-- `<video controls src={url} />` náhled
-- Tlačítka **Stáhnout** a **Sdílet**
-- Sdílení: pokud `navigator.canShare({ files: [...] })` → použije Web Share API, jinak fallback na download + toast „Stáhni a nahraj na FB ručně".
-
-**Integrace v `Index.tsx`:**
-- Přidat `RecordFlythroughButton` do `AnimationControls` propsu nebo vedle něj.
-- Předat ref na canvas a `startFlythrough` / callback na konec.
-
-## Omezení (řekneme uživateli)
-
-- **Nahrávání běží jen v záložce která je vidět** (browser pozastaví canvas pokud přepneš tab) → ukážeme upozornění „Nepřepínej záložku".
-- **Safari/iOS** má omezenou podporu `MediaRecorder` pro canvas — pro iOS uděláme fallback hlášku „Pro nahrávání použij Chrome/Firefox/Edge na desktopu".
-- Výstup bude **WebM** ve většině prohlížečů (FB ho přijímá, ale doporučíme uživateli „pokud chceš MP4, zkonvertuj online — třeba cloudconvert.com"). Volitelně později přidáme server-side konverzi přes edge function + ffmpeg.wasm.
-- Zvuk: zatím **bez zvuku** (je to jen vizualizace mapy). Můžeme později přidat hudbu na pozadí.
-
-## Soubory k vytvoření / úpravě
-
-- **nový** `src/hooks/useFlythroughRecorder.ts`
-- **nový** `src/components/RecordFlythroughButton.tsx`
-- **nový** `src/components/VideoPreviewDialog.tsx`
-- **úprava** `src/components/TrailMap.tsx` — `preserveDrawingBuffer: true`, vystavení canvas ref
-- **úprava** `src/hooks/useFlythrough.ts` — `onFlythroughComplete` callback
-- **úprava** `src/components/AnimationControls.tsx` — přidat tlačítko
-- **úprava** `src/pages/Index.tsx` — propojení
-
-## Otevřené otázky (volitelné, mohu rozhodnout sám)
-
-- **Rozlišení videa**: necháme nativní velikost canvasu (cca 1500×500 px) nebo přidat preset 1080×1080 (čtverec pro IG)? Defaultně necháme nativní, později můžeme přidat presety.
-- **FPS**: 30 fps default (kompromis mezi plynulostí a velikostí souboru).
+Modré tečky fotek pryč. Pod mapou zůstává `PhotoTimeEditor` pro úpravu km fotek.
