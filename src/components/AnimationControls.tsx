@@ -104,23 +104,6 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
 
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Vzdálenost spuštění</span>
-                  <span>{Math.round(animationSettings.threshold * 111000)} m</span>
-                </div>
-                <Slider
-                  value={[Math.round(animationSettings.threshold * 111000)]}
-                  onValueChange={(v) =>
-                    onAnimationSettingsChange({ ...animationSettings, threshold: v[0] / 111000 })
-                  }
-                  min={10}
-                  max={500}
-                  step={10}
-                  className="w-full"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" />
                     Doba zobrazení
