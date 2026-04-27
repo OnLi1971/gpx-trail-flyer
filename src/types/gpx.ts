@@ -21,6 +21,8 @@ export interface PhotoPoint {
   photo: string; // base64 nebo URL
   description: string;
   timestamp: number;
+  /** Sekunda od startu průletu, kdy se má fotka zobrazit. */
+  triggerSec?: number;
 }
 
 export interface GPXData {
@@ -34,7 +36,6 @@ export interface GPXData {
 }
 
 export interface AnimationSettings {
-  threshold: number;
   zoomFactor: number;
   flyToDuration: number;
   modalDelay: number;
@@ -43,7 +44,6 @@ export interface AnimationSettings {
 }
 
 export const defaultAnimationSettings: AnimationSettings = {
-  threshold: 0.00045,
   zoomFactor: 1.5,
   flyToDuration: 1500,
   modalDelay: 2000,

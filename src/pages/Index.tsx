@@ -5,6 +5,7 @@ import { TrailMap } from '@/components/TrailMap';
 import { AnimationControls } from '@/components/AnimationControls';
 import { AppHeader } from '@/components/AppHeader';
 import { SaveTrailDialog } from '@/components/SaveTrailDialog';
+import { PhotoTimeEditor } from '@/components/PhotoTimeEditor';
 import { defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
 import { GPXParser } from '@/utils/gpxParser';
 import { GPXData, PhotoPoint } from '@/types/gpx';
@@ -28,6 +29,7 @@ const Index = () => {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [animationSettings, setAnimationSettings] = useState<AnimationSettings>(defaultAnimationSettings);
+  const [flyDurationSec, setFlyDurationSec] = useState(60);
 
   const handleFileUpload = useCallback((content: string, filename: string) => {
     setIsLoading(true);
@@ -106,6 +108,35 @@ const Index = () => {
     }
     setSaveOpen(true);
   };
+
+  // Při přidání fotek automaticky rozprostřít triggerSec rovnoměrně
+  const handleAddPhotos = useCallback((newPhotos: PhotoPoint[]) => {
+    setPhotos((prev) => {
+      const combined = [...prev, ...newPhotos];
+      const N = combined.length;
+      const dur = flyDurationSec || 60;
+      // Pokud fotka nemá triggerSec, dopočítej rovnoměrné rozprostření
+      return combined.map((p, i) => {
+        if (p.triggerSec !== undefined) return p;
+        return { ...p, triggerSec: ((i + 1) / (N + 1)) * dur };
+      });
+    });
+  }, [flyDurationSec]);
+
+  const handleChangeTriggerSec = useCallback((id: string, sec: number) => {
+    setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, triggerSec: sec } : p)));
+  }, []);
+
+  const handleRemovePhoto = useCallback((id: string) => {
+    setPhotos((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const handleFlyStateChange = useCallback(
+    (state: { isFlying: boolean; flyDurationSec: number; flyStartTimestamp: number | null }) => {
+      setFlyDurationSec(state.flyDurationSec);
+    },
+    []
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -187,7 +218,15 @@ const Index = () => {
                   currentPosition={currentPosition}
                   animationSettings={animationSettings}
                   photos={photos}
-                  onAddPhotos={(newPhotos) => setPhotos(prev => [...prev, ...newPhotos])}
+                  onAddPhotos={handleAddPhotos}
+                  onFlyStateChange={handleFlyStateChange}
+                />
+
+                <PhotoTimeEditor
+                  photos={photos}
+                  flyDurationSec={flyDurationSec}
+                  onChangeTriggerSec={handleChangeTriggerSec}
+                  onRemove={handleRemovePhoto}
                 />
             </div>
 
