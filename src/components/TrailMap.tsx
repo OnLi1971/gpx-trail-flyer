@@ -642,7 +642,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               </div>
             </div>
           )}
-          {!readOnly && (
+          {!readOnly && !presentationMode && (
             <div className="absolute top-2 left-2 z-10 flex gap-2">
               <input
                 ref={photoMarkers.fileInputRef}
