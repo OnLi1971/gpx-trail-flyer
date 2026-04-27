@@ -48,6 +48,7 @@ export function useFlythrough(
   const [flyingIndex, setFlyingIndex] = useState<number | null>(null);
   const [currentGrade, setCurrentGrade] = useState<number | null>(null);
   const [mapPitch, setMapPitchState] = useState(0);
+  const [flyStartTimestamp, setFlyStartTimestamp] = useState<number | null>(null);
 
   const flyAnimationRef = useRef<number | null>(null);
   const flyStartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -58,6 +59,23 @@ export function useFlythrough(
   const elevationExaggerationRef = useRef(1.5);
   const lastBearingRef = useRef(0);
   const flyMarkerRef = useRef<Marker | null>(null);
+
+  // Vypočítaná délka průletu (sekundy) — odvozeno přesně podle vzorce v animateStep:
+  //   step = max(1, floor(speed/10))
+  //   duration_ms = max(16, 800 - speed*7.7)
+  //   čekání mezi kroky = duration_ms * 0.8 → reálný čas na krok ≈ duration_ms (easeTo + setTimeout 0.8d běží paralelně)
+  // V praxi se používá duration jako čas na jeden krok.
+  const flyDurationSec = (() => {
+    if (!gpxData || gpxData.tracks.length === 0) return 60;
+    const totalPoints = gpxData.tracks[0].points.length;
+    if (totalPoints < 2) return 60;
+    const speed = flySpeed;
+    const step = Math.max(1, Math.floor(speed / 10));
+    const duration = Math.max(16, 800 - speed * 7.7);
+    const numSteps = Math.ceil((totalPoints - 1) / step);
+    // 2 s úvodní flyTo + numSteps * duration
+    return Math.max(5, Math.round((2000 + numSteps * duration) / 1000));
+  })();
 
   const setFlySpeed = useCallback((value: number) => {
     setFlySpeedState(value);
