@@ -218,7 +218,15 @@ const Index = () => {
                   currentPosition={currentPosition}
                   animationSettings={animationSettings}
                   photos={photos}
-                  onAddPhotos={(newPhotos) => setPhotos(prev => [...prev, ...newPhotos])}
+                  onAddPhotos={handleAddPhotos}
+                  onFlyStateChange={handleFlyStateChange}
+                />
+
+                <PhotoTimeEditor
+                  photos={photos}
+                  flyDurationSec={flyDurationSec}
+                  onChangeTriggerSec={handleChangeTriggerSec}
+                  onRemove={handleRemovePhoto}
                 />
             </div>
 
