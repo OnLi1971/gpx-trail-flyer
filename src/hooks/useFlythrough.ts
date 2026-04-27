@@ -110,7 +110,7 @@ export function useFlythrough(
     }
   }, [map]);
 
-  const stopFlythrough = useCallback(() => {
+  const stopFlythrough = useCallback((reason: 'finished' | 'stopped' = 'stopped') => {
     if (flyAnimationRef.current) {
       cancelAnimationFrame(flyAnimationRef.current);
       flyAnimationRef.current = null;
@@ -149,6 +149,8 @@ export function useFlythrough(
       });
       setMapPitchState(0);
     }
+
+    onCompleteRef.current?.(reason);
   }, [map, gpxData]);
 
   const startFlythrough = useCallback(() => {
