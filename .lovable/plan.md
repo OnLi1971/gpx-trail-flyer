@@ -1,67 +1,46 @@
-## Proč ti fotka nenaskočila
+## Co se ve skutečnosti děje
 
-Aktuální detekce v `usePhotoMarkers.ts` měří vzdálenost **trackeru** (aktuální bod na trase, daný `currentPosition` nebo `flyingIndex`) k fotce a spustí ji, jakmile padne pod práh ze slideru.
+Při průletu se 7 fotek nezobrazuje sekvenčně, ale „plave přes obraz" — to jsou ve skutečnosti **kruhové thumbnaily markerů** (`new Marker` v `usePhotoMarkers.ts`), které vidíš, jak míjejí kameru. Modal se otevře jen u první fotky a u dalších už ne.
 
-Problém má dvě varianty:
+Po čtení `usePhotoMarkers.ts` a `useFlythrough.ts` jsou tři reálné chyby:
 
-1. **Přeskakování bodů v 3D průletu**: `useFlythrough.ts` při default rychlosti 50 dělá krok `Math.max(1, Math.floor(50/10)) = 5`. Tracker tedy přeskakuje po 5 bodech. Pokud je hustota GPX bodů ~30 m, jeden krok = 150 m. Vzdálenost trackeru k fotce v jednom snímku může být 200+ m a v dalším už 100+ m za fotkou — slider 150 m to nikdy nezachytí, protože v žádném okamžiku tracker není < 150 m od fotky.
-2. **Fotka mimo trasu**: Pokud souřadnice fotky leží > 150 m od polyline trasy (typicky když ji přidáš klikem na mapu nebo z EXIF mimo přesnou stopu), žádný bod trasy se k ní nedostane blíž než její offset — slider 150 m nestačí.
+### 1. Auto-close timer se nikdy nespustí, pokud se závisí na `animationSettings.autoCloseDelay = 0`
+Default v `defaultAnimationSettings` může být 0 (nebo ho `AnimationControls` nastaví posuvníkem na „Ručně zavřít"). Pak se `autoCloseTimerRef` vůbec nenaplánuje, modal zůstane otevřený celý průlet, a guard `if (isPhotoViewOpen || activePhotoId !== null) return;` blokuje všechny další fotky → vidíš jen první.
 
-V tvém případě (přidaná fotka přímo do trasy přes "Přidat fotku" → klik na mapě) je nejpravděpodobnější varianta 1: souřadnice jsou na trase, ale tracker mezi snímky průletu fotku "přeskočí".
+### 2. `handleArrivedPhoto` má v deps `animationSettings`
+Pokaždé, když se kdekoliv změní settings (např. uživatel hýbe slidery během průletu), se přegeneruje closure a ref `handlePhotoCloseRef` se updatuje až o tick později. Pokud při tom právě běží timer, může se zavolat zastaralá verze `handlePhotoClose` → modal se zavře, ale `originalMapState` už je null nebo `setActivePhotoId(null)` nestihne shodit guard před dalším frame detekcí.
+
+### 3. Fotky, které tracker minul „daleko za sebou", se nikdy nepustí
+Když je modal 4 s otevřený, tracker mezitím ujede 20+ indexů. Druhá fotka, jejíž `nearestIndex` je v tom intervalu, se v okně `±5` už nikdy neobjeví → zmešká se a zůstává navždy nezobrazená (jen marker plave kolem).
 
 ## Oprava
 
-### Změna logiky detekce (`src/hooks/usePhotoMarkers.ts`)
+### A) Fronta čekajících fotek místo „buď teď nebo nikdy"
+V `usePhotoMarkers.ts` zavést `pendingQueueRef: PhotoPoint[]`. V detekčním efektu:
+- Pokud tracker projíždí oknem fotky **a** modal je otevřený → push do fronty (pokud tam ještě není a není v `shownPhotosRef`).
+- Pokud tracker už **přejel** `nearestIndex + triggerWindow` fotky, která ještě nebyla zobrazena → taky push do fronty (zachytí pomalý uživatelský close).
+- Pokud modal **není** otevřený a fronta není prázdná → vyzvedni první z fronty a zobraz.
 
-Místo "vzdálenost aktuálního bodu trasy od fotky" počítej pro každou fotku **nejbližší bod celé trasy** a porovnej, kde tracker právě je vůči tomu nejbližšímu bodu:
+### B) `handlePhotoClose` vždy zkontroluje frontu
+Po zavření modalu (auto i ruční) se ihned podívej do `pendingQueueRef`. Pokud něco je, naplánuj `handleArrivedPhoto(next)` přes krátký `setTimeout(80 ms)` (aby modal stihl zavřít animaci a `flyTo` zoom-back se rozjel) — pak fotka naskočí.
 
-```text
-pro každou fotku (která ještě nebyla zobrazena):
-  najdi index nejbližšího bodu trasy ke GPS fotky → photoTrackIndex
-  najdi minimální vzdálenost fotka↔trasa → photoToTrackDist
-  
-  pokud photoToTrackDist > slider (fotka je moc daleko od trasy):
-    → tato fotka se v této session nepustí (přeskoč úplně, ať neblokuje)
-  
-  pokud tracker právě prochází tím nejbližším bodem (currentIndex ≈ photoTrackIndex):
-    → otevři fotku
-```
+### C) Vynutit minimální auto-close 2 s, pokud je 0
+Pokud `animationSettings.autoCloseDelay === 0` a běží průlet (`isFlying`), použít fallback 4 s — jinak průlet uvázne na první fotce. Manuální mód `0` má smysl jen pro statický slider.
 
-Konkrétně: cache si `nearestTrackIndex` pro každou fotku (počítá se 1× při změně `gpxData`/`photos`). Pak v detekčním efektu jen porovnej:
+### D) Stabilizovat `handleArrivedPhoto`
+Vyhodit `animationSettings` z deps `useCallback` a místo toho číst aktuální hodnoty přes `animationSettingsRef` (sync v `useEffect`). Tím se closure nepřegeneruje při každém posunu slideru.
 
-```ts
-const triggerWindow = Math.max(2, Math.floor(stepSize * 1.5)); // tolerance v krocích
-if (Math.abs(currentIndex - photo.nearestTrackIndex) <= triggerWindow) {
-  trigger(photo);
-}
-```
-
-Tohle eliminuje problém s přeskakováním bodů během průletu — i kdyby tracker mezi snímky přeskočil 5 bodů, kontrola na "dostal jsem se k indexu nejbližšímu fotce" projde.
-
-Slider "Vzdálenost spuštění" se použije jako **maximální offset fotky od trasy** (pokud je fotka dál než slider, vůbec se nezařadí do session). Tím slider získá smysluplný význam i při přeskakujícím trackeru.
-
-### Vizuální zpětná vazba (`src/hooks/usePhotoMarkers.ts`)
-
-Když se při loadu trasy zjistí, že některá fotka leží dál od trasy, než dovoluje slider, ukaž `toast.warning`:
-
-```text
-"Fotka 'IMG_1234' je 230 m od trasy — zvyš slider 'Vzdálenost spuštění' nad 230 m, aby se zobrazila."
-```
-
-Uživatel okamžitě ví, co s tím (žádné tiché selhání).
-
-### Drobnost: rozšířit horní hranici slideru (`src/components/AnimationControls.tsx`)
-
-Aktuálně `max=200`. Pokud někdo má fotku 250 m od trasy (například výhled na hrad), nemá jak ji povolit. Změna na `max=500, step=10`.
-
-## Co se nemění
-
-- Fullscreen modal s Ken Burns + 4s autoclose timer.
-- Sjednocená detekce pro live i 3D průlet (jen mění se, *jak* se porovnává).
-- `defaultAnimationSettings.threshold` zůstává 0.00045 (~50 m), což je dobrá výchozí přísnost.
+### E) Drobnost: marker thumbnaily v 3D pitchi „plavou"
+S `anchor: 'bottom'` při velkém pitchi MapLibre marker neukotví přesně — vypadá to jako že pluje. Není to bug detekce (ta funguje na GPS souřadnicích), ale uživatelsky matoucí. Skrýt photo markery během `isFlying` (`container.style.display = isFlying ? 'none' : 'flex'`) — během průletu je beztak nahrazuje fullscreen modal.
 
 ## Soubory k úpravě
 
-- `src/hooks/usePhotoMarkers.ts` — přepočet detekce na "tracker dorazil k bodu nejbližšímu fotce" + warning toast pro fotky mimo dosah.
-- `src/components/AnimationControls.tsx` — rozsah slideru 10–500 m.
-- `mem://features/animace-fotek` — aktualizovat pravidlo pro detekci.
+- `src/hooks/usePhotoMarkers.ts` — fronta, fallback auto-close, stabilizace callbacku, skrytí markerů při `isFlying`.
+- `mem://features/animace-fotek` — doplnit pravidlo o frontě.
+
+## Co se nemění
+
+- Index-based detekce (`±5` okno) zůstává.
+- Slider „Vzdálenost spuštění" 10–500 m a warning toast pro fotky mimo dosah.
+- `PhotoViewModal` (Ken Burns, fullscreen).
+- `useFlythrough.ts` — 3D průlet se nemění.
