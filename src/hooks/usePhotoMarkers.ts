@@ -210,11 +210,12 @@ export function usePhotoMarkers(
     warnedPhotosRef.current.clear();
   }, [gpxData, photos.length]);
 
-  // Sjednocená detekce: spustí fotku, když tracker dorazí k bodu trasy nejbližšímu fotce.
-  // Tím obejdeme přeskakování bodů během 3D průletu (krok může být 5+ bodů).
+  // Sjednocená detekce + fronta:
+  // - Pokud tracker projíždí oknem fotky a modal je otevřený → fotku zařadit do fronty.
+  // - Pokud tracker fotku už přejel a nikdy nebyla zobrazena → také do fronty.
+  // - Pokud modal není otevřený a fronta není prázdná → vyzvedni první.
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) return;
-    if (isPhotoViewOpen || activePhotoId !== null) return;
 
     const track = gpxData.tracks[0];
     let currentIndex: number;
@@ -224,66 +225,74 @@ export function usePhotoMarkers(
       currentIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
     }
 
-    // Tolerance v indexech — průlet skáče po krocích, potřebujeme okno
     const triggerWindow = 5;
 
-    let arrived: { photo: PhotoPoint; delta: number } | null = null;
+    // Projdi všechny fotky a zařaď ty, které jsou „teď nebo už přejeté", do fronty
     photos.forEach(photo => {
       if (shownPhotosRef.current.has(photo.id)) return;
+      if (pendingQueueRef.current.some(p => p.id === photo.id)) return;
       const meta = photoTrackMap[photo.id];
       if (!meta) return;
-      // Fotka mimo dosah slideru → nepouštět (uživatel byl varován)
       if (meta.distMeters > arrivalRadiusMeters) return;
-      // Spusti, jakmile tracker projíždí blízko nejbližšího bodu k fotce
-      // (a nepustil ho nedávno — kontroluje se až jako dorazil, ne před)
-      if (currentIndex >= meta.nearestIndex - triggerWindow &&
-          currentIndex <= meta.nearestIndex + triggerWindow) {
-        const delta = Math.abs(currentIndex - meta.nearestIndex);
-        if (!arrived || delta < arrived.delta) {
-          arrived = { photo, delta };
-        }
+
+      const reachedWindow = currentIndex >= meta.nearestIndex - triggerWindow;
+      const passed = currentIndex > meta.nearestIndex + triggerWindow;
+
+      if (reachedWindow || passed) {
+        // Označíme jako "shown" hned při zařazení do fronty, aby se znovu nezařazovala
+        shownPhotosRef.current.add(photo.id);
+        pendingQueueRef.current.push(photo);
       }
     });
 
-    if (arrived) {
-      shownPhotosRef.current.add(arrived.photo.id);
-      setActivePhotoId(arrived.photo.id);
-      handleArrivedPhoto(arrived.photo);
+    // Pokud modal není otevřený a něco čeká → vyzvedni
+    if (!isPhotoViewOpen && activePhotoId === null && pendingQueueRef.current.length > 0) {
+      const next = pendingQueueRef.current.shift()!;
+      setActivePhotoId(next.id);
+      handleArrivedPhoto(next);
     }
   }, [currentPosition, flyingIndex, isFlying, gpxData, photos, isPhotoViewOpen, activePhotoId, photoTrackMap, arrivalRadiusMeters]);
 
   const handlePhotoCloseRef = useRef<() => void>(() => {});
+  // Forward ref na handleArrivedPhoto pro volání z handlePhotoClose (vyhne se cyklu)
+  const handleArrivedPhotoRef = useRef<(p: PhotoPoint) => void>(() => {});
 
   const handleArrivedPhoto = useCallback((photo: PhotoPoint) => {
     if (!map.current) return;
     if (!map.current.isStyleLoaded()) return;
+    const settings = animationSettingsRef.current;
     setOriginalMapState({
       center: [map.current.getCenter().lng, map.current.getCenter().lat],
       zoom: map.current.getZoom(),
     });
     const currentZoom = map.current.getZoom();
-    const newZoom = Math.min(currentZoom * animationSettings.zoomFactor, 18);
+    const newZoom = Math.min(currentZoom * settings.zoomFactor, 18);
 
-    // Otevřít modal okamžitě (tracker už je u fotky díky Haversine prahu)
     setViewPhoto(photo);
     setIsPhotoViewOpen(true);
 
-    // Plynule zoomnout na fotku
     map.current.flyTo({
       center: [photo.lon, photo.lat],
       zoom: newZoom,
-      duration: animationSettings.flyToDuration,
+      duration: settings.flyToDuration,
       essential: true,
     });
 
-    // Auto-close timer běží od TEĎ — fotka je vidět celé 4 s
-    if (animationSettings.autoCloseDelay > 0) {
+    // Auto-close: pokud je 0 a běží průlet, vynutíme 4 s, jinak průlet uvázne na první fotce
+    let delay = settings.autoCloseDelay;
+    if (delay <= 0 && isFlyingRef.current) delay = 4000;
+
+    if (delay > 0) {
       if (autoCloseTimerRef.current) clearTimeout(autoCloseTimerRef.current);
       autoCloseTimerRef.current = setTimeout(() => {
         handlePhotoCloseRef.current();
-      }, animationSettings.autoCloseDelay);
+      }, delay);
     }
-  }, [map, animationSettings]);
+  }, [map]);
+
+  useEffect(() => {
+    handleArrivedPhotoRef.current = handleArrivedPhoto;
+  }, [handleArrivedPhoto]);
 
   const handlePhotoClose = useCallback(() => {
     if (autoCloseTimerRef.current) {
@@ -293,20 +302,41 @@ export function usePhotoMarkers(
     setIsPhotoViewOpen(false);
     setViewPhoto(null);
     setActivePhotoId(null);
+    const settings = animationSettingsRef.current;
     if (map.current && originalMapState) {
       map.current.flyTo({
         center: originalMapState.center,
         zoom: originalMapState.zoom,
-        duration: animationSettings.zoomBackDuration,
+        duration: settings.zoomBackDuration,
       });
       setOriginalMapState(null);
     }
-  }, [map, originalMapState, animationSettings.zoomBackDuration]);
+
+    // Po zavření zkontroluj frontu — další fotka naskočí po krátké pauze
+    if (pendingQueueRef.current.length > 0) {
+      const next = pendingQueueRef.current.shift()!;
+      setTimeout(() => {
+        setActivePhotoId(next.id);
+        handleArrivedPhotoRef.current(next);
+      }, 80);
+    }
+  }, [map, originalMapState]);
 
   // Synchronizace ref s nejnovější verzí callbacku
   useEffect(() => {
     handlePhotoCloseRef.current = handlePhotoClose;
   }, [handlePhotoClose]);
+
+  // Reset fronty při změně GPX/fotek nebo návratu na začátek
+  useEffect(() => {
+    if (currentPosition < 1) {
+      pendingQueueRef.current = [];
+    }
+  }, [currentPosition]);
+
+  useEffect(() => {
+    pendingQueueRef.current = [];
+  }, [gpxData, photos.length]);
 
   const handleBulkPhotoUpload = useCallback(async (files: FileList) => {
     const fileArray = Array.from(files);
