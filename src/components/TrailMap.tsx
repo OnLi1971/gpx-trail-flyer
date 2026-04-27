@@ -610,6 +610,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         {/* Main map container */}
         <div className="relative w-full h-[500px]">
           <div ref={mapContainer} className="absolute inset-0" />
+
+          {/* Elevation chart overlay */}
+          {gpxData && (
+            <div className="absolute bottom-2 left-2 right-2 z-10 pointer-events-none">
+              <div className="pointer-events-auto">
+                <ElevationChart
+                  chartData={elevationData.chartData}
+                  currentChartPoint={elevationData.currentChartPoint}
+                  variant="overlay"
+                />
+              </div>
+            </div>
+          )}
           {!readOnly && (
             <div className="absolute top-2 left-2 z-10 flex gap-2">
               <input
@@ -1099,15 +1112,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           )}
         </div>
 
-        {/* Elevation chart */}
-        {gpxData && (
-          <ElevationChart
-            chartData={elevationData.chartData}
-            currentChartPoint={elevationData.currentChartPoint}
-            photosOnChart={elevationData.photosOnChart}
-            onPhotoKmChange={onPhotoKmChange}
-          />
-        )}
       </div>
 
       <PhotoViewModal
