@@ -90,6 +90,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // Tick pro re-render po mutaci allNearbyPoisRef (přidání custom vrcholu)
   const [poiVersion, setPoiVersion] = useState(0);
 
+  // Pokud initialPoiSettings dorazí asynchronně (po mountu), aplikuj je jednou
+  const initialAppliedRef = useRef<boolean>(!!initialPoiSettings);
+  useEffect(() => {
+    if (initialAppliedRef.current) return;
+    if (!initialPoiSettings) return;
+    initialAppliedRef.current = true;
+    hasInitialPoiRef.current = true;
+    setPeakLimit(initialPoiSettings.peakLimit);
+    setPlaceLimit(initialPoiSettings.placeLimit);
+    setPeakSelectionMode(initialPoiSettings.peakSelectionMode);
+    setSelectedPeakKeys(new Set(initialPoiSettings.selectedPeakKeys));
+  }, [initialPoiSettings]);
+
   // Emit POI settings to parent when they change
   useEffect(() => {
     if (!onPoiSettingsChange) return;
