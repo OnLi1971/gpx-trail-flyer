@@ -345,6 +345,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const poiCancelRef = useRef<{ cancelled: boolean } | null>(null);
   const cachedPoisRef = useRef(cachedPois);
   useEffect(() => { cachedPoisRef.current = cachedPois; }, [cachedPois]);
+  // Stabilní reference na render & callback, aby loadPOIs neměl měnící se deps
+  const renderPoiMarkersRef = useRef(renderPoiMarkers);
+  useEffect(() => { renderPoiMarkersRef.current = renderPoiMarkers; }, [renderPoiMarkers]);
+  const onPoisFetchedRef = useRef(onPoisFetched);
+  useEffect(() => { onPoisFetchedRef.current = onPoisFetched; }, [onPoisFetched]);
 
   const loadPOIs = useCallback(async (forceRefresh = false) => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
@@ -372,7 +377,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         setPeakSelectionMode('auto');
       }
       hasInitialPoiRef.current = false;
-      renderPoiMarkers(nearbyPois);
+      renderPoiMarkersRef.current(nearbyPois);
       return;
     }
 
@@ -397,15 +402,15 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       }
       hasInitialPoiRef.current = false;
 
-      renderPoiMarkers(nearbyPois);
+      renderPoiMarkersRef.current(nearbyPois);
       // Předat rodiči k uložení do DB (vlastník)
-      onPoisFetched?.(nearbyPois);
+      onPoisFetchedRef.current?.(nearbyPois);
     } catch (err) {
       if (token.cancelled) return;
       setPoiStatus('error');
       setPoiError(err instanceof Error ? err.message : 'Neznámá chyba');
     }
-  }, [gpxData, renderPoiMarkers, onPoisFetched]);
+  }, [gpxData]);
 
   // POI fetch — only on gpx change
   useEffect(() => {
