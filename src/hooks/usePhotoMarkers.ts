@@ -107,11 +107,10 @@ export function usePhotoMarkers(
     });
   }, [photos, map]);
 
-  // Pulse glow na aktivní fotce (PiP nebo modal)
+  // Pulse glow na aktivní fotce (modal otevřený)
   useEffect(() => {
-    const activeId = nearbyPhoto?.id ?? activePhotoId;
     Object.entries(photoMarkerMapRef.current).forEach(([id, thumb]) => {
-      if (id === activeId) {
+      if (id === activePhotoId) {
         thumb.style.borderColor = 'hsl(var(--primary))';
         thumb.style.boxShadow = '0 0 0 4px hsl(var(--primary) / 0.4), 0 2px 12px hsl(var(--primary) / 0.6)';
         thumb.style.transform = 'scale(1.2)';
@@ -121,7 +120,7 @@ export function usePhotoMarkers(
         thumb.style.transform = 'scale(1)';
       }
     });
-  }, [nearbyPhoto, activePhotoId, photos]);
+  }, [activePhotoId, photos]);
 
   // Reset zobrazených fotek při návratu na začátek
   useEffect(() => {
