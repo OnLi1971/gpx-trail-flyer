@@ -123,6 +123,7 @@ export function useFlythrough(
     setIsFlying(false);
     setFlyingIndex(null);
     setCurrentGrade(null);
+    setFlyStartTimestamp(null);
 
     if (flyMarkerRef.current) {
       flyMarkerRef.current.remove();
@@ -155,6 +156,7 @@ export function useFlythrough(
 
     setIsFlying(true);
     setFlyingIndex(0);
+    setFlyStartTimestamp(null); // nastaví se až po úvodním 2 s flyTo
     let currentIndex = 0;
     const totalPoints = track.points.length;
 
@@ -246,6 +248,7 @@ export function useFlythrough(
     setMapPitchState(startPitch);
 
     flyStartTimeoutRef.current = setTimeout(() => {
+      setFlyStartTimestamp(Date.now());
       flyAnimationRef.current = requestAnimationFrame(animateStep);
     }, 2000);
   }, [map, gpxData, mapPitch, stopFlythrough]);
