@@ -1,41 +1,67 @@
-## Problém
+## Proč ti fotka nenaskočila
 
-Po předchozí změně na Haversine detekci jsem do `usePhotoMarkers.ts` vložil tvrdý strop **30 m** na rádius příchodu k fotce:
+Aktuální detekce v `usePhotoMarkers.ts` měří vzdálenost **trackeru** (aktuální bod na trase, daný `currentPosition` nebo `flyingIndex`) k fotce a spustí ji, jakmile padne pod práh ze slideru.
 
-```ts
-return Math.min(40, fromDeg, 30); // vždy ≤ 30 m
-```
+Problém má dvě varianty:
 
-To znamená, že **ať nastavíš slider „Vzdálenost spuštění" na cokoli mezi 100–500 m, reálně se používá pořád 30 m**. Pokud GPX trasa neprochází přesně do 30 m od fotky (typicky nepřesnost EXIF + odchylka trasy), fotka se nikdy nespustí. Proto se ti dvě nově přidané fotky neukázaly.
+1. **Přeskakování bodů v 3D průletu**: `useFlythrough.ts` při default rychlosti 50 dělá krok `Math.max(1, Math.floor(50/10)) = 5`. Tracker tedy přeskakuje po 5 bodech. Pokud je hustota GPX bodů ~30 m, jeden krok = 150 m. Vzdálenost trackeru k fotce v jednom snímku může být 200+ m a v dalším už 100+ m za fotkou — slider 150 m to nikdy nezachytí, protože v žádném okamžiku tracker není < 150 m od fotky.
+2. **Fotka mimo trasu**: Pokud souřadnice fotky leží > 150 m od polyline trasy (typicky když ji přidáš klikem na mapu nebo z EXIF mimo přesnou stopu), žádný bod trasy se k ní nedostane blíž než její offset — slider 150 m nestačí.
 
-Slider v UI navíc začíná na 20 m a jde do 500 m, což je matoucí — uživatel mění hodnotu, ale nic se neděje.
+V tvém případě (přidaná fotka přímo do trasy přes "Přidat fotku" → klik na mapě) je nejpravděpodobnější varianta 1: souřadnice jsou na trase, ale tracker mezi snímky průletu fotku "přeskočí".
 
 ## Oprava
 
-**`src/hooks/usePhotoMarkers.ts`**
-- Zrušit hard cap. Rádius = přímo hodnota ze slideru (v metrech), s jemným spodním limitem 10 m, aby šlo ručně zacílit a horním 500 m, aby nepřišly všechny najednou.
+### Změna logiky detekce (`src/hooks/usePhotoMarkers.ts`)
 
-```ts
-const arrivalRadiusMeters = useCallback(() => {
-  const meters = animationSettings.threshold * 111000; // deg → m
-  return Math.min(500, Math.max(10, meters));
-}, [animationSettings.threshold]);
+Místo "vzdálenost aktuálního bodu trasy od fotky" počítej pro každou fotku **nejbližší bod celé trasy** a porovnej, kde tracker právě je vůči tomu nejbližšímu bodu:
+
+```text
+pro každou fotku (která ještě nebyla zobrazena):
+  najdi index nejbližšího bodu trasy ke GPS fotky → photoTrackIndex
+  najdi minimální vzdálenost fotka↔trasa → photoToTrackDist
+  
+  pokud photoToTrackDist > slider (fotka je moc daleko od trasy):
+    → tato fotka se v této session nepustí (přeskoč úplně, ať neblokuje)
+  
+  pokud tracker právě prochází tím nejbližším bodem (currentIndex ≈ photoTrackIndex):
+    → otevři fotku
 ```
 
-**`src/types/gpx.ts`**
-- Změnit default `threshold` z `0.005` (≈555 m, mimo nový cap) na `0.00045` (≈50 m) — rozumný default pro běžné cyklo trasy s mírnou nepřesností EXIF.
+Konkrétně: cache si `nearestTrackIndex` pro každou fotku (počítá se 1× při změně `gpxData`/`photos`). Pak v detekčním efektu jen porovnej:
 
-**`src/components/AnimationControls.tsx`**
-- Slider rozsah `min=10`, `max=200`, `step=5`. Nad 200 m už fotky vyskakují příliš dřív — pokud někdo opravdu chce 500 m, slider zatím povolí jen 200 (čistší UX). Pokud bys chtěl širší rozsah, snadno se vrátí.
+```ts
+const triggerWindow = Math.max(2, Math.floor(stepSize * 1.5)); // tolerance v krocích
+if (Math.abs(currentIndex - photo.nearestTrackIndex) <= triggerWindow) {
+  trigger(photo);
+}
+```
 
-## Co tím získáš
+Tohle eliminuje problém s přeskakováním bodů během průletu — i kdyby tracker mezi snímky přeskočil 5 bodů, kontrola na "dostal jsem se k indexu nejbližšímu fotce" projde.
 
-- Slider „Vzdálenost spuštění" reálně funguje — když ho posuneš výš, fotky se spustí dříve.
-- Default 50 m: tracker je u fotky, ale není to tak přísné jako 30 m, takže se neminou kvůli GPS nepřesnosti.
-- Pokud budou fotky pořád unikat (např. tvoje EXIF souřadnice jsou daleko od trasy), zvýšíš slider na 100–200 m.
+Slider "Vzdálenost spuštění" se použije jako **maximální offset fotky od trasy** (pokud je fotka dál než slider, vůbec se nezařadí do session). Tím slider získá smysluplný význam i při přeskakujícím trackeru.
+
+### Vizuální zpětná vazba (`src/hooks/usePhotoMarkers.ts`)
+
+Když se při loadu trasy zjistí, že některá fotka leží dál od trasy, než dovoluje slider, ukaž `toast.warning`:
+
+```text
+"Fotka 'IMG_1234' je 230 m od trasy — zvyš slider 'Vzdálenost spuštění' nad 230 m, aby se zobrazila."
+```
+
+Uživatel okamžitě ví, co s tím (žádné tiché selhání).
+
+### Drobnost: rozšířit horní hranici slideru (`src/components/AnimationControls.tsx`)
+
+Aktuálně `max=200`. Pokud někdo má fotku 250 m od trasy (například výhled na hrad), nemá jak ji povolit. Změna na `max=500, step=10`.
 
 ## Co se nemění
 
-- Fullscreen modal s Ken Burns efektem zůstává.
-- 4s autoclose timer zůstává.
-- Detekce funguje pro live i 3D průlet stejně.
+- Fullscreen modal s Ken Burns + 4s autoclose timer.
+- Sjednocená detekce pro live i 3D průlet (jen mění se, *jak* se porovnává).
+- `defaultAnimationSettings.threshold` zůstává 0.00045 (~50 m), což je dobrá výchozí přísnost.
+
+## Soubory k úpravě
+
+- `src/hooks/usePhotoMarkers.ts` — přepočet detekce na "tracker dorazil k bodu nejbližšímu fotce" + warning toast pro fotky mimo dosah.
+- `src/components/AnimationControls.tsx` — rozsah slideru 10–500 m.
+- `mem://features/animace-fotek` — aktualizovat pravidlo pro detekci.
