@@ -269,5 +269,7 @@ export function useFlythrough(
     setMapPitch,
     startFlythrough,
     stopFlythrough,
+    flyDurationSec,
+    flyStartTimestamp,
   };
 }
