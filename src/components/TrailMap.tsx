@@ -751,6 +751,64 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                         </Button>
                       </div>
                     </div>
+                    {/* Přidat vlastní vrchol */}
+                    <div className="p-2 border-b space-y-1.5 bg-muted/30">
+                      <div className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                        <Plus className="w-3 h-3" /> Přidat vlastní vrchol
+                      </div>
+                      <Input
+                        value={customPeakName}
+                        onChange={(e) => setCustomPeakName(e.target.value)}
+                        placeholder="Název"
+                        className="h-7 text-xs"
+                      />
+                      <div className="flex gap-1">
+                        <Input
+                          value={customPeakLat}
+                          onChange={(e) => setCustomPeakLat(e.target.value)}
+                          placeholder="Šířka"
+                          className="h-7 text-xs flex-1"
+                          inputMode="decimal"
+                        />
+                        <Input
+                          value={customPeakLon}
+                          onChange={(e) => setCustomPeakLon(e.target.value)}
+                          placeholder="Délka"
+                          className="h-7 text-xs flex-1"
+                          inputMode="decimal"
+                        />
+                        <Input
+                          value={customPeakEle}
+                          onChange={(e) => setCustomPeakEle(e.target.value)}
+                          placeholder="m n.m."
+                          className="h-7 text-xs w-16"
+                          inputMode="numeric"
+                        />
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={pickingPeakOnMap ? 'default' : 'outline'}
+                          className="h-7 text-xs flex-1 gap-1"
+                          onClick={() => setPickingPeakOnMap((v) => !v)}
+                        >
+                          <Crosshair className="w-3 h-3" />
+                          {pickingPeakOnMap ? 'Klikni na mapu…' : 'Vybrat na mapě'}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-7 text-xs flex-1 gap-1"
+                          onClick={addCustomPeak}
+                        >
+                          <Plus className="w-3 h-3" /> Přidat
+                        </Button>
+                      </div>
+                      {customPeakError && (
+                        <div className="text-[11px] text-destructive">{customPeakError}</div>
+                      )}
+                    </div>
                     <ScrollArea className="h-72">
                       <div className="p-1">
                         {allNearbyPoisRef.current
