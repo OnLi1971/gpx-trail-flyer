@@ -18,6 +18,13 @@ import { useFlythrough } from '@/hooks/useFlythrough';
 import { usePhotoMarkers } from '@/hooks/usePhotoMarkers';
 import { useElevationData } from '@/hooks/useElevationData';
 
+export interface PoiSettings {
+  peakLimit: number;
+  placeLimit: number;
+  peakSelectionMode: 'auto' | 'manual';
+  selectedPeakKeys: string[];
+}
+
 interface TrailMapProps {
   gpxData: GPXData | null;
   currentPosition: number;
@@ -25,6 +32,8 @@ interface TrailMapProps {
   onAddPhotos: (newPhotos: PhotoPoint[]) => void;
   animationSettings: AnimationSettings;
   readOnly?: boolean;
+  initialPoiSettings?: PoiSettings | null;
+  onPoiSettingsChange?: (settings: PoiSettings) => void;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({
