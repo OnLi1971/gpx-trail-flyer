@@ -6,7 +6,7 @@ import { PhotoViewModal } from './PhotoViewModal';
 import { PhotoPiP } from './PhotoPiP';
 import { ManualPhotoDialog } from './ManualPhotoDialog';
 import { ElevationChart } from './ElevationChart';
-import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug, ListChecks, Search, RefreshCw } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -79,6 +79,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [peakSearch, setPeakSearch] = useState('');
   const allNearbyPoisRef = useRef<import('@/utils/overpassApi').POIPoint[]>([]);
   const hasInitialPoiRef = useRef<boolean>(!!initialPoiSettings);
+
+  // Custom peak (přidaný uživatelem)
+  const [customPeakName, setCustomPeakName] = useState('');
+  const [customPeakEle, setCustomPeakEle] = useState('');
+  const [customPeakLat, setCustomPeakLat] = useState('');
+  const [customPeakLon, setCustomPeakLon] = useState('');
+  const [pickingPeakOnMap, setPickingPeakOnMap] = useState(false);
+  const [customPeakError, setCustomPeakError] = useState<string | null>(null);
+  // Tick pro re-render po mutaci allNearbyPoisRef (přidání custom vrcholu)
+  const [poiVersion, setPoiVersion] = useState(0);
 
   // Emit POI settings to parent when they change
   useEffect(() => {
@@ -443,6 +453,75 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
   }, [addPhotoMode]);
 
+  // Click-to-pick custom peak coords
+  useEffect(() => {
+    if (!map.current || !pickingPeakOnMap) return;
+    const m = map.current;
+    const canvas = m.getCanvas();
+    canvas.style.cursor = 'crosshair';
+
+    const handleClick = (e: MapMouseEvent) => {
+      setCustomPeakLat(e.lngLat.lat.toFixed(6));
+      setCustomPeakLon(e.lngLat.lng.toFixed(6));
+      setPickingPeakOnMap(false);
+    };
+
+    m.on('click', handleClick);
+    return () => {
+      m.off('click', handleClick);
+      canvas.style.cursor = '';
+    };
+  }, [pickingPeakOnMap]);
+
+  const addCustomPeak = useCallback(() => {
+    setCustomPeakError(null);
+    const name = customPeakName.trim();
+    const lat = parseFloat(customPeakLat);
+    const lon = parseFloat(customPeakLon);
+    const eleNum = customPeakEle.trim() ? parseFloat(customPeakEle) : undefined;
+
+    if (!name) { setCustomPeakError('Zadej název vrcholu'); return; }
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) { setCustomPeakError('Neplatná zeměpisná šířka'); return; }
+    if (!Number.isFinite(lon) || lon < -180 || lon > 180) { setCustomPeakError('Neplatná zeměpisná délka'); return; }
+    if (eleNum !== undefined && !Number.isFinite(eleNum)) { setCustomPeakError('Neplatná nadmořská výška'); return; }
+
+    const newPeak: import('@/utils/overpassApi').POIPoint = {
+      name,
+      lat,
+      lon,
+      ele: eleNum !== undefined ? Math.round(eleNum) : undefined,
+      type: 'peak',
+    };
+    const k = `${newPeak.name}@${newPeak.lat.toFixed(5)},${newPeak.lon.toFixed(5)}`;
+
+    // Přidat do seznamu (vyhnout se duplicitě podle key)
+    const exists = allNearbyPoisRef.current.some(p => p.type === 'peak' && `${p.name}@${p.lat.toFixed(5)},${p.lon.toFixed(5)}` === k);
+    const updated = exists ? allNearbyPoisRef.current : [...allNearbyPoisRef.current, newPeak];
+    allNearbyPoisRef.current = updated;
+
+    // Aktualizovat čítače a vybrat ho
+    const peakList = updated.filter(p => p.type === 'peak');
+    const placeList = updated.filter(p => p.type === 'place');
+    setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: updated.length, filtered: updated.length });
+    setSelectedPeakKeys(prev => {
+      const next = new Set(prev);
+      next.add(k);
+      return next;
+    });
+    setPeakSelectionMode('manual');
+    setPoiVersion(v => v + 1);
+
+    // Persist do DB cache (vlastník)
+    onPoisFetched?.(updated);
+
+    // Reset formuláře
+    setCustomPeakName('');
+    setCustomPeakEle('');
+    setCustomPeakLat('');
+    setCustomPeakLon('');
+  }, [customPeakName, customPeakEle, customPeakLat, customPeakLon, onPoisFetched]);
+
+
   return (
     <>
       <div className="relative w-full rounded-lg overflow-hidden shadow-lg">
@@ -492,6 +571,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               Klikni na mapu pro umístění fotky
               <button
                 onClick={() => setAddPhotoMode(false)}
+                className="ml-2 hover:opacity-70"
+                aria-label="Zrušit"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {pickingPeakOnMap && !readOnly && (
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium animate-fade-in">
+              <Crosshair className="w-4 h-4" />
+              Klikni na mapu pro výběr vrcholu
+              <button
+                onClick={() => setPickingPeakOnMap(false)}
                 className="ml-2 hover:opacity-70"
                 aria-label="Zrušit"
               >
@@ -671,6 +764,64 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                           Zrušit vše
                         </Button>
                       </div>
+                    </div>
+                    {/* Přidat vlastní vrchol */}
+                    <div className="p-2 border-b space-y-1.5 bg-muted/30">
+                      <div className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                        <Plus className="w-3 h-3" /> Přidat vlastní vrchol
+                      </div>
+                      <Input
+                        value={customPeakName}
+                        onChange={(e) => setCustomPeakName(e.target.value)}
+                        placeholder="Název"
+                        className="h-7 text-xs"
+                      />
+                      <div className="flex gap-1">
+                        <Input
+                          value={customPeakLat}
+                          onChange={(e) => setCustomPeakLat(e.target.value)}
+                          placeholder="Šířka"
+                          className="h-7 text-xs flex-1"
+                          inputMode="decimal"
+                        />
+                        <Input
+                          value={customPeakLon}
+                          onChange={(e) => setCustomPeakLon(e.target.value)}
+                          placeholder="Délka"
+                          className="h-7 text-xs flex-1"
+                          inputMode="decimal"
+                        />
+                        <Input
+                          value={customPeakEle}
+                          onChange={(e) => setCustomPeakEle(e.target.value)}
+                          placeholder="m n.m."
+                          className="h-7 text-xs w-16"
+                          inputMode="numeric"
+                        />
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={pickingPeakOnMap ? 'default' : 'outline'}
+                          className="h-7 text-xs flex-1 gap-1"
+                          onClick={() => setPickingPeakOnMap((v) => !v)}
+                        >
+                          <Crosshair className="w-3 h-3" />
+                          {pickingPeakOnMap ? 'Klikni na mapu…' : 'Vybrat na mapě'}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-7 text-xs flex-1 gap-1"
+                          onClick={addCustomPeak}
+                        >
+                          <Plus className="w-3 h-3" /> Přidat
+                        </Button>
+                      </div>
+                      {customPeakError && (
+                        <div className="text-[11px] text-destructive">{customPeakError}</div>
+                      )}
                     </div>
                     <ScrollArea className="h-72">
                       <div className="p-1">
