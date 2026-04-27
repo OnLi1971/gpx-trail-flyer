@@ -56,6 +56,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   cachedPois = null,
   onPoisFetched,
   onFlyStateChange,
+  onPhotoKmChange,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
