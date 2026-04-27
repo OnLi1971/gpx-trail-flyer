@@ -230,7 +230,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       (placeRank[a.placeType ?? 'hamlet'] ?? 9) - (placeRank[b.placeType ?? 'hamlet'] ?? 9)
     );
 
-    const limited = [...peaks.slice(0, peakLimit), ...places.slice(0, placeLimit)];
+    // Peaks: auto = top N by elevation; manual = explicit selection
+    const limitedPeaks = peakSelectionMode === 'manual'
+      ? peaks.filter(p => selectedPeakKeys.has(peakKey(p)))
+      : peaks.slice(0, peakLimit);
+
+    const limited = [...limitedPeaks, ...places.slice(0, placeLimit)];
 
     poiMarkersRef.current.forEach(m => m.remove());
     poiMarkersRef.current = [];
