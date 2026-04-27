@@ -278,6 +278,25 @@ export default function SharedTrail() {
     }
   };
 
+  // Když TrailMap úspěšně načte POI z Overpassu, uloží se k trase do DB (jen vlastník)
+  const handlePoisFetched = useCallback(async (pois: POIPoint[]) => {
+    setCachedPois(pois);
+    if (!isOwner || !trailId) return;
+    try {
+      const { error } = await supabase
+        .from('trails')
+        .update({
+          cached_pois: pois as any,
+          pois_cached_at: new Date().toISOString(),
+        })
+        .eq('id', trailId);
+      if (error) throw error;
+      toast.success(`Uloženo ${pois.length} POI k trase`);
+    } catch (err: any) {
+      console.error('POI cache save failed', err);
+    }
+  }, [isOwner, trailId]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
