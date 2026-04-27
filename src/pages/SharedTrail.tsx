@@ -87,6 +87,14 @@ export default function SharedTrail() {
       setCurrentPoi(poi);
       setSavedPoi(poi);
 
+      // Načíst uložená POI (vrcholy + obce) — pokud existují, Overpass se nebude volat
+      const cached = (trail as any).cached_pois;
+      if (Array.isArray(cached) && cached.length > 0) {
+        setCachedPois(cached as POIPoint[]);
+      } else {
+        setCachedPois(null);
+      }
+
       const { data: photoRows } = await supabase
         .from('trail_photos')
         .select('id, photo_url, description, lat, lon, photo_timestamp')
