@@ -453,6 +453,75 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
   }, [addPhotoMode]);
 
+  // Click-to-pick custom peak coords
+  useEffect(() => {
+    if (!map.current || !pickingPeakOnMap) return;
+    const m = map.current;
+    const canvas = m.getCanvas();
+    canvas.style.cursor = 'crosshair';
+
+    const handleClick = (e: MapMouseEvent) => {
+      setCustomPeakLat(e.lngLat.lat.toFixed(6));
+      setCustomPeakLon(e.lngLat.lng.toFixed(6));
+      setPickingPeakOnMap(false);
+    };
+
+    m.on('click', handleClick);
+    return () => {
+      m.off('click', handleClick);
+      canvas.style.cursor = '';
+    };
+  }, [pickingPeakOnMap]);
+
+  const addCustomPeak = useCallback(() => {
+    setCustomPeakError(null);
+    const name = customPeakName.trim();
+    const lat = parseFloat(customPeakLat);
+    const lon = parseFloat(customPeakLon);
+    const eleNum = customPeakEle.trim() ? parseFloat(customPeakEle) : undefined;
+
+    if (!name) { setCustomPeakError('Zadej název vrcholu'); return; }
+    if (!Number.isFinite(lat) || lat < -90 || lat > 90) { setCustomPeakError('Neplatná zeměpisná šířka'); return; }
+    if (!Number.isFinite(lon) || lon < -180 || lon > 180) { setCustomPeakError('Neplatná zeměpisná délka'); return; }
+    if (eleNum !== undefined && !Number.isFinite(eleNum)) { setCustomPeakError('Neplatná nadmořská výška'); return; }
+
+    const newPeak: import('@/utils/overpassApi').POIPoint = {
+      name,
+      lat,
+      lon,
+      ele: eleNum !== undefined ? Math.round(eleNum) : undefined,
+      type: 'peak',
+    };
+    const k = `${newPeak.name}@${newPeak.lat.toFixed(5)},${newPeak.lon.toFixed(5)}`;
+
+    // Přidat do seznamu (vyhnout se duplicitě podle key)
+    const exists = allNearbyPoisRef.current.some(p => p.type === 'peak' && `${p.name}@${p.lat.toFixed(5)},${p.lon.toFixed(5)}` === k);
+    const updated = exists ? allNearbyPoisRef.current : [...allNearbyPoisRef.current, newPeak];
+    allNearbyPoisRef.current = updated;
+
+    // Aktualizovat čítače a vybrat ho
+    const peakList = updated.filter(p => p.type === 'peak');
+    const placeList = updated.filter(p => p.type === 'place');
+    setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: updated.length, filtered: updated.length });
+    setSelectedPeakKeys(prev => {
+      const next = new Set(prev);
+      next.add(k);
+      return next;
+    });
+    setPeakSelectionMode('manual');
+    setPoiVersion(v => v + 1);
+
+    // Persist do DB cache (vlastník)
+    onPoisFetched?.(updated);
+
+    // Reset formuláře
+    setCustomPeakName('');
+    setCustomPeakEle('');
+    setCustomPeakLat('');
+    setCustomPeakLon('');
+  }, [customPeakName, customPeakEle, customPeakLat, customPeakLon, onPoisFetched]);
+
+
   return (
     <>
       <div className="relative w-full rounded-lg overflow-hidden shadow-lg">
