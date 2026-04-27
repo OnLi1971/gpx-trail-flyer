@@ -355,7 +355,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (allNearbyPoisRef.current.length > 0) {
       renderPoiMarkers(allNearbyPoisRef.current);
     }
-  }, [peakLimit, placeLimit, renderPoiMarkers]);
+  }, [peakLimit, placeLimit, peakSelectionMode, selectedPeakKeys, renderPoiMarkers]);
 
   // Click-to-add-photo mode
   useEffect(() => {
