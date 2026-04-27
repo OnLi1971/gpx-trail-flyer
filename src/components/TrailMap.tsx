@@ -503,9 +503,31 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                     </>
                   )}
                   {poiStatus === 'error' && (
-                    <div className="text-destructive break-words max-w-[220px]">
-                      {poiError || 'Chyba načítání POI'}
+                    <div className="space-y-2 max-w-[220px]">
+                      <div className="text-destructive break-words">
+                        {poiError || 'Chyba načítání POI'}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 gap-1 text-xs"
+                        onClick={() => loadPOIs()}
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        Načíst znovu
+                      </Button>
                     </div>
+                  )}
+                  {poiStatus === 'success' && poiCounts.raw === 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 gap-1 text-xs mt-1"
+                      onClick={() => loadPOIs()}
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Zkusit znovu
+                    </Button>
                   )}
                 </div>
               )}
