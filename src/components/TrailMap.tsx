@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Map, NavigationControl, Marker, LngLatBounds, MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, PhotoPoint, AnimationSettings } from '@/types/gpx';
@@ -6,7 +6,7 @@ import { PhotoViewModal } from './PhotoViewModal';
 import { PhotoPiP } from './PhotoPiP';
 import { ManualPhotoDialog } from './ManualPhotoDialog';
 import { ElevationChart } from './ElevationChart';
-import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug, ListChecks, Search } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug, ListChecks, Search, RefreshCw } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -325,46 +325,50 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     });
   }, [peakLimit, placeLimit, peakSelectionMode, selectedPeakKeys]);
 
-  // POI fetch — only on gpx change
-  useEffect(() => {
+  // POI fetch — extrahováno, aby šlo zavolat i ručně přes tlačítko reload
+  const poiCancelRef = useRef<{ cancelled: boolean } | null>(null);
+  const loadPOIs = useCallback(async () => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
-
     const track = gpxData.tracks[0];
     if (track.points.length === 0) return;
 
-    let cancelled = false;
+    // zruš případný předchozí běh
+    if (poiCancelRef.current) poiCancelRef.current.cancelled = true;
+    const token = { cancelled: false };
+    poiCancelRef.current = token;
 
-    const loadPOIs = async () => {
-      setPoiStatus('loading');
-      setPoiError(null);
-      try {
-        const pois = await fetchPeaksAndPlaces(gpxData.bounds);
-        if (cancelled || !map.current) return;
+    setPoiStatus('loading');
+    setPoiError(null);
+    try {
+      const pois = await fetchPeaksAndPlaces(gpxData.bounds);
+      if (token.cancelled || !map.current) return;
 
-        const nearbyPois = filterPOIsNearTrack(pois, track.points, 2);
-        allNearbyPoisRef.current = nearbyPois;
+      const nearbyPois = filterPOIsNearTrack(pois, track.points, 2);
+      allNearbyPoisRef.current = nearbyPois;
 
-        const peakList = nearbyPois.filter(p => p.type === 'peak');
-        const placeList = nearbyPois.filter(p => p.type === 'place');
-        setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: pois.length, filtered: nearbyPois.length });
-        setPoiStatus('success');
+      const peakList = nearbyPois.filter(p => p.type === 'peak');
+      const placeList = nearbyPois.filter(p => p.type === 'place');
+      setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: pois.length, filtered: nearbyPois.length });
+      setPoiStatus('success');
 
-        // Pre-select top peaks for manual mode (sorted by elevation) — jen pokud nemáme uložená nastavení
-        if (!hasInitialPoiRef.current) {
-          const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
-          setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
-          setPeakSelectionMode('auto');
-        }
-        // Pro další gpx změny v rámci téže instance už znovu defaultovat
-        hasInitialPoiRef.current = false;
-
-        renderPoiMarkers(nearbyPois);
-      } catch (err) {
-        if (cancelled) return;
-        setPoiStatus('error');
-        setPoiError(err instanceof Error ? err.message : 'Neznámá chyba');
+      if (!hasInitialPoiRef.current) {
+        const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
+        setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
+        setPeakSelectionMode('auto');
       }
-    };
+      hasInitialPoiRef.current = false;
+
+      renderPoiMarkers(nearbyPois);
+    } catch (err) {
+      if (token.cancelled) return;
+      setPoiStatus('error');
+      setPoiError(err instanceof Error ? err.message : 'Neznámá chyba');
+    }
+  }, [gpxData, renderPoiMarkers]);
+
+  // POI fetch — only on gpx change
+  useEffect(() => {
+    if (!map.current || !gpxData) return;
 
     if (map.current.isStyleLoaded()) {
       loadPOIs();
@@ -373,11 +377,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
 
     return () => {
-      cancelled = true;
+      if (poiCancelRef.current) poiCancelRef.current.cancelled = true;
       poiMarkersRef.current.forEach(m => m.remove());
       poiMarkersRef.current = [];
     };
-  }, [gpxData, renderPoiMarkers]);
+  }, [gpxData, loadPOIs]);
 
   // Re-render markers when limits change (without re-fetching)
   useEffect(() => {
@@ -499,9 +503,31 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                     </>
                   )}
                   {poiStatus === 'error' && (
-                    <div className="text-destructive break-words max-w-[220px]">
-                      {poiError || 'Chyba načítání POI'}
+                    <div className="space-y-2 max-w-[220px]">
+                      <div className="text-destructive break-words">
+                        {poiError || 'Chyba načítání POI'}
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 px-2 gap-1 text-xs"
+                        onClick={() => loadPOIs()}
+                      >
+                        <RefreshCw className="w-3 h-3" />
+                        Načíst znovu
+                      </Button>
                     </div>
+                  )}
+                  {poiStatus === 'success' && poiCounts.raw === 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 gap-1 text-xs mt-1"
+                      onClick={() => loadPOIs()}
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                      Zkusit znovu
+                    </Button>
                   )}
                 </div>
               )}

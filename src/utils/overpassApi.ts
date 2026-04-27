@@ -37,7 +37,13 @@ export async function fetchPeaksAndPlaces(bounds: {
 out body 300;`;
 
   let lastError: unknown = null;
-  for (const endpoint of OVERPASS_ENDPOINTS) {
+  // 2 pokusy přes všechny servery (s krátkou prodlevou mezi koly) — Overpass občas vrací 502/504 pod zátěží
+  const MAX_ROUNDS = 2;
+  for (let round = 0; round < MAX_ROUNDS; round++) {
+    if (round > 0) {
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+    for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -67,6 +73,7 @@ out body 300;`;
       return result;
     } catch (err) {
       lastError = err;
+    }
     }
   }
 
