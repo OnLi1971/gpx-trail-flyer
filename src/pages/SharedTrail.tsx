@@ -49,6 +49,9 @@ export default function SharedTrail() {
   const [savedPoi, setSavedPoi] = useState<PoiSettings | null>(null);
   const [savingPoi, setSavingPoi] = useState(false);
 
+  // Cache POI dat z DB (vrcholy + obce)
+  const [cachedPois, setCachedPois] = useState<POIPoint[] | null>(null);
+
   const isOwner = !!user && !!ownerId && user.id === ownerId;
 
   useEffect(() => {
