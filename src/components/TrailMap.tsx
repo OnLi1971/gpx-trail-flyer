@@ -34,6 +34,10 @@ interface TrailMapProps {
   readOnly?: boolean;
   initialPoiSettings?: PoiSettings | null;
   onPoiSettingsChange?: (settings: PoiSettings) => void;
+  /** Předem uložená POI z DB — pokud jsou, Overpass se nevolá */
+  cachedPois?: import('@/utils/overpassApi').POIPoint[] | null;
+  /** Zavolá se po úspěšném (znovu)načtení POI z Overpassu — vlastník je může uložit */
+  onPoisFetched?: (pois: import('@/utils/overpassApi').POIPoint[]) => void;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({
@@ -45,6 +49,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   readOnly = false,
   initialPoiSettings = null,
   onPoiSettingsChange,
+  cachedPois = null,
+  onPoisFetched,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
@@ -327,7 +333,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   // POI fetch — extrahováno, aby šlo zavolat i ručně přes tlačítko reload
   const poiCancelRef = useRef<{ cancelled: boolean } | null>(null);
-  const loadPOIs = useCallback(async () => {
+  const cachedPoisRef = useRef(cachedPois);
+  useEffect(() => { cachedPoisRef.current = cachedPois; }, [cachedPois]);
+
+  const loadPOIs = useCallback(async (forceRefresh = false) => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
     const track = gpxData.tracks[0];
     if (track.points.length === 0) return;
@@ -336,6 +345,26 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (poiCancelRef.current) poiCancelRef.current.cancelled = true;
     const token = { cancelled: false };
     poiCancelRef.current = token;
+
+    // Pokud máme cache z DB a nejde o vynucené obnovení, použij ji a vůbec nevolat Overpass
+    const cached = cachedPoisRef.current;
+    if (!forceRefresh && cached && cached.length > 0) {
+      const nearbyPois = cached;
+      allNearbyPoisRef.current = nearbyPois;
+      const peakList = nearbyPois.filter(p => p.type === 'peak');
+      const placeList = nearbyPois.filter(p => p.type === 'place');
+      setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: nearbyPois.length, filtered: nearbyPois.length });
+      setPoiStatus('success');
+
+      if (!hasInitialPoiRef.current) {
+        const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
+        setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
+        setPeakSelectionMode('auto');
+      }
+      hasInitialPoiRef.current = false;
+      renderPoiMarkers(nearbyPois);
+      return;
+    }
 
     setPoiStatus('loading');
     setPoiError(null);
@@ -359,21 +388,24 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       hasInitialPoiRef.current = false;
 
       renderPoiMarkers(nearbyPois);
+      // Předat rodiči k uložení do DB (vlastník)
+      onPoisFetched?.(nearbyPois);
     } catch (err) {
       if (token.cancelled) return;
       setPoiStatus('error');
       setPoiError(err instanceof Error ? err.message : 'Neznámá chyba');
     }
-  }, [gpxData, renderPoiMarkers]);
+  }, [gpxData, renderPoiMarkers, onPoisFetched]);
 
   // POI fetch — only on gpx change
   useEffect(() => {
     if (!map.current || !gpxData) return;
 
+    const run = () => loadPOIs(false);
     if (map.current.isStyleLoaded()) {
-      loadPOIs();
+      run();
     } else {
-      map.current.once('load', loadPOIs);
+      map.current.once('load', run);
     }
 
     return () => {
@@ -511,7 +543,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                         size="sm"
                         variant="outline"
                         className="h-7 px-2 gap-1 text-xs"
-                        onClick={() => loadPOIs()}
+                        onClick={() => loadPOIs(true)}
                       >
                         <RefreshCw className="w-3 h-3" />
                         Načíst znovu
@@ -523,7 +555,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                       size="sm"
                       variant="outline"
                       className="h-7 px-2 gap-1 text-xs mt-1"
-                      onClick={() => loadPOIs()}
+                      onClick={() => loadPOIs(true)}
                     >
                       <RefreshCw className="w-3 h-3" />
                       Zkusit znovu

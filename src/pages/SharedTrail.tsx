@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { AppHeader } from '@/components/AppHeader';
 import { TrailMap, PoiSettings } from '@/components/TrailMap';
+import type { POIPoint } from '@/utils/overpassApi';
 import { AnimationControls } from '@/components/AnimationControls';
 import { GPXData, PhotoPoint, defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
 import { Card, CardContent } from '@/components/ui/card';
@@ -48,6 +49,9 @@ export default function SharedTrail() {
   const [savedPoi, setSavedPoi] = useState<PoiSettings | null>(null);
   const [savingPoi, setSavingPoi] = useState(false);
 
+  // Cache POI dat z DB (vrcholy + obce)
+  const [cachedPois, setCachedPois] = useState<POIPoint[] | null>(null);
+
   const isOwner = !!user && !!ownerId && user.id === ownerId;
 
   useEffect(() => {
@@ -56,7 +60,7 @@ export default function SharedTrail() {
       setLoading(true);
       const { data: trail, error: tErr } = await supabase
         .from('trails')
-        .select('id, name, gpx_data, user_id, peak_limit, place_limit, peak_selection_mode, selected_peak_keys')
+        .select('id, name, gpx_data, user_id, peak_limit, place_limit, peak_selection_mode, selected_peak_keys, cached_pois, pois_cached_at')
         .eq('slug', slug)
         .maybeSingle();
 
@@ -82,6 +86,14 @@ export default function SharedTrail() {
       setInitialPoi(poi);
       setCurrentPoi(poi);
       setSavedPoi(poi);
+
+      // Načíst uložená POI (vrcholy + obce) — pokud existují, Overpass se nebude volat
+      const cached = (trail as any).cached_pois;
+      if (Array.isArray(cached) && cached.length > 0) {
+        setCachedPois(cached as POIPoint[]);
+      } else {
+        setCachedPois(null);
+      }
 
       const { data: photoRows } = await supabase
         .from('trail_photos')
@@ -266,6 +278,25 @@ export default function SharedTrail() {
     }
   };
 
+  // Když TrailMap úspěšně načte POI z Overpassu, uloží se k trase do DB (jen vlastník)
+  const handlePoisFetched = useCallback(async (pois: POIPoint[]) => {
+    setCachedPois(pois);
+    if (!isOwner || !trailId) return;
+    try {
+      const { error } = await supabase
+        .from('trails')
+        .update({
+          cached_pois: pois as any,
+          pois_cached_at: new Date().toISOString(),
+        })
+        .eq('id', trailId);
+      if (error) throw error;
+      toast.success(`Uloženo ${pois.length} POI k trase`);
+    } catch (err: any) {
+      console.error('POI cache save failed', err);
+    }
+  }, [isOwner, trailId]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
@@ -352,6 +383,8 @@ export default function SharedTrail() {
           readOnly={!isOwner}
           initialPoiSettings={initialPoi}
           onPoiSettingsChange={setCurrentPoi}
+          cachedPois={cachedPois}
+          onPoisFetched={handlePoisFetched}
         />
 
         {isOwner && photos.length > 0 && (
