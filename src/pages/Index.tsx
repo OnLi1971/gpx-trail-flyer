@@ -109,23 +109,33 @@ const Index = () => {
     setSaveOpen(true);
   };
 
-  // Při přidání fotek automaticky rozprostřít triggerSec rovnoměrně
+  // Celková délka trasy v km
+  const totalKm = gpxData && gpxData.tracks.length > 0 ? gpxData.tracks[0].totalDistance / 1000 : 0;
+
+  // Při přidání fotek automaticky rozprostřít triggerKm rovnoměrně podél trasy
   const handleAddPhotos = useCallback((newPhotos: PhotoPoint[]) => {
     setPhotos((prev) => {
       const combined = [...prev, ...newPhotos];
       const N = combined.length;
-      const dur = flyDurationSec || 60;
-      // Pokud fotka nemá triggerSec, dopočítej rovnoměrné rozprostření
+      const dist = totalKm || 1;
       return combined.map((p, i) => {
-        if (p.triggerSec !== undefined) return p;
-        return { ...p, triggerSec: ((i + 1) / (N + 1)) * dur };
+        if (p.triggerKm !== undefined) return p;
+        return { ...p, triggerKm: ((i + 1) / (N + 1)) * dist };
       });
     });
-  }, [flyDurationSec]);
+  }, [totalKm]);
 
-  const handleChangeTriggerSec = useCallback((id: string, sec: number) => {
-    setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, triggerSec: sec } : p)));
+  const handleChangePhotoKm = useCallback((id: string, km: number) => {
+    setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, triggerKm: km } : p)));
   }, []);
+
+  const handleRedistribute = useCallback(() => {
+    setPhotos((prev) => {
+      const N = prev.length;
+      const dist = totalKm || 1;
+      return prev.map((p, i) => ({ ...p, triggerKm: ((i + 1) / (N + 1)) * dist }));
+    });
+  }, [totalKm]);
 
   const handleRemovePhoto = useCallback((id: string) => {
     setPhotos((prev) => prev.filter((p) => p.id !== id));
@@ -220,13 +230,15 @@ const Index = () => {
                   photos={photos}
                   onAddPhotos={handleAddPhotos}
                   onFlyStateChange={handleFlyStateChange}
+                  onPhotoKmChange={handleChangePhotoKm}
                 />
 
                 <PhotoTimeEditor
                   photos={photos}
-                  flyDurationSec={flyDurationSec}
-                  onChangeTriggerSec={handleChangeTriggerSec}
+                  totalKm={totalKm}
+                  onChangePhotoKm={handleChangePhotoKm}
                   onRemove={handleRemovePhoto}
+                  onRedistribute={handleRedistribute}
                 />
             </div>
 

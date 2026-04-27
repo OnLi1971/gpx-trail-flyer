@@ -4,18 +4,38 @@ import { GPXData, PhotoPoint, AnimationSettings } from '@/types/gpx';
 import { extractPhotoGPS } from '@/utils/exifReader';
 import { toast } from 'sonner';
 
-const ANIMATION_DURATION_MS = 10000; // sjednocené s Index.tsx / SharedTrail.tsx
+/** Haversine vzdálenost v metrech. */
+function haversineM(aLat: number, aLon: number, bLat: number, bLon: number) {
+  const R = 6371000;
+  const dLat = ((bLat - aLat) * Math.PI) / 180;
+  const dLon = ((bLon - aLon) * Math.PI) / 180;
+  const la1 = (aLat * Math.PI) / 180;
+  const la2 = (bLat * Math.PI) / 180;
+  const x = Math.sin(dLat / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
 
-/** Vrátí bod trasy odpovídající sekundě průletu. */
-function getTrackPointAtSec(
-  triggerSec: number,
-  flyDurationSec: number,
-  points: { lat: number; lon: number }[]
-) {
-  if (points.length === 0) return null;
-  const ratio = Math.min(1, Math.max(0, triggerSec / Math.max(1, flyDurationSec)));
-  const idx = Math.round(ratio * (points.length - 1));
-  return points[idx];
+/** Pole kumulované vzdálenosti (km) pro každý bod trasy. */
+function buildCumulativeKm(points: { lat: number; lon: number }[]): number[] {
+  const out: number[] = new Array(points.length).fill(0);
+  for (let i = 1; i < points.length; i++) {
+    out[i] = out[i - 1] + haversineM(points[i - 1].lat, points[i - 1].lon, points[i].lat, points[i].lon) / 1000;
+  }
+  return out;
+}
+
+/** Najdi index bodu trasy nejbližší dané vzdálenosti v km. */
+function indexAtKm(cumKm: number[], targetKm: number): number {
+  if (cumKm.length === 0) return 0;
+  if (targetKm <= 0) return 0;
+  if (targetKm >= cumKm[cumKm.length - 1]) return cumKm.length - 1;
+  // binární vyhledávání
+  let lo = 0, hi = cumKm.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (cumKm[mid] < targetKm) lo = mid + 1; else hi = mid;
+  }
+  return lo;
 }
 
 export function usePhotoMarkers(
@@ -27,8 +47,8 @@ export function usePhotoMarkers(
   animationSettings: AnimationSettings,
   flyingIndex: number | null = null,
   isFlying: boolean = false,
-  flyStartTimestamp: number | null = null,
-  flyDurationSec: number = 60,
+  _flyStartTimestamp: number | null = null,
+  _flyDurationSec: number = 60,
 ) {
   const [viewPhoto, setViewPhoto] = useState<PhotoPoint | null>(null);
   const [isPhotoViewOpen, setIsPhotoViewOpen] = useState(false);
@@ -56,7 +76,16 @@ export function usePhotoMarkers(
     };
   }, [gpxData]);
 
-  // Vykreslení značek fotek na mapě — pozice odpovídá triggerSec na trase
+  const trackPoints = gpxData && gpxData.tracks.length > 0 ? gpxData.tracks[0].points : [];
+  const totalKm = gpxData && gpxData.tracks.length > 0 ? gpxData.tracks[0].totalDistance / 1000 : 0;
+
+  // Kumulovaná vzdálenost pro každý bod — přepočítáme jen při změně trasy
+  const cumKmRef = useRef<number[]>([]);
+  useEffect(() => {
+    cumKmRef.current = buildCumulativeKm(trackPoints);
+  }, [gpxData]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Vykreslení značek fotek na mapě — pozice odpovídá triggerKm na trase
   useEffect(() => {
     if (!map.current) return;
 
@@ -73,14 +102,15 @@ export function usePhotoMarkers(
     photoMarkerMapRef.current = {};
     photoMarkerContainerRef.current = {};
 
-    const trackPoints = gpxData && gpxData.tracks.length > 0 ? gpxData.tracks[0].points : [];
+    const cumKm = cumKmRef.current;
 
     photos.forEach(photo => {
-      // Pozice značky: pokud má fotka triggerSec a máme trasu, sedí přesně na trase.
+      // Pozice značky: pokud má fotka triggerKm a máme trasu, sedí přesně na trase.
       let lat = photo.lat;
       let lon = photo.lon;
-      if (photo.triggerSec !== undefined && trackPoints.length > 0) {
-        const p = getTrackPointAtSec(photo.triggerSec, flyDurationSec, trackPoints);
+      if (photo.triggerKm !== undefined && trackPoints.length > 0 && cumKm.length > 0) {
+        const idx = indexAtKm(cumKm, photo.triggerKm);
+        const p = trackPoints[idx];
         if (p) { lat = p.lat; lon = p.lon; }
       }
 
@@ -127,7 +157,7 @@ export function usePhotoMarkers(
       photoMarkerMapRef.current[photo.id] = thumb;
       photoMarkerContainerRef.current[photo.id] = container;
     });
-  }, [photos, map, isFlying, gpxData, flyDurationSec]);
+  }, [photos, map, isFlying, gpxData]);
 
   // Skrýt photo markery během 3D průletu
   useEffect(() => {
@@ -151,7 +181,7 @@ export function usePhotoMarkers(
     });
   }, [activePhotoId, photos]);
 
-  // Reset zobrazených fotek při návratu na začátek (slider mimo průlet)
+  // Reset zobrazených fotek při návratu na začátek
   useEffect(() => {
     if (currentPosition < 1 && !isFlying) {
       shownPhotosRef.current.clear();
@@ -161,49 +191,43 @@ export function usePhotoMarkers(
 
   // Reset při startu nového průletu
   useEffect(() => {
-    if (isFlying && flyStartTimestamp !== null) {
+    if (isFlying) {
       shownPhotosRef.current.clear();
       pendingQueueRef.current = [];
     }
-  }, [isFlying, flyStartTimestamp]);
+  }, [isFlying]);
 
-  // Časový trigger — během průletu tikáme přes interval, mimo průlet podle currentPosition
+  // Trigger podle ujeté vzdálenosti (km)
   useEffect(() => {
-    if (!map.current || photos.length === 0) return;
+    if (!map.current || photos.length === 0 || trackPoints.length === 0) return;
+    const cumKm = cumKmRef.current;
+    if (cumKm.length === 0) return;
 
-    const checkAndQueue = (elapsedSec: number) => {
-      photos.forEach(photo => {
-        if (photo.triggerSec === undefined) return;
-        if (shownPhotosRef.current.has(photo.id)) return;
-        if (pendingQueueRef.current.some(p => p.id === photo.id)) return;
-        if (elapsedSec >= photo.triggerSec) {
-          shownPhotosRef.current.add(photo.id);
-          pendingQueueRef.current.push(photo);
-        }
-      });
-
-      if (!isPhotoViewOpen && activePhotoId === null && pendingQueueRef.current.length > 0) {
-        const next = pendingQueueRef.current.shift()!;
-        setActivePhotoId(next.id);
-        handleArrivedPhotoRef.current(next);
-      }
-    };
-
-    if (isFlying && flyStartTimestamp !== null) {
-      // Tik každých 200 ms — sjednocený zdroj uplynulého času průletu
-      const interval = setInterval(() => {
-        const elapsedSec = (Date.now() - flyStartTimestamp) / 1000;
-        checkAndQueue(elapsedSec);
-      }, 200);
-      return () => clearInterval(interval);
+    // Aktuální km — z flyingIndex (3D průlet) nebo z currentPosition (slider/2D animace)
+    let currentKm: number;
+    if (flyingIndex !== null && flyingIndex >= 0 && flyingIndex < cumKm.length) {
+      currentKm = cumKm[flyingIndex];
     } else {
-      // Mimo průlet — odvodíme uplynulý čas z currentPosition (0–100 %).
-      // ANIMATION_DURATION_MS je délka klasické 2D animace; mapujeme na flyDurationSec,
-      // aby se značky a triggery chovaly konzistentně i při náhledu sliderem.
-      const elapsedSec = (currentPosition / 100) * flyDurationSec;
-      checkAndQueue(elapsedSec);
+      const idx = Math.floor((currentPosition / 100) * (trackPoints.length - 1));
+      currentKm = cumKm[Math.max(0, Math.min(cumKm.length - 1, idx))];
     }
-  }, [photos, isFlying, flyStartTimestamp, currentPosition, flyDurationSec, isPhotoViewOpen, activePhotoId, map]);
+
+    photos.forEach(photo => {
+      if (photo.triggerKm === undefined) return;
+      if (shownPhotosRef.current.has(photo.id)) return;
+      if (pendingQueueRef.current.some(p => p.id === photo.id)) return;
+      if (currentKm >= photo.triggerKm) {
+        shownPhotosRef.current.add(photo.id);
+        pendingQueueRef.current.push(photo);
+      }
+    });
+
+    if (!isPhotoViewOpen && activePhotoId === null && pendingQueueRef.current.length > 0) {
+      const next = pendingQueueRef.current.shift()!;
+      setActivePhotoId(next.id);
+      handleArrivedPhotoRef.current(next);
+    }
+  }, [photos, flyingIndex, currentPosition, isPhotoViewOpen, activePhotoId, map, gpxData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handlePhotoCloseRef = useRef<() => void>(() => {});
   const handleArrivedPhotoRef = useRef<(p: PhotoPoint) => void>(() => {});
@@ -219,11 +243,12 @@ export function usePhotoMarkers(
     const currentZoom = map.current.getZoom();
     const newZoom = Math.min(currentZoom * settings.zoomFactor, 18);
 
-    // Cíl flyTo: bod na trase odpovídající triggerSec, pokud existuje
+    // Cíl flyTo: bod na trase odpovídající triggerKm, pokud existuje
     let centerLat = photo.lat;
     let centerLon = photo.lon;
-    if (photo.triggerSec !== undefined && gpxData && gpxData.tracks.length > 0) {
-      const p = getTrackPointAtSec(photo.triggerSec, flyDurationSec, gpxData.tracks[0].points);
+    if (photo.triggerKm !== undefined && trackPoints.length > 0 && cumKmRef.current.length > 0) {
+      const idx = indexAtKm(cumKmRef.current, photo.triggerKm);
+      const p = trackPoints[idx];
       if (p) { centerLat = p.lat; centerLon = p.lon; }
     }
 
@@ -246,7 +271,7 @@ export function usePhotoMarkers(
         handlePhotoCloseRef.current();
       }, delay);
     }
-  }, [map, gpxData, flyDurationSec]);
+  }, [map, gpxData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     handleArrivedPhotoRef.current = handleArrivedPhoto;
@@ -283,7 +308,7 @@ export function usePhotoMarkers(
     handlePhotoCloseRef.current = handlePhotoClose;
   }, [handlePhotoClose]);
 
-  // Reset fronty při změně GPX/fotek
+  // Reset fronty při změně GPX/počtu fotek
   useEffect(() => {
     pendingQueueRef.current = [];
     shownPhotosRef.current.clear();
@@ -315,8 +340,6 @@ export function usePhotoMarkers(
             timestamp: result.timestamp ?? Date.now(),
           });
         } else {
-          // Bez GPS — i tak nahrajeme s placeholder pozicí (fotka se umístí podle triggerSec na trase)
-          // Pro extractPhotoGPS bez GPS by ale result == null, takže přeskočíme.
           skippedNames.push(file.name);
         }
       });
@@ -349,5 +372,6 @@ export function usePhotoMarkers(
     handleBulkPhotoUpload,
     fileInputRef,
     triggerUpload,
+    totalKm,
   };
 }

@@ -40,6 +40,8 @@ interface TrailMapProps {
   onPoisFetched?: (pois: import('@/utils/overpassApi').POIPoint[]) => void;
   /** Notifikace o stavu průletu — pro nadřazenou komponentu (časový editor fotek) */
   onFlyStateChange?: (state: { isFlying: boolean; flyDurationSec: number; flyStartTimestamp: number | null }) => void;
+  /** Volitelný callback pro drag fotek na výškovém profilu (km od startu trasy). */
+  onPhotoKmChange?: (id: string, km: number) => void;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({
@@ -54,6 +56,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   cachedPois = null,
   onPoisFetched,
   onFlyStateChange,
+  onPhotoKmChange,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
@@ -1034,6 +1037,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             chartData={elevationData.chartData}
             currentChartPoint={elevationData.currentChartPoint}
             photosOnChart={elevationData.photosOnChart}
+            onPhotoKmChange={onPhotoKmChange}
           />
         )}
       </div>
