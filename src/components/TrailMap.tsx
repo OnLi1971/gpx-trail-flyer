@@ -187,6 +187,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       zoom: 10,
       center: [14.4, 50.1],
       maxPitch: 85,
+      // @ts-expect-error — supported by maplibre-gl at runtime; needed for canvas captureStream
       preserveDrawingBuffer: true,
     });
 
