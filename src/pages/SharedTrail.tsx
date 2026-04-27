@@ -108,12 +108,12 @@ export default function SharedTrail() {
         description: p.description || '',
         timestamp: Number(p.photo_timestamp),
       }));
-      // Auto-doplnit triggerSec pro staré fotky bez něj (rovnoměrné rozprostření)
+      // Auto-doplnit triggerKm pro fotky bez něj (rovnoměrné rozprostření podél trasy)
       const N = loadedRaw.length;
-      const dur = 60; // default; po startu průletu se přepočítá v editoru/triggru
+      const totalKm = parsedData.tracks[0]?.totalDistance ? parsedData.tracks[0].totalDistance / 1000 : 1;
       const loaded: PhotoPoint[] = loadedRaw.map((p, i) => ({
         ...p,
-        triggerSec: ((i + 1) / (N + 1)) * dur,
+        triggerKm: ((i + 1) / (N + 1)) * totalKm,
       }));
       setPhotos(loaded);
       setSavedPhotoIds(new Set(loaded.map((p) => p.id)));
