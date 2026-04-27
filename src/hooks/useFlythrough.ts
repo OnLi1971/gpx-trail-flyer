@@ -44,22 +44,22 @@ export function useFlythrough(
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
   const [isFlying, setIsFlying] = useState(false);
-  const [flySpeed, setFlySpeedState] = useState(50);
-  const [flyRotation, setFlyRotationState] = useState(50);
-  const [flyZoom, setFlyZoomState] = useState(15);
-  const [elevationExaggeration, setElevationExaggerationState] = useState(1.5);
+  const [flySpeed, setFlySpeedState] = useState(82);
+  const [flyRotation, setFlyRotationState] = useState(32);
+  const [flyZoom, setFlyZoomState] = useState(12.5);
+  const [elevationExaggeration, setElevationExaggerationState] = useState(1.9);
   const [flyingIndex, setFlyingIndex] = useState<number | null>(null);
   const [currentGrade, setCurrentGrade] = useState<number | null>(null);
-  const [mapPitch, setMapPitchState] = useState(0);
+  const [mapPitch, setMapPitchState] = useState(73);
   const [flyStartTimestamp, setFlyStartTimestamp] = useState<number | null>(null);
 
   const flyAnimationRef = useRef<number | null>(null);
   const flyStartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flyStepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const flySpeedRef = useRef(50);
-  const flyRotationRef = useRef(50);
-  const flyZoomRef = useRef(15);
-  const elevationExaggerationRef = useRef(1.5);
+  const flySpeedRef = useRef(82);
+  const flyRotationRef = useRef(32);
+  const flyZoomRef = useRef(12.5);
+  const elevationExaggerationRef = useRef(1.9);
   const lastBearingRef = useRef(0);
   const flyMarkerRef = useRef<Marker | null>(null);
 
