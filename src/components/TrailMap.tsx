@@ -793,6 +793,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         </div>
 
         {/* 3D Controls */}
+        {!presentationMode && (
         <div className="bg-muted/50 border-t p-4 space-y-3">
           {/* Pitch slider */}
           <div className="flex items-center gap-3">
