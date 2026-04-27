@@ -130,61 +130,57 @@ export function usePhotoMarkers(
     }
   }, [currentPosition]);
 
-  // Auto-open photo when animation arrives near it
+  // Haversine — přesná vzdálenost v metrech mezi dvěma GPS body
+  const distanceMeters = useCallback((a: { lat: number; lon: number }, b: { lat: number; lon: number }) => {
+    const R = 6371000;
+    const dLat = (b.lat - a.lat) * Math.PI / 180;
+    const dLon = (b.lon - a.lon) * Math.PI / 180;
+    const lat1 = a.lat * Math.PI / 180;
+    const lat2 = b.lat * Math.PI / 180;
+    const x = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(x));
+  }, []);
+
+  // Práh příchodu k fotce (m). animationSettings.threshold (stupně) převedeme přibližně na metry,
+  // ale držíme tvrdou horní hranici 30 m, aby fotka nikdy neskočila dřív než tracker doopravdy dorazí.
+  const arrivalRadiusMeters = useCallback(() => {
+    const fromDeg = Math.max(10, animationSettings.threshold * 111000); // 1 deg ≈ 111 km
+    return Math.min(40, fromDeg, 30);
+  }, [animationSettings.threshold]);
+
+  // Sjednocená detekce: použije se pro live (currentPosition) i pro 3D průlet (flyingIndex)
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) return;
+    if (isPhotoViewOpen || activePhotoId !== null) return;
+
     const track = gpxData.tracks[0];
-    const pointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
+    let pointIndex: number;
+    if (isFlying && flyingIndex !== null) {
+      pointIndex = flyingIndex;
+    } else {
+      pointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
+    }
     const point = track.points[pointIndex];
-
     if (!point) return;
-    const threshold = animationSettings.threshold;
 
+    const radius = arrivalRadiusMeters();
+
+    // Najdi nejbližší ještě nezobrazenou fotku v okruhu
+    let arrived: { photo: PhotoPoint; dist: number } | null = null;
     photos.forEach(photo => {
       if (shownPhotosRef.current.has(photo.id)) return;
-      const latDiff = Math.abs(photo.lat - point.lat);
-      const lonDiff = Math.abs(photo.lon - point.lon);
-
-      if (
-        latDiff < threshold &&
-        lonDiff < threshold &&
-        !isPhotoViewOpen &&
-        activePhotoId === null
-      ) {
-        shownPhotosRef.current.add(photo.id);
-        setActivePhotoId(photo.id);
-        handleArrivedPhoto(photo);
+      const dist = distanceMeters(photo, point);
+      if (dist <= radius && (!arrived || dist < arrived.dist)) {
+        arrived = { photo, dist };
       }
     });
-  }, [currentPosition, gpxData, photos, isPhotoViewOpen, activePhotoId, animationSettings.threshold]);
 
-  // PiP náhled během 3D průletu — sleduje aktuální flyingIndex
-  useEffect(() => {
-    if (!isFlying || flyingIndex === null || !gpxData || gpxData.tracks.length === 0 || photos.length === 0) {
-      setNearbyPhoto(null);
-      return;
+    if (arrived) {
+      shownPhotosRef.current.add(arrived.photo.id);
+      setActivePhotoId(arrived.photo.id);
+      handleArrivedPhoto(arrived.photo);
     }
-    const track = gpxData.tracks[0];
-    const point = track.points[flyingIndex];
-    if (!point) return;
-
-    // Větší práh než pro modal — fotka se má objevit dřív a zůstat déle
-    const threshold = animationSettings.threshold * 3;
-
-    let closest: { photo: PhotoPoint; dist: number } | null = null;
-    photos.forEach(photo => {
-      const latDiff = Math.abs(photo.lat - point.lat);
-      const lonDiff = Math.abs(photo.lon - point.lon);
-      if (latDiff < threshold && lonDiff < threshold) {
-        const dist = latDiff + lonDiff;
-        if (!closest || dist < closest.dist) {
-          closest = { photo, dist };
-        }
-      }
-    });
-
-    setNearbyPhoto(closest ? closest.photo : null);
-  }, [flyingIndex, isFlying, gpxData, photos, animationSettings.threshold]);
+  }, [currentPosition, flyingIndex, isFlying, gpxData, photos, isPhotoViewOpen, activePhotoId, distanceMeters, arrivalRadiusMeters]);
 
   const handlePhotoCloseRef = useRef<() => void>(() => {});
 
