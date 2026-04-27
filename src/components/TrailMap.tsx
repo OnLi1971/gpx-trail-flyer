@@ -47,8 +47,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [poiError, setPoiError] = useState<string | null>(null);
   const [poiPanelExpanded, setPoiPanelExpanded] = useState(false);
 
-  // POI density — max number of POIs shown on the map
-  const [poiLimit, setPoiLimit] = useState(40);
+  // POI density — separate limits for peaks (hory) and places (města)
+  const [peakLimit, setPeakLimit] = useState(25);
+  const [placeLimit, setPlaceLimit] = useState(15);
   const allNearbyPoisRef = useRef<import('@/utils/overpassApi').POIPoint[]>([]);
 
   // Hooks — order matters: flythrough first (produces flyingIndex)
