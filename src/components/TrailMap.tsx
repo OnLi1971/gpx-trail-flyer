@@ -642,6 +642,22 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               </div>
             </div>
           )}
+
+          {/* Fullscreen / Presentation toggle */}
+          {gpxData && (
+            <div className="absolute top-2 right-2 z-20">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-2 shadow-md"
+                onClick={() => setPresentationMode((v) => !v)}
+                title={presentationMode ? 'Ukončit prezentaci (Esc)' : 'Prezentační mód'}
+              >
+                {presentationMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                {presentationMode ? 'Ukončit' : 'Prezentace'}
+              </Button>
+            </div>
+          )}
           {!readOnly && !presentationMode && (
             <div className="absolute top-2 left-2 z-10 flex gap-2">
               <input
