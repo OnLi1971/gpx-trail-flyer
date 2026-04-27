@@ -90,6 +90,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // Tick pro re-render po mutaci allNearbyPoisRef (přidání custom vrcholu)
   const [poiVersion, setPoiVersion] = useState(0);
 
+  // Pokud initialPoiSettings dorazí asynchronně (po mountu), aplikuj je jednou
+  const initialAppliedRef = useRef<boolean>(!!initialPoiSettings);
+  useEffect(() => {
+    if (initialAppliedRef.current) return;
+    if (!initialPoiSettings) return;
+    initialAppliedRef.current = true;
+    hasInitialPoiRef.current = true;
+    setPeakLimit(initialPoiSettings.peakLimit);
+    setPlaceLimit(initialPoiSettings.placeLimit);
+    setPeakSelectionMode(initialPoiSettings.peakSelectionMode);
+    setSelectedPeakKeys(new Set(initialPoiSettings.selectedPeakKeys));
+  }, [initialPoiSettings]);
+
   // Emit POI settings to parent when they change
   useEffect(() => {
     if (!onPoiSettingsChange) return;
@@ -345,6 +358,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const poiCancelRef = useRef<{ cancelled: boolean } | null>(null);
   const cachedPoisRef = useRef(cachedPois);
   useEffect(() => { cachedPoisRef.current = cachedPois; }, [cachedPois]);
+  // Stabilní reference na render & callback, aby loadPOIs neměl měnící se deps
+  const renderPoiMarkersRef = useRef(renderPoiMarkers);
+  useEffect(() => { renderPoiMarkersRef.current = renderPoiMarkers; }, [renderPoiMarkers]);
+  const onPoisFetchedRef = useRef(onPoisFetched);
+  useEffect(() => { onPoisFetchedRef.current = onPoisFetched; }, [onPoisFetched]);
 
   const loadPOIs = useCallback(async (forceRefresh = false) => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
@@ -372,7 +390,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         setPeakSelectionMode('auto');
       }
       hasInitialPoiRef.current = false;
-      renderPoiMarkers(nearbyPois);
+      renderPoiMarkersRef.current(nearbyPois);
       return;
     }
 
@@ -397,15 +415,15 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       }
       hasInitialPoiRef.current = false;
 
-      renderPoiMarkers(nearbyPois);
+      renderPoiMarkersRef.current(nearbyPois);
       // Předat rodiči k uložení do DB (vlastník)
-      onPoisFetched?.(nearbyPois);
+      onPoisFetchedRef.current?.(nearbyPois);
     } catch (err) {
       if (token.cancelled) return;
       setPoiStatus('error');
       setPoiError(err instanceof Error ? err.message : 'Neznámá chyba');
     }
-  }, [gpxData, renderPoiMarkers, onPoisFetched]);
+  }, [gpxData]);
 
   // POI fetch — only on gpx change
   useEffect(() => {
