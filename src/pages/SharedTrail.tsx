@@ -71,6 +71,18 @@ export default function SharedTrail() {
       setName(trail.name);
       setGpxData(trail.gpx_data as unknown as GPXData);
 
+      const poi: PoiSettings = {
+        peakLimit: (trail as any).peak_limit ?? 25,
+        placeLimit: (trail as any).place_limit ?? 15,
+        peakSelectionMode: ((trail as any).peak_selection_mode ?? 'auto') as 'auto' | 'manual',
+        selectedPeakKeys: Array.isArray((trail as any).selected_peak_keys)
+          ? ((trail as any).selected_peak_keys as string[])
+          : [],
+      };
+      setInitialPoi(poi);
+      setCurrentPoi(poi);
+      setSavedPoi(poi);
+
       const { data: photoRows } = await supabase
         .from('trail_photos')
         .select('id, photo_url, description, lat, lon, photo_timestamp')
