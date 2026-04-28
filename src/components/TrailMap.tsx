@@ -658,6 +658,38 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               </Button>
             </div>
           )}
+
+          {/* Presentation-mode controls: start flythrough + record */}
+          {presentationMode && gpxData && (
+            <div className="absolute top-2 left-2 z-20 flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-2 shadow-md"
+                onClick={() => flythrough.isFlying ? flythrough.stopFlythrough('stopped') : flythrough.startFlythrough()}
+              >
+                {flythrough.isFlying ? (
+                  <><Square className="w-4 h-4" /> Zastavit průlet</>
+                ) : (
+                  <><Play className="w-4 h-4" /> Spustit průlet</>
+                )}
+              </Button>
+              <Button
+                size="sm"
+                variant={recorder.isRecording ? 'destructive' : 'secondary'}
+                className="gap-2 shadow-md"
+                onClick={recorder.isRecording ? handleStopRecording : handleStartRecording}
+                disabled={!recorder.isSupported && !recorder.isRecording}
+                title={recorder.isSupported ? 'Nahrát celý prezentační pohled' : 'Prohlížeč nepodporuje nahrávání'}
+              >
+                {recorder.isRecording ? (
+                  <><CircleDot className="w-4 h-4 text-red-200 animate-pulse" /> Nahrávám…</>
+                ) : (
+                  <><Video className="w-4 h-4" /> Nahrát</>
+                )}
+              </Button>
+            </div>
+          )}
           {!readOnly && !presentationMode && (
             <div className="absolute top-2 left-2 z-10 flex gap-2">
               <input
