@@ -666,7 +666,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 size="sm"
                 variant="secondary"
                 className="gap-2 shadow-md"
-                onClick={flythrough.isFlying ? flythrough.stopFlying : flythrough.startFlying}
+                onClick={() => flythrough.isFlying ? flythrough.stopFlythrough('stopped') : flythrough.startFlythrough()}
               >
                 {flythrough.isFlying ? (
                   <><Square className="w-4 h-4" /> Zastavit průlet</>
