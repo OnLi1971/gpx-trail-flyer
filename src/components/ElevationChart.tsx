@@ -26,10 +26,10 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
 
   const wrapperClass =
     variant === 'overlay'
-      ? 'w-full h-28 bg-white/80 backdrop-blur-md rounded-lg shadow-lg border border-white/40'
+      ? 'w-full h-40 bg-white/40 backdrop-blur-sm rounded-lg shadow-md border border-white/30'
       : 'w-full h-40 bg-white/95 backdrop-blur-sm border-t-2 border-trail-color/30';
 
-  const innerClass = variant === 'overlay' ? 'h-full p-2' : 'h-full p-3';
+  const innerClass = variant === 'overlay' ? 'h-full px-2 py-1' : 'h-full p-3';
   const chartHeight = variant === 'overlay' ? 'h-full' : 'h-32';
 
   return (
@@ -37,39 +37,39 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
       <div className={innerClass}>
         <div className={`${chartHeight} relative`}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 5, right: 5, left: 25, bottom: 15 }}>
+            <LineChart data={chartData} margin={{ top: 6, right: 10, left: 8, bottom: 4 }}>
               <defs>
                 <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="#059669" stopOpacity={0.8} />
                   <stop offset="100%" stopColor="#059669" stopOpacity={0.1} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="1 1" stroke="#e5e7eb" strokeWidth={0.5} />
+              <CartesianGrid strokeDasharray="1 1" stroke="#9ca3af" strokeOpacity={0.4} strokeWidth={0.5} />
               <XAxis
                 dataKey="distance"
                 tickFormatter={(value) => `${Math.round(value)}km`}
-                className="text-xs"
                 axisLine={false}
                 tickLine={false}
                 interval="preserveStartEnd"
-                tickCount={4}
+                tickCount={9}
+                tick={{ fontSize: 10, fill: '#374151' }}
                 type="number"
                 domain={[minKm, maxKm]}
               />
               <YAxis
                 tickFormatter={(value) => `${Math.round(value)}`}
                 domain={['dataMin - 10', 'dataMax + 10']}
-                className="text-xs opacity-60"
                 axisLine={false}
                 tickLine={false}
-                width={20}
-                tickCount={3}
+                width={32}
+                tickCount={6}
+                tick={{ fontSize: 10, fill: '#374151' }}
               />
               <Line
                 type="monotone"
                 dataKey="elevation"
                 stroke="#059669"
-                strokeWidth={2}
+                strokeWidth={2.5}
                 dot={false}
                 fill="url(#elevationGradient)"
                 fillOpacity={0.3}

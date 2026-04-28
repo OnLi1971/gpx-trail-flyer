@@ -1,41 +1,47 @@
 ## Cíl
-
-1. Graf nadmořské výšky a km přesunout **dovnitř** mapy jako poloprůhledný overlay (dnes je pod mapou jako samostatný panel).
-2. Odstranit modré tečky fotek z grafu — graf bude ukazovat jen profil + červenou aktuální pozici.
+Overlay graf nadmořské výšky v mapě:
+1. Roztáhnout vizuálně na maximum (větší výška, menší vnitřní okraje, plné využití šířky).
+2. Více ticků na obou osách (vyšší rozlišení popisků km a m n.m.).
+3. Více průhlednosti pozadí, aby mapa pod grafem byla výrazněji vidět.
 
 ## Změny
 
 ### `src/components/ElevationChart.tsx`
-- Odstranit veškerou logiku okolo modrých teček fotek: props `photosOnChart`, `onPhotoKmChange`, `ReferenceDot` mapování, drag handlery (`onPointerDown/Move/Up`, `xFromEvent`, `draggingId`) i nápovědu „Tip: modré tečky můžeš přetáhnout…".
-- Komponenta zůstane jen s `chartData` + `currentChartPoint` (červená tečka aktuální polohy).
-- Upravit obal pro overlay režim:
-  - Místo bílého panelu s `border-t-2` použít poloprůhledné pozadí `bg-white/80 backdrop-blur-md` se zaoblenými rohy a jemným stínem.
-  - Výška kompaktnější (≈ `h-28`), aby nezakrývala mapu.
-  - Volitelný prop `variant?: 'overlay' | 'panel'` pro budoucí flexibilitu (výchozí `overlay`).
+- **Wrapper (overlay variant)**:
+  - Pozadí z `bg-white/80` → `bg-white/40` (víc průhledné).
+  - `backdrop-blur-md` → `backdrop-blur-sm` (jemnější).
+  - `border border-white/40` → `border-white/30`.
+  - Stín ztlumit (`shadow-md` místo `shadow-lg`).
+  - Výška: `h-28` → `h-40` (výrazně vyšší graf).
+- **Vnitřní padding**: `p-2` → `px-2 py-1` (méně mrtvého místa, graf využije plochu).
+- **LineChart margin**: `{ top: 5, right: 5, left: 25, bottom: 15 }` → `{ top: 6, right: 10, left: 8, bottom: 4 }` aby čára vyplnila plochu (popisky se vejdou do `width`/`height` os).
+- **Osa X**: 
+  - `tickCount={4}` → `tickCount={9}` pro hustší krok km.
+  - Ponechat `interval="preserveStartEnd"`, `axisLine={false}`, `tickLine={false}`.
+  - Drobnější font (`tick={{ fontSize: 10, fill: '#374151' }}`).
+- **Osa Y**:
+  - `tickCount={3}` → `tickCount={6}`.
+  - `width={20}` → `width={32}` aby se vešly 4místné hodnoty.
+  - `tick={{ fontSize: 10, fill: '#374151' }}`.
+- **Grid**: ponechat, jen `stroke="#9ca3af"` s `strokeOpacity={0.4}` aby byl vidět přes průhledné pozadí.
+- **Linie profilu**: `strokeWidth={2}` → `strokeWidth={2.5}` pro lepší kontrast přes mapu.
 
 ### `src/components/TrailMap.tsx`
-- Přesunout `<ElevationChart …/>` z místa pod mapou (ř. 1102–1110) do kontejneru mapy `<div className="relative w-full h-[500px]">` (ř. 611) jako absolutně pozicovaný overlay:
-  - `absolute bottom-2 left-2 right-2 z-10 pointer-events-none` na obal, samotná karta s `pointer-events-auto`.
-  - Aby nebránila interakci s mapou všude jinde.
-- Odebrat předávání `photosOnChart` a `onPhotoKmChange` do grafu (přetahování fotek se nadále dělá v `PhotoTimeEditor` pod mapou — beze změny).
-
-### `src/hooks/useElevationData.ts`
-- Pole `photosOnChart` můžeme nechat ve výpočtu (používá se případně jinde) nebo zjednodušit. Doporučení: nechat hook beze změny, jen ho v `TrailMap` ignorovat — bezpečné a minimálně invazivní.
+- Bez logických změn. Volitelně zmenšit boční marginy overlay obalu v prezentačním módu (`bottom-6 left-6 right-6` → `bottom-4 left-4 right-4`) aby graf zabíral víc šířky. V normálním režimu nechat `bottom-2 left-2 right-2`.
 
 ## Vizuální výsledek
-
 ```text
-┌──────────────────────────────────────────┐
-│  MAPA (3D / 2D)             [3D] [Rec]   │
-│                                          │
-│         🚴 ━━━━━━━━━━━ 🏔                │
-│                                          │
-│  ┌────────────────────────────────────┐  │
-│  │ ╱╲    profil výšky      ●          │  │  ← overlay graf
-│  │╱  ╲__╱╲___________╱╲___╱           │  │     (poloprůhledný)
-│  │ 0km          15km         30km     │  │
-│  └────────────────────────────────────┘  │
-└──────────────────────────────────────────┘
+┌──────────────────────────────────────────────┐
+│  MAPA                                        │
+│ ┌──────────────────────────────────────────┐ │
+│ │800┤·····················●················│ │  ← vyšší, průhlednější
+│ │600┤   ╱╲     ╱╲___╱╲                    │ │     hustší ticky
+│ │400┤__╱  ╲___╱       ╲__                 │ │
+│ │   0  4  8  12 16 20 24 28 32 km         │ │
+│ └──────────────────────────────────────────┘ │
+└──────────────────────────────────────────────┘
 ```
 
-Modré tečky fotek pryč. Pod mapou zůstává `PhotoTimeEditor` pro úpravu km fotek.
+## Soubory
+- `src/components/ElevationChart.tsx` — wrapper, marginy, tickCount, fonty.
+- `src/components/TrailMap.tsx` — drobná úprava marginů overlay v prezentačním módu (volitelné).
