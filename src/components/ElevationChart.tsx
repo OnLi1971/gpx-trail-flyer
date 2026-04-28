@@ -26,11 +26,11 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
 
   const wrapperClass =
     variant === 'overlay'
-      ? 'w-full h-40 bg-white/40 backdrop-blur-sm rounded-lg shadow-md border border-white/30'
-      : 'w-full h-40 bg-white/95 backdrop-blur-sm border-t-2 border-trail-color/30';
+      ? 'w-full h-24 bg-white/40 backdrop-blur-sm rounded-lg shadow-md border border-white/30'
+      : 'w-full h-24 bg-white/95 backdrop-blur-sm border-t-2 border-trail-color/30';
 
-  const innerClass = variant === 'overlay' ? 'h-full px-2 py-1' : 'h-full p-3';
-  const chartHeight = variant === 'overlay' ? 'h-full' : 'h-32';
+  const innerClass = variant === 'overlay' ? 'h-full px-2 py-1' : 'h-full p-2';
+  const chartHeight = variant === 'overlay' ? 'h-full' : 'h-20';
 
   return (
     <div className={wrapperClass}>
