@@ -143,7 +143,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       setTimeout(() => setVideoDialogOpen(true), 300);
     }
   });
-  const photoMarkers = usePhotoMarkers(map, gpxData, photos, onAddPhotos);
+  
 
   const handleStartRecording = useCallback(() => {
     if (!map.current) return;
@@ -189,7 +189,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     });
   }, [flythrough.isFlying, flythrough.flyDurationSec, flythrough.flyStartTimestamp, onFlyStateChange]);
   const elevationData = useElevationData(
-    gpxData, photos, currentPosition,
+    gpxData, currentPosition,
     flythrough.flyingIndex,
     flythrough.elevationExaggeration,
   );
@@ -516,26 +516,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
   }, [peakLimit, placeLimit, peakSelectionMode, selectedPeakKeys, renderPoiMarkers]);
 
-  // Click-to-add-photo mode
-  useEffect(() => {
-    if (!map.current || !addPhotoMode) return;
-    const m = map.current;
-    const canvas = m.getCanvas();
-    canvas.style.cursor = 'crosshair';
-
-    const handleClick = (e: MapMouseEvent) => {
-      setPendingCoords({ lat: e.lngLat.lat, lon: e.lngLat.lng });
-      setIsDialogOpen(true);
-      setAddPhotoMode(false);
-    };
-
-    m.on('click', handleClick);
-
-    return () => {
-      m.off('click', handleClick);
-      canvas.style.cursor = '';
-    };
-  }, [addPhotoMode]);
 
   // Click-to-pick custom peak coords
   useEffect(() => {
@@ -675,57 +655,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               </Button>
             </div>
           )}
-          {!readOnly && !presentationMode && (
-            <div className="absolute top-2 left-2 z-10 flex gap-2">
-              <input
-                ref={photoMarkers.fileInputRef}
-                type="file"
-                multiple
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files?.length) {
-                    photoMarkers.handleBulkPhotoUpload(e.target.files);
-                    e.target.value = '';
-                  }
-                }}
-              />
-              <Button
-                size="sm"
-                variant="secondary"
-                className="gap-2 shadow-md"
-                onClick={photoMarkers.triggerUpload}
-                disabled={addPhotoMode}
-              >
-                <Camera className="w-4 h-4" />
-                Přidat fotky
-              </Button>
-              <Button
-                size="sm"
-                variant={addPhotoMode ? 'default' : 'secondary'}
-                className="gap-2 shadow-md"
-                onClick={() => setAddPhotoMode((v) => !v)}
-              >
-                <MapPin className="w-4 h-4" />
-                {addPhotoMode ? 'Zrušit' : 'Přidat klikem'}
-              </Button>
-            </div>
-          )}
-
-          {addPhotoMode && !readOnly && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium animate-fade-in">
-              <MapPin className="w-4 h-4" />
-              Klikni na mapu pro umístění fotky
-              <button
-                onClick={() => setAddPhotoMode(false)}
-                className="ml-2 hover:opacity-70"
-                aria-label="Zrušit"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
           {pickingPeakOnMap && !readOnly && (
             <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium animate-fade-in">
               <Crosshair className="w-4 h-4" />
@@ -1167,22 +1096,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         )}
 
       </div>
-
-      <PhotoViewModal
-        photo={photoMarkers.viewPhoto}
-        isOpen={photoMarkers.isPhotoViewOpen}
-        onClose={photoMarkers.handlePhotoClose}
-      />
-
-      <ManualPhotoDialog
-        isOpen={isDialogOpen}
-        onClose={() => {
-          setIsDialogOpen(false);
-          setPendingCoords(null);
-        }}
-        coords={pendingCoords}
-        onConfirm={(photo) => onAddPhotos([photo])}
-      />
 
       <VideoPreviewDialog
         open={videoDialogOpen}
