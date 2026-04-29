@@ -197,23 +197,6 @@ const Index = () => {
             </Card>
 
             <FileUpload onFileUpload={handleFileUpload} />
-
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">nebo</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-
-            <Button
-              onClick={handleLoadDemo}
-              disabled={isLoading}
-              size="lg"
-              variant="secondary"
-              className="w-full gap-2"
-            >
-              <Sparkles className="w-5 h-5" />
-              Spustit demo (okruh přes Sněžku)
-            </Button>
           </div>
         ) : (
           <div className="space-y-6">
