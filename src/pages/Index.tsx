@@ -5,10 +5,9 @@ import { TrailMap } from '@/components/TrailMap';
 import { AnimationControls } from '@/components/AnimationControls';
 import { AppHeader } from '@/components/AppHeader';
 import { SaveTrailDialog } from '@/components/SaveTrailDialog';
-import { PhotoTimeEditor } from '@/components/PhotoTimeEditor';
 import { defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
 import { GPXParser } from '@/utils/gpxParser';
-import { GPXData, PhotoPoint } from '@/types/gpx';
+import { GPXData } from '@/types/gpx';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -22,23 +21,21 @@ const Index = () => {
   const navigate = useNavigate();
   const [gpxData, setGpxData] = useState<GPXData | null>(null);
   const [gpxFilename, setGpxFilename] = useState<string>('');
-  const [photos, setPhotos] = useState<PhotoPoint[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [animationSettings, setAnimationSettings] = useState<AnimationSettings>(defaultAnimationSettings);
-  const [flyDurationSec, setFlyDurationSec] = useState(60);
 
   const handleFileUpload = useCallback((content: string, filename: string) => {
     setIsLoading(true);
-    
+
     setTimeout(() => {
       try {
         const parser = new GPXParser();
         const parsedData = parser.parseGPX(content);
-        
+
         if (parsedData.tracks.length === 0) {
           toast.error('Nepodařilo se najít žádné trasy v GPX souboru');
           setIsLoading(false);
@@ -47,7 +44,6 @@ const Index = () => {
 
         setGpxData(parsedData);
         setGpxFilename(filename.replace(/\.gpx$/i, ''));
-        setPhotos([]);
         setCurrentPosition(0);
         setIsPlaying(false);
         toast.success(`Nahrán GPX soubor: ${filename}`);
@@ -87,9 +83,9 @@ const Index = () => {
     const animate = () => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min((elapsed / ANIMATION_DURATION) * 100, 100);
-      
+
       setCurrentPosition(progress);
-      
+
       if (progress >= 100) {
         setIsPlaying(false);
         setStartTime(null);
@@ -109,45 +105,6 @@ const Index = () => {
     setSaveOpen(true);
   };
 
-  // Celková délka trasy v km
-  const totalKm = gpxData && gpxData.tracks.length > 0 ? gpxData.tracks[0].totalDistance / 1000 : 0;
-
-  // Při přidání fotek automaticky rozprostřít triggerKm rovnoměrně podél trasy
-  const handleAddPhotos = useCallback((newPhotos: PhotoPoint[]) => {
-    setPhotos((prev) => {
-      const combined = [...prev, ...newPhotos];
-      const N = combined.length;
-      const dist = totalKm || 1;
-      return combined.map((p, i) => {
-        if (p.triggerKm !== undefined) return p;
-        return { ...p, triggerKm: ((i + 1) / (N + 1)) * dist };
-      });
-    });
-  }, [totalKm]);
-
-  const handleChangePhotoKm = useCallback((id: string, km: number) => {
-    setPhotos((prev) => prev.map((p) => (p.id === id ? { ...p, triggerKm: km } : p)));
-  }, []);
-
-  const handleRedistribute = useCallback(() => {
-    setPhotos((prev) => {
-      const N = prev.length;
-      const dist = totalKm || 1;
-      return prev.map((p, i) => ({ ...p, triggerKm: ((i + 1) / (N + 1)) * dist }));
-    });
-  }, [totalKm]);
-
-  const handleRemovePhoto = useCallback((id: string) => {
-    setPhotos((prev) => prev.filter((p) => p.id !== id));
-  }, []);
-
-  const handleFlyStateChange = useCallback(
-    (state: { isFlying: boolean; flyDurationSec: number; flyStartTimestamp: number | null }) => {
-      setFlyDurationSec(state.flyDurationSec);
-    },
-    []
-  );
-
   return (
     <div className="min-h-screen bg-background">
       <AppHeader onSaveClick={handleSaveClick} canSave={!!gpxData} />
@@ -163,7 +120,7 @@ const Index = () => {
                 </div>
               </div>
             )}
-            
+
             <Card className="text-center">
               <CardHeader>
                 <CardTitle className="flex items-center justify-center gap-2 text-2xl">
@@ -223,22 +180,10 @@ const Index = () => {
                   onAnimationSettingsChange={setAnimationSettings}
                 />
 
-                <TrailMap 
-                  gpxData={gpxData} 
+                <TrailMap
+                  gpxData={gpxData}
                   currentPosition={currentPosition}
                   animationSettings={animationSettings}
-                  photos={photos}
-                  onAddPhotos={handleAddPhotos}
-                  onFlyStateChange={handleFlyStateChange}
-                  onPhotoKmChange={handleChangePhotoKm}
-                />
-
-                <PhotoTimeEditor
-                  photos={photos}
-                  totalKm={totalKm}
-                  onChangePhotoKm={handleChangePhotoKm}
-                  onRemove={handleRemovePhoto}
-                  onRedistribute={handleRedistribute}
                 />
             </div>
 
@@ -259,7 +204,6 @@ const Index = () => {
           open={saveOpen}
           onOpenChange={setSaveOpen}
           gpxData={gpxData}
-          photos={photos}
           defaultName={gpxFilename}
         />
       )}
