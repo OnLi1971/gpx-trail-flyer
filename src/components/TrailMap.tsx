@@ -225,6 +225,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       style: {
         version: 8,
         sources: {
+          'terrain-tiles': {
+            type: 'raster',
+            tiles: [
+              'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
+              'https://b.tile.opentopomap.org/{z}/{x}/{y}.png',
+              'https://c.tile.opentopomap.org/{z}/{x}/{y}.png',
+            ],
+            tileSize: 256,
+            maxzoom: 17,
+            attribution:
+              'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)',
+          },
           'satellite-tiles': {
             type: 'raster',
             tiles: [
@@ -245,11 +257,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         },
         layers: [
           {
+            id: 'terrain-layer',
+            type: 'raster',
+            source: 'terrain-tiles',
+            minzoom: 0,
+            maxzoom: 19,
+          },
+          {
             id: 'satellite-layer',
             type: 'raster',
             source: 'satellite-tiles',
             minzoom: 0,
             maxzoom: 19,
+            layout: { visibility: 'none' },
           },
         ],
         terrain: {
