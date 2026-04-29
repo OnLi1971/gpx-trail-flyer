@@ -1,10 +1,19 @@
+export type POIType = 'peak' | 'place' | 'viewpoint' | 'castle' | 'saddle' | 'pub';
+
 export interface POIPoint {
   name: string;
   lat: number;
   lon: number;
   ele?: number;
-  type: 'peak' | 'place';
-  placeType?: string; // city, town, village
+  type: POIType;
+  /** Pro 'place': city/town/village/hamlet */
+  placeType?: string;
+  /** Pro 'viewpoint': 'viewpoint' | 'tower' (rozhledna) */
+  viewpointKind?: 'viewpoint' | 'tower';
+  /** Pro 'castle': castle/ruins/fort/manor… */
+  castleKind?: string;
+  /** Pro 'pub': pub/bar/restaurant/cafe */
+  pubKind?: string;
 }
 
 const OVERPASS_ENDPOINTS = [
@@ -28,13 +37,19 @@ export async function fetchPeaksAndPlaces(bounds: {
 
   const bbox = `${south},${west},${north},${east}`;
 
-  // Single union query — both peaks and places in one (...); group, single out body
-  const query = `[out:json][timeout:25];
+  // Single union query — peaks, places, viewpoints (vč. rozhleden), hrady/zříceniny, sedla, hospody/restaurace
+  const query = `[out:json][timeout:30];
 (
   node["natural"="peak"]["name"](${bbox});
   node["place"~"^(city|town|village|hamlet)$"]["name"](${bbox});
+  node["tourism"="viewpoint"]["name"](${bbox});
+  node["man_made"="tower"]["tower:type"="observation"]["name"](${bbox});
+  node["historic"~"^(castle|fort|ruins|manor)$"]["name"](${bbox});
+  node["natural"~"^(saddle|mountain_pass)$"]["name"](${bbox});
+  node["mountain_pass"="yes"]["name"](${bbox});
+  node["amenity"~"^(pub|bar|restaurant|cafe|biergarten)$"]["name"](${bbox});
 );
-out body 300;`;
+out body 800;`;
 
   let lastError: unknown = null;
   // 2 pokusy přes všechny servery (s krátkou prodlevou mezi koly) — Overpass občas vrací 502/504 pod zátěží
@@ -58,17 +73,65 @@ out body 300;`;
 
       const data = await response.json();
 
-      const result: POIPoint[] = (data.elements || []).map((el: any) => {
-        const isPeak = el.tags?.natural === 'peak';
-        return {
-          name: el.tags?.name || '',
-          lat: el.lat,
-          lon: el.lon,
-          ele: isPeak && el.tags?.ele ? Math.round(parseFloat(el.tags.ele)) : undefined,
-          type: isPeak ? 'peak' : 'place',
-          placeType: !isPeak ? el.tags?.place : undefined,
-        } as POIPoint;
-      }).filter((p: POIPoint) => p.name);
+      const result: POIPoint[] = (data.elements || [])
+        .map((el: any): POIPoint | null => {
+          const tags = el.tags || {};
+          const name = tags.name;
+          if (!name) return null;
+
+          const base = { name, lat: el.lat, lon: el.lon };
+
+          // Vrchol
+          if (tags.natural === 'peak') {
+            return {
+              ...base,
+              type: 'peak',
+              ele: tags.ele ? Math.round(parseFloat(tags.ele)) : undefined,
+            };
+          }
+
+          // Sedlo / horský průsmyk
+          if (tags.natural === 'saddle' || tags.natural === 'mountain_pass' || tags.mountain_pass === 'yes') {
+            return {
+              ...base,
+              type: 'saddle',
+              ele: tags.ele ? Math.round(parseFloat(tags.ele)) : undefined,
+            };
+          }
+
+          // Sídlo
+          if (tags.place && /^(city|town|village|hamlet)$/.test(tags.place)) {
+            return { ...base, type: 'place', placeType: tags.place };
+          }
+
+          // Rozhledna (man_made=tower s tower:type=observation)
+          if (tags.man_made === 'tower' && tags['tower:type'] === 'observation') {
+            return {
+              ...base,
+              type: 'viewpoint',
+              viewpointKind: 'tower',
+              ele: tags.ele ? Math.round(parseFloat(tags.ele)) : undefined,
+            };
+          }
+
+          // Vyhlídka
+          if (tags.tourism === 'viewpoint') {
+            return { ...base, type: 'viewpoint', viewpointKind: 'viewpoint' };
+          }
+
+          // Hrad / zřícenina / pevnost / panské sídlo
+          if (tags.historic && /^(castle|fort|ruins|manor)$/.test(tags.historic)) {
+            return { ...base, type: 'castle', castleKind: tags.historic };
+          }
+
+          // Hospoda / restaurace / kavárna / bar
+          if (tags.amenity && /^(pub|bar|restaurant|cafe|biergarten)$/.test(tags.amenity)) {
+            return { ...base, type: 'pub', pubKind: tags.amenity };
+          }
+
+          return null;
+        })
+        .filter((p: POIPoint | null): p is POIPoint => p !== null);
 
       return result;
     } catch (err) {
