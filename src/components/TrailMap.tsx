@@ -352,18 +352,31 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       .addTo(map.current);
   }, [currentPosition, gpxData]);
 
-  // POI markers — render helper using current limit
+  // POI markers — render helper using current limits per category
   const renderPoiMarkers = React.useCallback((pois: import('@/utils/overpassApi').POIPoint[]) => {
     if (!map.current) return;
 
-    // Split into peaks and places
     const peaks = pois.filter(p => p.type === 'peak');
-    const places = pois.filter(p => p.type !== 'peak');
+    const places = pois.filter(p => p.type === 'place');
+    const viewpoints = pois.filter(p => p.type === 'viewpoint');
+    const castles = pois.filter(p => p.type === 'castle');
+    const saddles = pois.filter(p => p.type === 'saddle');
+    const pubs = pois.filter(p => p.type === 'pub');
 
-    // Sort peaks by elevation desc
+    // Sort peaks & saddles by elevation desc
     peaks.sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
+    saddles.sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
+    // Rozhledny (tower) první, pak vyhlídky
+    viewpoints.sort((a, b) => {
+      const av = a.viewpointKind === 'tower' ? 0 : 1;
+      const bv = b.viewpointKind === 'tower' ? 0 : 1;
+      return av - bv;
+    });
+    // Hrady před zříceninami
+    const castleRank: Record<string, number> = { castle: 0, fort: 1, manor: 2, ruins: 3 };
+    castles.sort((a, b) => (castleRank[a.castleKind ?? 'ruins'] ?? 9) - (castleRank[b.castleKind ?? 'ruins'] ?? 9));
 
-    // Sort places by importance (city > town > village > hamlet)
+    // Sort places by importance
     const placeRank: Record<string, number> = { city: 0, town: 1, village: 2, hamlet: 3 };
     places.sort((a, b) =>
       (placeRank[a.placeType ?? 'hamlet'] ?? 9) - (placeRank[b.placeType ?? 'hamlet'] ?? 9)
@@ -374,10 +387,56 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       ? peaks.filter(p => selectedPeakKeys.has(peakKey(p)))
       : peaks.slice(0, peakLimit);
 
-    const limited = [...limitedPeaks, ...places.slice(0, placeLimit)];
+    const limited = [
+      ...limitedPeaks,
+      ...places.slice(0, placeLimit),
+      ...viewpoints.slice(0, viewpointLimit),
+      ...castles.slice(0, castleLimit),
+      ...saddles.slice(0, saddleLimit),
+      ...pubs.slice(0, pubLimit),
+    ];
 
     poiMarkersRef.current.forEach(m => m.remove());
     poiMarkersRef.current = [];
+
+    // Společný helper pro generování karty s tyčkou
+    const buildCard = (opts: {
+      icon: string;
+      text: string;
+      borderColor: string;
+      textColor: string;
+      poleColorTop: string;
+      poleColorBottom: string;
+      dotColor: string;
+      bold?: boolean;
+      smallDot?: boolean;
+    }) => {
+      const fontWeight = opts.bold ? 700 : 600;
+      const dotSize = opts.smallDot ? 6 : 8;
+      const poleHeight = opts.smallDot ? 18 : 24;
+      return `
+        <div style="
+          background: rgba(255,255,255,0.97);
+          border: 2px solid ${opts.borderColor};
+          border-radius: 8px;
+          padding: 3px 8px;
+          font-size: 12px;
+          font-weight: ${fontWeight};
+          color: ${opts.textColor};
+          white-space: nowrap;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          pointer-events: auto;
+        ">
+          <span style="font-size:14px;line-height:1;">${opts.icon}</span>
+          ${opts.text}
+        </div>
+        <div style="width: 2px; height: ${poleHeight}px; background: linear-gradient(to bottom, ${opts.poleColorTop}, ${opts.poleColorBottom});"></div>
+        <div style="width: ${dotSize}px; height: ${dotSize}px; border-radius: 50%; background: ${opts.dotColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>
+      `;
+    };
 
     limited.forEach(poi => {
       const el = document.createElement('div');
@@ -387,48 +446,87 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       el.style.pointerEvents = 'none';
       el.style.zIndex = '5';
 
-      if (poi.type === 'peak') {
-        el.innerHTML = `
-          <div style="
-            background: rgba(255,255,255,0.97);
-            border: 2px solid #b45309;
-            border-radius: 8px;
-            padding: 3px 8px;
-            font-size: 12px;
-            font-weight: 700;
-            color: #78350f;
-            white-space: nowrap;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            pointer-events: auto;
-          ">
-            <span style="font-size:16px;line-height:1;">⛰️</span>
-            ${poi.name}${poi.ele ? ` ${poi.ele}\u202Fm` : ''}
-          </div>
-          <div style="width: 2px; height: 28px; background: linear-gradient(to bottom, #b45309, #78350f);"></div>
-          <div style="width: 8px; height: 8px; border-radius: 50%; background: #78350f; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>
-        `;
-      } else {
-        el.innerHTML = `
-          <div style="
-            background: rgba(255,255,255,0.95);
-            border: 1px solid #6b7280;
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-size: 11px;
-            font-weight: 500;
-            color: #374151;
-            white-space: nowrap;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-            pointer-events: auto;
-          ">
-            ${poi.name}
-          </div>
-          <div style="width: 1.5px; height: 12px; background: #6b7280; opacity: 0.7;"></div>
-          <div style="width: 4px; height: 4px; border-radius: 50%; background: #6b7280;"></div>
-        `;
+      switch (poi.type) {
+        case 'peak':
+          el.innerHTML = buildCard({
+            icon: '⛰️',
+            text: `${poi.name}${poi.ele ? ` ${poi.ele}\u202Fm` : ''}`,
+            borderColor: '#b45309',
+            textColor: '#78350f',
+            poleColorTop: '#b45309',
+            poleColorBottom: '#78350f',
+            dotColor: '#78350f',
+            bold: true,
+          });
+          break;
+        case 'saddle':
+          el.innerHTML = buildCard({
+            icon: '⛰',
+            text: `${poi.name}${poi.ele ? ` ${poi.ele}\u202Fm` : ''}`,
+            borderColor: '#a16207',
+            textColor: '#713f12',
+            poleColorTop: '#a16207',
+            poleColorBottom: '#713f12',
+            dotColor: '#713f12',
+          });
+          break;
+        case 'viewpoint':
+          el.innerHTML = buildCard({
+            icon: poi.viewpointKind === 'tower' ? '🗼' : '🔭',
+            text: poi.name,
+            borderColor: '#7c3aed',
+            textColor: '#5b21b6',
+            poleColorTop: '#7c3aed',
+            poleColorBottom: '#5b21b6',
+            dotColor: '#5b21b6',
+            bold: true,
+          });
+          break;
+        case 'castle':
+          el.innerHTML = buildCard({
+            icon: poi.castleKind === 'ruins' ? '🏚️' : '🏰',
+            text: poi.name,
+            borderColor: '#9f1239',
+            textColor: '#881337',
+            poleColorTop: '#9f1239',
+            poleColorBottom: '#881337',
+            dotColor: '#881337',
+            bold: true,
+          });
+          break;
+        case 'pub':
+          el.innerHTML = buildCard({
+            icon: poi.pubKind === 'cafe' ? '☕' : (poi.pubKind === 'restaurant' ? '🍽️' : '🍺'),
+            text: poi.name,
+            borderColor: '#15803d',
+            textColor: '#14532d',
+            poleColorTop: '#15803d',
+            poleColorBottom: '#14532d',
+            dotColor: '#14532d',
+            smallDot: true,
+          });
+          break;
+        case 'place':
+        default:
+          el.innerHTML = `
+            <div style="
+              background: rgba(255,255,255,0.95);
+              border: 1px solid #6b7280;
+              border-radius: 4px;
+              padding: 2px 6px;
+              font-size: 11px;
+              font-weight: 500;
+              color: #374151;
+              white-space: nowrap;
+              box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+              pointer-events: auto;
+            ">
+              ${poi.name}
+            </div>
+            <div style="width: 1.5px; height: 12px; background: #6b7280; opacity: 0.7;"></div>
+            <div style="width: 4px; height: 4px; border-radius: 50%; background: #6b7280;"></div>
+          `;
+          break;
       }
 
       const marker = new Marker({ element: el, anchor: 'bottom' })
@@ -437,7 +535,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       poiMarkersRef.current.push(marker);
     });
-  }, [peakLimit, placeLimit, peakSelectionMode, selectedPeakKeys]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys]);
 
   // POI fetch — extrahováno, aby šlo zavolat i ručně přes tlačítko reload
   const poiCancelRef = useRef<{ cancelled: boolean } | null>(null);
