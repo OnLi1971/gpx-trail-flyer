@@ -21,6 +21,10 @@ import { toast } from 'sonner';
 export interface PoiSettings {
   peakLimit: number;
   placeLimit: number;
+  viewpointLimit: number;
+  castleLimit: number;
+  saddleLimit: number;
+  pubLimit: number;
   peakSelectionMode: 'auto' | 'manual';
   selectedPeakKeys: string[];
 }
@@ -58,13 +62,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   // POI debug state (visible on mobile)
   const [poiStatus, setPoiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [poiCounts, setPoiCounts] = useState({ peaks: 0, places: 0, raw: 0, filtered: 0 });
+  const [poiCounts, setPoiCounts] = useState({
+    peaks: 0, places: 0, viewpoints: 0, castles: 0, saddles: 0, pubs: 0,
+    raw: 0, filtered: 0,
+  });
   const [poiError, setPoiError] = useState<string | null>(null);
   const [poiPanelExpanded, setPoiPanelExpanded] = useState(false);
 
-  // POI density — separate limits for peaks (hory) and places (města)
+  // POI density — separate limits per category
   const [peakLimit, setPeakLimit] = useState(initialPoiSettings?.peakLimit ?? 25);
   const [placeLimit, setPlaceLimit] = useState(initialPoiSettings?.placeLimit ?? 15);
+  const [viewpointLimit, setViewpointLimit] = useState(initialPoiSettings?.viewpointLimit ?? 15);
+  const [castleLimit, setCastleLimit] = useState(initialPoiSettings?.castleLimit ?? 15);
+  const [saddleLimit, setSaddleLimit] = useState(initialPoiSettings?.saddleLimit ?? 15);
+  const [pubLimit, setPubLimit] = useState(initialPoiSettings?.pubLimit ?? 10);
   // Manual peak selection
   const [peakSelectionMode, setPeakSelectionMode] = useState<'auto' | 'manual'>(initialPoiSettings?.peakSelectionMode ?? 'auto');
   const [selectedPeakKeys, setSelectedPeakKeys] = useState<Set<string>>(
@@ -93,6 +104,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     hasInitialPoiRef.current = true;
     setPeakLimit(initialPoiSettings.peakLimit);
     setPlaceLimit(initialPoiSettings.placeLimit);
+    setViewpointLimit(initialPoiSettings.viewpointLimit);
+    setCastleLimit(initialPoiSettings.castleLimit);
+    setSaddleLimit(initialPoiSettings.saddleLimit);
+    setPubLimit(initialPoiSettings.pubLimit);
     setPeakSelectionMode(initialPoiSettings.peakSelectionMode);
     setSelectedPeakKeys(new Set(initialPoiSettings.selectedPeakKeys));
   }, [initialPoiSettings]);
@@ -103,10 +118,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     onPoiSettingsChange({
       peakLimit,
       placeLimit,
+      viewpointLimit,
+      castleLimit,
+      saddleLimit,
+      pubLimit,
       peakSelectionMode,
       selectedPeakKeys: [...selectedPeakKeys],
     });
-  }, [peakLimit, placeLimit, peakSelectionMode, selectedPeakKeys, onPoiSettingsChange]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, onPoiSettingsChange]);
 
   // Helper: stable key per peak
   const peakKey = (p: import('@/utils/overpassApi').POIPoint) =>
@@ -333,18 +352,31 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       .addTo(map.current);
   }, [currentPosition, gpxData]);
 
-  // POI markers — render helper using current limit
+  // POI markers — render helper using current limits per category
   const renderPoiMarkers = React.useCallback((pois: import('@/utils/overpassApi').POIPoint[]) => {
     if (!map.current) return;
 
-    // Split into peaks and places
     const peaks = pois.filter(p => p.type === 'peak');
-    const places = pois.filter(p => p.type !== 'peak');
+    const places = pois.filter(p => p.type === 'place');
+    const viewpoints = pois.filter(p => p.type === 'viewpoint');
+    const castles = pois.filter(p => p.type === 'castle');
+    const saddles = pois.filter(p => p.type === 'saddle');
+    const pubs = pois.filter(p => p.type === 'pub');
 
-    // Sort peaks by elevation desc
+    // Sort peaks & saddles by elevation desc
     peaks.sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
+    saddles.sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
+    // Rozhledny (tower) první, pak vyhlídky
+    viewpoints.sort((a, b) => {
+      const av = a.viewpointKind === 'tower' ? 0 : 1;
+      const bv = b.viewpointKind === 'tower' ? 0 : 1;
+      return av - bv;
+    });
+    // Hrady před zříceninami
+    const castleRank: Record<string, number> = { castle: 0, fort: 1, manor: 2, ruins: 3 };
+    castles.sort((a, b) => (castleRank[a.castleKind ?? 'ruins'] ?? 9) - (castleRank[b.castleKind ?? 'ruins'] ?? 9));
 
-    // Sort places by importance (city > town > village > hamlet)
+    // Sort places by importance
     const placeRank: Record<string, number> = { city: 0, town: 1, village: 2, hamlet: 3 };
     places.sort((a, b) =>
       (placeRank[a.placeType ?? 'hamlet'] ?? 9) - (placeRank[b.placeType ?? 'hamlet'] ?? 9)
@@ -355,10 +387,56 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       ? peaks.filter(p => selectedPeakKeys.has(peakKey(p)))
       : peaks.slice(0, peakLimit);
 
-    const limited = [...limitedPeaks, ...places.slice(0, placeLimit)];
+    const limited = [
+      ...limitedPeaks,
+      ...places.slice(0, placeLimit),
+      ...viewpoints.slice(0, viewpointLimit),
+      ...castles.slice(0, castleLimit),
+      ...saddles.slice(0, saddleLimit),
+      ...pubs.slice(0, pubLimit),
+    ];
 
     poiMarkersRef.current.forEach(m => m.remove());
     poiMarkersRef.current = [];
+
+    // Společný helper pro generování karty s tyčkou
+    const buildCard = (opts: {
+      icon: string;
+      text: string;
+      borderColor: string;
+      textColor: string;
+      poleColorTop: string;
+      poleColorBottom: string;
+      dotColor: string;
+      bold?: boolean;
+      smallDot?: boolean;
+    }) => {
+      const fontWeight = opts.bold ? 700 : 600;
+      const dotSize = opts.smallDot ? 6 : 8;
+      const poleHeight = opts.smallDot ? 18 : 24;
+      return `
+        <div style="
+          background: rgba(255,255,255,0.97);
+          border: 2px solid ${opts.borderColor};
+          border-radius: 8px;
+          padding: 3px 8px;
+          font-size: 12px;
+          font-weight: ${fontWeight};
+          color: ${opts.textColor};
+          white-space: nowrap;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          pointer-events: auto;
+        ">
+          <span style="font-size:14px;line-height:1;">${opts.icon}</span>
+          ${opts.text}
+        </div>
+        <div style="width: 2px; height: ${poleHeight}px; background: linear-gradient(to bottom, ${opts.poleColorTop}, ${opts.poleColorBottom});"></div>
+        <div style="width: ${dotSize}px; height: ${dotSize}px; border-radius: 50%; background: ${opts.dotColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>
+      `;
+    };
 
     limited.forEach(poi => {
       const el = document.createElement('div');
@@ -368,48 +446,87 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       el.style.pointerEvents = 'none';
       el.style.zIndex = '5';
 
-      if (poi.type === 'peak') {
-        el.innerHTML = `
-          <div style="
-            background: rgba(255,255,255,0.97);
-            border: 2px solid #b45309;
-            border-radius: 8px;
-            padding: 3px 8px;
-            font-size: 12px;
-            font-weight: 700;
-            color: #78350f;
-            white-space: nowrap;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            pointer-events: auto;
-          ">
-            <span style="font-size:16px;line-height:1;">⛰️</span>
-            ${poi.name}${poi.ele ? ` ${poi.ele}\u202Fm` : ''}
-          </div>
-          <div style="width: 2px; height: 28px; background: linear-gradient(to bottom, #b45309, #78350f);"></div>
-          <div style="width: 8px; height: 8px; border-radius: 50%; background: #78350f; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>
-        `;
-      } else {
-        el.innerHTML = `
-          <div style="
-            background: rgba(255,255,255,0.95);
-            border: 1px solid #6b7280;
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-size: 11px;
-            font-weight: 500;
-            color: #374151;
-            white-space: nowrap;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
-            pointer-events: auto;
-          ">
-            ${poi.name}
-          </div>
-          <div style="width: 1.5px; height: 12px; background: #6b7280; opacity: 0.7;"></div>
-          <div style="width: 4px; height: 4px; border-radius: 50%; background: #6b7280;"></div>
-        `;
+      switch (poi.type) {
+        case 'peak':
+          el.innerHTML = buildCard({
+            icon: '⛰️',
+            text: `${poi.name}${poi.ele ? ` ${poi.ele}\u202Fm` : ''}`,
+            borderColor: '#b45309',
+            textColor: '#78350f',
+            poleColorTop: '#b45309',
+            poleColorBottom: '#78350f',
+            dotColor: '#78350f',
+            bold: true,
+          });
+          break;
+        case 'saddle':
+          el.innerHTML = buildCard({
+            icon: '⛰',
+            text: `${poi.name}${poi.ele ? ` ${poi.ele}\u202Fm` : ''}`,
+            borderColor: '#a16207',
+            textColor: '#713f12',
+            poleColorTop: '#a16207',
+            poleColorBottom: '#713f12',
+            dotColor: '#713f12',
+          });
+          break;
+        case 'viewpoint':
+          el.innerHTML = buildCard({
+            icon: poi.viewpointKind === 'tower' ? '🗼' : '🔭',
+            text: poi.name,
+            borderColor: '#7c3aed',
+            textColor: '#5b21b6',
+            poleColorTop: '#7c3aed',
+            poleColorBottom: '#5b21b6',
+            dotColor: '#5b21b6',
+            bold: true,
+          });
+          break;
+        case 'castle':
+          el.innerHTML = buildCard({
+            icon: poi.castleKind === 'ruins' ? '🏚️' : '🏰',
+            text: poi.name,
+            borderColor: '#9f1239',
+            textColor: '#881337',
+            poleColorTop: '#9f1239',
+            poleColorBottom: '#881337',
+            dotColor: '#881337',
+            bold: true,
+          });
+          break;
+        case 'pub':
+          el.innerHTML = buildCard({
+            icon: poi.pubKind === 'cafe' ? '☕' : (poi.pubKind === 'restaurant' ? '🍽️' : '🍺'),
+            text: poi.name,
+            borderColor: '#15803d',
+            textColor: '#14532d',
+            poleColorTop: '#15803d',
+            poleColorBottom: '#14532d',
+            dotColor: '#14532d',
+            smallDot: true,
+          });
+          break;
+        case 'place':
+        default:
+          el.innerHTML = `
+            <div style="
+              background: rgba(255,255,255,0.95);
+              border: 1px solid #6b7280;
+              border-radius: 4px;
+              padding: 2px 6px;
+              font-size: 11px;
+              font-weight: 500;
+              color: #374151;
+              white-space: nowrap;
+              box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+              pointer-events: auto;
+            ">
+              ${poi.name}
+            </div>
+            <div style="width: 1.5px; height: 12px; background: #6b7280; opacity: 0.7;"></div>
+            <div style="width: 4px; height: 4px; border-radius: 50%; background: #6b7280;"></div>
+          `;
+          break;
       }
 
       const marker = new Marker({ element: el, anchor: 'bottom' })
@@ -418,7 +535,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       poiMarkersRef.current.push(marker);
     });
-  }, [peakLimit, placeLimit, peakSelectionMode, selectedPeakKeys]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys]);
 
   // POI fetch — extrahováno, aby šlo zavolat i ručně přes tlačítko reload
   const poiCancelRef = useRef<{ cancelled: boolean } | null>(null);
@@ -429,6 +546,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   useEffect(() => { renderPoiMarkersRef.current = renderPoiMarkers; }, [renderPoiMarkers]);
   const onPoisFetchedRef = useRef(onPoisFetched);
   useEffect(() => { onPoisFetchedRef.current = onPoisFetched; }, [onPoisFetched]);
+
+  // Helper: spočítej kategorie POI
+  const buildCounts = (nearby: import('@/utils/overpassApi').POIPoint[], rawTotal: number) => ({
+    peaks: nearby.filter(p => p.type === 'peak').length,
+    places: nearby.filter(p => p.type === 'place').length,
+    viewpoints: nearby.filter(p => p.type === 'viewpoint').length,
+    castles: nearby.filter(p => p.type === 'castle').length,
+    saddles: nearby.filter(p => p.type === 'saddle').length,
+    pubs: nearby.filter(p => p.type === 'pub').length,
+    raw: rawTotal,
+    filtered: nearby.length,
+  });
 
   const loadPOIs = useCallback(async (forceRefresh = false) => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
@@ -445,12 +574,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (!forceRefresh && cached && cached.length > 0) {
       const nearbyPois = cached;
       allNearbyPoisRef.current = nearbyPois;
-      const peakList = nearbyPois.filter(p => p.type === 'peak');
-      const placeList = nearbyPois.filter(p => p.type === 'place');
-      setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: nearbyPois.length, filtered: nearbyPois.length });
+      setPoiCounts(buildCounts(nearbyPois, nearbyPois.length));
       setPoiStatus('success');
 
       if (!hasInitialPoiRef.current) {
+        const peakList = nearbyPois.filter(p => p.type === 'peak');
         const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
         setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
         setPeakSelectionMode('auto');
@@ -469,12 +597,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       const nearbyPois = filterPOIsNearTrack(pois, track.points, 2);
       allNearbyPoisRef.current = nearbyPois;
 
-      const peakList = nearbyPois.filter(p => p.type === 'peak');
-      const placeList = nearbyPois.filter(p => p.type === 'place');
-      setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: pois.length, filtered: nearbyPois.length });
+      setPoiCounts(buildCounts(nearbyPois, pois.length));
       setPoiStatus('success');
 
       if (!hasInitialPoiRef.current) {
+        const peakList = nearbyPois.filter(p => p.type === 'peak');
         const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
         setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
         setPeakSelectionMode('auto');
@@ -514,7 +641,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (allNearbyPoisRef.current.length > 0) {
       renderPoiMarkers(allNearbyPoisRef.current);
     }
-  }, [peakLimit, placeLimit, peakSelectionMode, selectedPeakKeys, renderPoiMarkers]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, renderPoiMarkers]);
 
 
   // Click-to-pick custom peak coords
@@ -564,9 +691,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     allNearbyPoisRef.current = updated;
 
     // Aktualizovat čítače a vybrat ho
-    const peakList = updated.filter(p => p.type === 'peak');
-    const placeList = updated.filter(p => p.type === 'place');
-    setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: updated.length, filtered: updated.length });
+    setPoiCounts(buildCounts(updated, updated.length));
     setSelectedPeakKeys(prev => {
       const next = new Set(prev);
       next.add(k);
@@ -692,7 +817,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   )}
                   {poiStatus === 'success' && (
                     <>
-                      <div className="font-medium">⛰️ {poiCounts.peaks} · 🏘️ {poiCounts.places}</div>
+                      <div className="font-medium space-y-0.5">
+                        <div>⛰️ {poiCounts.peaks} · 🏘️ {poiCounts.places}</div>
+                        <div>🔭 {poiCounts.viewpoints} · 🏰 {poiCounts.castles}</div>
+                        <div>⛰ {poiCounts.saddles} · 🍺 {poiCounts.pubs}</div>
+                      </div>
                       <div className="text-muted-foreground">API vrátilo: <span className="text-foreground">{poiCounts.raw}</span></div>
                       <div className="text-muted-foreground">Po filtru 2 km: <span className="text-foreground">{poiCounts.filtered}</span></div>
                       {poiCounts.filtered === 0 && poiCounts.raw > 0 && (
@@ -952,7 +1081,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           {gpxData && poiCounts.places > 0 && (
             <div className="flex items-center gap-3">
               <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs font-medium text-muted-foreground w-20">Města (POI)</span>
+              <span className="text-xs font-medium text-muted-foreground w-20">Města</span>
               <Slider
                 value={[placeLimit]}
                 onValueChange={(value) => setPlaceLimit(value[0])}
@@ -963,6 +1092,82 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               />
               <span className="text-xs text-muted-foreground w-10 text-right">
                 {Math.min(placeLimit, poiCounts.places)}/{poiCounts.places}
+              </span>
+            </div>
+          )}
+
+          {/* POI density — viewpoints (rozhledny + vyhlídky) */}
+          {gpxData && poiCounts.viewpoints > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-base flex-shrink-0 w-4 text-center">🔭</span>
+              <span className="text-xs font-medium text-muted-foreground w-20">Rozhledny</span>
+              <Slider
+                value={[viewpointLimit]}
+                onValueChange={(value) => setViewpointLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.viewpoints, 5)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(viewpointLimit, poiCounts.viewpoints)}/{poiCounts.viewpoints}
+              </span>
+            </div>
+          )}
+
+          {/* POI density — castles (hrady, zříceniny) */}
+          {gpxData && poiCounts.castles > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-base flex-shrink-0 w-4 text-center">🏰</span>
+              <span className="text-xs font-medium text-muted-foreground w-20">Hrady</span>
+              <Slider
+                value={[castleLimit]}
+                onValueChange={(value) => setCastleLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.castles, 5)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(castleLimit, poiCounts.castles)}/{poiCounts.castles}
+              </span>
+            </div>
+          )}
+
+          {/* POI density — saddles (sedla) */}
+          {gpxData && poiCounts.saddles > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-base flex-shrink-0 w-4 text-center">⛰</span>
+              <span className="text-xs font-medium text-muted-foreground w-20">Sedla</span>
+              <Slider
+                value={[saddleLimit]}
+                onValueChange={(value) => setSaddleLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.saddles, 5)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(saddleLimit, poiCounts.saddles)}/{poiCounts.saddles}
+              </span>
+            </div>
+          )}
+
+          {/* POI density — pubs (hospody, restaurace) */}
+          {gpxData && poiCounts.pubs > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-base flex-shrink-0 w-4 text-center">🍺</span>
+              <span className="text-xs font-medium text-muted-foreground w-20">Hospody</span>
+              <Slider
+                value={[pubLimit]}
+                onValueChange={(value) => setPubLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.pubs, 5)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(pubLimit, poiCounts.pubs)}/{poiCounts.pubs}
               </span>
             </div>
           )}

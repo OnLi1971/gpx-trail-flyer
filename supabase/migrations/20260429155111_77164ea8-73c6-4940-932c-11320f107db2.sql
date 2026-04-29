@@ -1,0 +1,5 @@
+ALTER TABLE public.trails
+  ADD COLUMN IF NOT EXISTS viewpoint_limit integer NOT NULL DEFAULT 15,
+  ADD COLUMN IF NOT EXISTS castle_limit integer NOT NULL DEFAULT 15,
+  ADD COLUMN IF NOT EXISTS saddle_limit integer NOT NULL DEFAULT 15,
+  ADD COLUMN IF NOT EXISTS pub_limit integer NOT NULL DEFAULT 10;
