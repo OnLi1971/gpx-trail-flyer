@@ -128,35 +128,53 @@ const Index = () => {
                   Vítej v GPX Trail Flyer
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5">
                 <p className="text-muted-foreground">
-                  Nahraj GPX soubor a sleduj animovanou vizualizaci své trasy včetně profilu nadmořské výšky.
+                  Nahraj GPX soubor a vytvoř efektní 3D průlet nad svou trasou — připravené ke sdílení na sociálních sítích.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div className="space-y-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                      <Route className="w-4 h-4 text-primary" />
+
+                <div className="text-left bg-muted/40 rounded-lg p-4 space-y-3">
+                  <div className="text-sm font-semibold text-foreground mb-2">Jak na to ve 4 krocích:</div>
+
+                  <div className="flex items-start gap-3 text-sm">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">1</div>
+                    <div>
+                      <div className="font-medium flex items-center gap-1.5"><Upload className="w-3.5 h-3.5" /> Nahraj GPX soubor</div>
+                      <div className="text-muted-foreground text-xs">Export z Garminu, Stravy, Mapy.cz, Komoot…</div>
                     </div>
-                    <div className="font-medium">Interaktivní mapa</div>
-                    <div className="text-muted-foreground">Zobrazení trasy na mapě</div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                      <Timer className="w-4 h-4 text-primary" />
+
+                  <div className="flex items-start gap-3 text-sm">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">2</div>
+                    <div>
+                      <div className="font-medium flex items-center gap-1.5"><Sliders className="w-3.5 h-3.5" /> Nastav vzhled</div>
+                      <div className="text-muted-foreground text-xs">3D náklon, rychlost, zoom, zvýraznění výšky a body zájmu (vrcholy, hrady, rozhledny, sedla, hospody).</div>
                     </div>
-                    <div className="font-medium">3D průlet</div>
-                    <div className="text-muted-foreground">Plynulá animace trasou</div>
                   </div>
-                  <div className="space-y-2">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
-                      <Mountain className="w-4 h-4 text-primary" />
+
+                  <div className="flex items-start gap-3 text-sm">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">3</div>
+                    <div>
+                      <div className="font-medium flex items-center gap-1.5"><Play className="w-3.5 h-3.5" /> Zapni „Prezentace"</div>
+                      <div className="text-muted-foreground text-xs">Ukryje ovládání a roztáhne mapu — vhodné před nahráváním. Pak klikni „Spustit 3D průlet".</div>
                     </div>
-                    <div className="font-medium">Uložit a sdílet</div>
-                    <div className="text-muted-foreground">{user ? 'Trasy v cloudu' : 'Po přihlášení'}</div>
+                  </div>
+
+                  <div className="flex items-start gap-3 text-sm">
+                    <div className="flex-shrink-0 w-7 h-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-bold text-xs">4</div>
+                    <div>
+                      <div className="font-medium flex items-center gap-1.5"><Video className="w-3.5 h-3.5" /> Nahraj video</div>
+                      <div className="text-muted-foreground text-xs">„Nahrát průlet" → po dokončení stáhneš WebM/MP4 a střih si dokončíš třeba v CapCutu.</div>
+                    </div>
                   </div>
                 </div>
+
+                <p className="text-xs text-muted-foreground">
+                  💡 Tip: Po přihlášení si můžeš trasy uložit a sdílet odkaz na konkrétní průlet.
+                </p>
+
                 {!user && (
-                  <Button variant="outline" size="sm" onClick={() => navigate('/auth')} className="gap-2 mt-2">
+                  <Button variant="outline" size="sm" onClick={() => navigate('/auth')} className="gap-2">
                     <LogIn className="w-4 h-4" />
                     Přihlásit pro ukládání
                   </Button>
