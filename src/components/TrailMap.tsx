@@ -569,9 +569,15 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     const token = { cancelled: false };
     poiCancelRef.current = token;
 
-    // Pokud máme cache z DB a nejde o vynucené obnovení, použij ji a vůbec nevolat Overpass
+    // Pokud máme cache z DB a nejde o vynucené obnovení, použij ji a vůbec nevolat Overpass.
+    // ALE: pokud cache obsahuje pouze staré kategorie (peak/place) a chybí nové (viewpoint/castle/saddle/pub),
+    // znamená to, že byla uložena před přidáním nových kategorií → automaticky přetáhnout.
     const cached = cachedPoisRef.current;
-    if (!forceRefresh && cached && cached.length > 0) {
+    const cacheHasNewCategories = cached?.some(
+      p => p.type === 'viewpoint' || p.type === 'castle' || p.type === 'saddle' || p.type === 'pub'
+    ) ?? false;
+    const cacheIsStale = cached && cached.length > 0 && !cacheHasNewCategories;
+    if (!forceRefresh && cached && cached.length > 0 && !cacheIsStale) {
       const nearbyPois = cached;
       allNearbyPoisRef.current = nearbyPois;
       setPoiCounts(buildCounts(nearbyPois, nearbyPois.length));
