@@ -1,12 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Map, NavigationControl, Marker, LngLatBounds, MapMouseEvent } from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import { GPXData, PhotoPoint, AnimationSettings } from '@/types/gpx';
-import { PhotoViewModal } from './PhotoViewModal';
+import { GPXData, AnimationSettings } from '@/types/gpx';
 
-import { ManualPhotoDialog } from './ManualPhotoDialog';
 import { ElevationChart } from './ElevationChart';
-import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, Camera, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot, Maximize2, Minimize2 } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot, Maximize2, Minimize2 } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -15,7 +13,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { fetchPeaksAndPlaces, filterPOIsNearTrack } from '@/utils/overpassApi';
 import { useFlythrough } from '@/hooks/useFlythrough';
-import { usePhotoMarkers } from '@/hooks/usePhotoMarkers';
 import { useElevationData } from '@/hooks/useElevationData';
 import { useFlythroughRecorder } from '@/hooks/useFlythroughRecorder';
 import { VideoPreviewDialog } from './VideoPreviewDialog';
@@ -31,8 +28,6 @@ export interface PoiSettings {
 interface TrailMapProps {
   gpxData: GPXData | null;
   currentPosition: number;
-  photos: PhotoPoint[];
-  onAddPhotos: (newPhotos: PhotoPoint[]) => void;
   animationSettings: AnimationSettings;
   readOnly?: boolean;
   initialPoiSettings?: PoiSettings | null;
@@ -41,17 +36,13 @@ interface TrailMapProps {
   cachedPois?: import('@/utils/overpassApi').POIPoint[] | null;
   /** Zavolá se po úspěšném (znovu)načtení POI z Overpassu — vlastník je může uložit */
   onPoisFetched?: (pois: import('@/utils/overpassApi').POIPoint[]) => void;
-  /** Notifikace o stavu průletu — pro nadřazenou komponentu (časový editor fotek) */
+  /** Notifikace o stavu průletu — pro nadřazenou komponentu */
   onFlyStateChange?: (state: { isFlying: boolean; flyDurationSec: number; flyStartTimestamp: number | null }) => void;
-  /** Volitelný callback pro drag fotek na výškovém profilu (km od startu trasy). */
-  onPhotoKmChange?: (id: string, km: number) => void;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({
   gpxData,
   currentPosition,
-  photos,
-  onAddPhotos,
   animationSettings,
   readOnly = false,
   initialPoiSettings = null,
@@ -59,17 +50,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   cachedPois = null,
   onPoisFetched,
   onFlyStateChange,
-  onPhotoKmChange,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
   const poiMarkersRef = useRef<Marker[]>([]);
-
-  // Manual photo placement state
-  const [addPhotoMode, setAddPhotoMode] = useState(false);
-  const [pendingCoords, setPendingCoords] = useState<{ lat: number; lon: number } | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   // POI debug state (visible on mobile)
   const [poiStatus, setPoiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
