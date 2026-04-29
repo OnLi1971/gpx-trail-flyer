@@ -60,6 +60,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const markerRef = useRef<Marker | null>(null);
   const poiMarkersRef = useRef<Marker[]>([]);
 
+  // Basemap toggle: 3D terrain (OpenTopoMap, default) vs satellite (Esri)
+  const [basemap, setBasemap] = useState<'terrain' | 'satellite'>('terrain');
+
   // POI debug state (visible on mobile)
   const [poiStatus, setPoiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [poiCounts, setPoiCounts] = useState({
@@ -222,6 +225,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       style: {
         version: 8,
         sources: {
+          'terrain-tiles': {
+            type: 'raster',
+            tiles: [
+              'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
+              'https://b.tile.opentopomap.org/{z}/{x}/{y}.png',
+              'https://c.tile.opentopomap.org/{z}/{x}/{y}.png',
+            ],
+            tileSize: 256,
+            maxzoom: 17,
+            attribution:
+              'Map data: © OpenStreetMap contributors, SRTM | Map style: © OpenTopoMap (CC-BY-SA)',
+          },
           'satellite-tiles': {
             type: 'raster',
             tiles: [
@@ -242,11 +257,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         },
         layers: [
           {
+            id: 'terrain-layer',
+            type: 'raster',
+            source: 'terrain-tiles',
+            minzoom: 0,
+            maxzoom: 19,
+          },
+          {
             id: 'satellite-layer',
             type: 'raster',
             source: 'satellite-tiles',
             minzoom: 0,
             maxzoom: 19,
+            layout: { visibility: 'none' },
           },
         ],
         terrain: {
@@ -271,7 +294,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
   }, []);
 
-  // Trail layer rendering
+  // Toggle basemap layer visibility
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const apply = () => {
+      if (!m.getLayer('terrain-layer') || !m.getLayer('satellite-layer')) return;
+      m.setLayoutProperty('terrain-layer', 'visibility', basemap === 'terrain' ? 'visible' : 'none');
+      m.setLayoutProperty('satellite-layer', 'visibility', basemap === 'satellite' ? 'visible' : 'none');
+    };
+    if (m.isStyleLoaded()) apply();
+    else m.once('load', apply);
+  }, [basemap]);
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
 
@@ -739,9 +773,35 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
-          {/* Fullscreen / Presentation toggle */}
+          {/* Basemap toggle + Fullscreen / Presentation toggle */}
           {gpxData && (
-            <div className="absolute top-2 right-2 z-20">
+            <div className="absolute top-2 right-2 z-20 flex gap-2">
+              <div className="inline-flex rounded-md shadow-md overflow-hidden border bg-background/80 backdrop-blur-sm">
+                <button
+                  type="button"
+                  onClick={() => setBasemap('terrain')}
+                  className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+                    basemap === 'terrain'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-muted'
+                  }`}
+                  title="Topografická mapa s vrstevnicemi"
+                >
+                  3D terén
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBasemap('satellite')}
+                  className={`px-2.5 py-1 text-xs font-medium transition-colors border-l ${
+                    basemap === 'satellite'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-muted'
+                  }`}
+                  title="Satelitní snímky"
+                >
+                  Satelit
+                </button>
+              </div>
               <Button
                 size="sm"
                 variant="secondary"
