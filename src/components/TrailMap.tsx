@@ -888,9 +888,73 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               step={1}
               className="flex-1"
               disabled={flythrough.isFlying}
-            />
+             />
             <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.mapPitch}°</span>
           </div>
+
+          {gpxData && (
+            <>
+              {/* Speed slider */}
+              <div className="flex items-center gap-3">
+                <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground w-20">Rychlost</span>
+                <Slider
+                  value={[flythrough.flySpeed]}
+                  onValueChange={(value) => flythrough.setFlySpeed(value[0])}
+                  min={1}
+                  max={100}
+                  step={1}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.flySpeed}%</span>
+              </div>
+
+              {/* Rotation slider */}
+              <div className="flex items-center gap-3">
+                <RotateCcw className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground w-20">Rotace</span>
+                <Slider
+                  value={[flythrough.flyRotation]}
+                  onValueChange={(value) => flythrough.setFlyRotation(value[0])}
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.flyRotation}%</span>
+              </div>
+
+              {/* Zoom slider */}
+              <div className="flex items-center gap-3">
+                <ZoomIn className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground w-20">Zoom</span>
+                <Slider
+                  value={[flythrough.flyZoom]}
+                  onValueChange={(value) => flythrough.setFlyZoom(value[0])}
+                  min={10}
+                  max={18}
+                  step={0.5}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.flyZoom}</span>
+              </div>
+
+              {/* Elevation exaggeration slider */}
+              <div className="flex items-center gap-3">
+                <TrendingUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground w-20">Zvýraznění</span>
+                <Slider
+                  value={[flythrough.elevationExaggeration]}
+                  onValueChange={(value) => flythrough.setElevationExaggeration(value[0])}
+                  min={1}
+                  max={5}
+                  step={0.1}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.elevationExaggeration}×</span>
+              </div>
+            </>
+          )}
 
           {/* POI density — peaks (hory) */}
           {gpxData && poiCounts.peaks > 0 && (
@@ -1180,65 +1244,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
           {gpxData && (
             <>
-              {/* Speed slider */}
-              <div className="flex items-center gap-3">
-                <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <span className="text-xs font-medium text-muted-foreground w-20">Rychlost</span>
-                <Slider
-                  value={[flythrough.flySpeed]}
-                  onValueChange={(value) => flythrough.setFlySpeed(value[0])}
-                  min={1}
-                  max={100}
-                  step={1}
-                  className="flex-1"
-                />
-                <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.flySpeed}%</span>
-              </div>
-
-              {/* Rotation slider */}
-              <div className="flex items-center gap-3">
-                <RotateCcw className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <span className="text-xs font-medium text-muted-foreground w-20">Rotace</span>
-                <Slider
-                  value={[flythrough.flyRotation]}
-                  onValueChange={(value) => flythrough.setFlyRotation(value[0])}
-                  min={0}
-                  max={100}
-                  step={1}
-                  className="flex-1"
-                />
-                <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.flyRotation}%</span>
-              </div>
-
-              {/* Zoom slider */}
-              <div className="flex items-center gap-3">
-                <ZoomIn className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <span className="text-xs font-medium text-muted-foreground w-20">Zoom</span>
-                <Slider
-                  value={[flythrough.flyZoom]}
-                  onValueChange={(value) => flythrough.setFlyZoom(value[0])}
-                  min={10}
-                  max={18}
-                  step={0.5}
-                  className="flex-1"
-                />
-                <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.flyZoom}</span>
-              </div>
-
-              {/* Elevation exaggeration slider */}
-              <div className="flex items-center gap-3">
-                <TrendingUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <span className="text-xs font-medium text-muted-foreground w-20">Zvýraznění</span>
-                <Slider
-                  value={[flythrough.elevationExaggeration]}
-                  onValueChange={(value) => flythrough.setElevationExaggeration(value[0])}
-                  min={1}
-                  max={5}
-                  step={0.1}
-                  className="flex-1"
-                />
-                <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.elevationExaggeration}×</span>
-              </div>
 
               {/* Flythrough button and grade indicator */}
               <div className="flex items-center justify-center gap-4 pt-2">
