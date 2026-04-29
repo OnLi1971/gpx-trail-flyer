@@ -817,7 +817,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   )}
                   {poiStatus === 'success' && (
                     <>
-                      <div className="font-medium">⛰️ {poiCounts.peaks} · 🏘️ {poiCounts.places}</div>
+                      <div className="font-medium space-y-0.5">
+                        <div>⛰️ {poiCounts.peaks} · 🏘️ {poiCounts.places}</div>
+                        <div>🔭 {poiCounts.viewpoints} · 🏰 {poiCounts.castles}</div>
+                        <div>⛰ {poiCounts.saddles} · 🍺 {poiCounts.pubs}</div>
+                      </div>
                       <div className="text-muted-foreground">API vrátilo: <span className="text-foreground">{poiCounts.raw}</span></div>
                       <div className="text-muted-foreground">Po filtru 2 km: <span className="text-foreground">{poiCounts.filtered}</span></div>
                       {poiCounts.filtered === 0 && poiCounts.raw > 0 && (
@@ -1077,7 +1081,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           {gpxData && poiCounts.places > 0 && (
             <div className="flex items-center gap-3">
               <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs font-medium text-muted-foreground w-20">Města (POI)</span>
+              <span className="text-xs font-medium text-muted-foreground w-20">Města</span>
               <Slider
                 value={[placeLimit]}
                 onValueChange={(value) => setPlaceLimit(value[0])}
@@ -1088,6 +1092,82 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               />
               <span className="text-xs text-muted-foreground w-10 text-right">
                 {Math.min(placeLimit, poiCounts.places)}/{poiCounts.places}
+              </span>
+            </div>
+          )}
+
+          {/* POI density — viewpoints (rozhledny + vyhlídky) */}
+          {gpxData && poiCounts.viewpoints > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-base flex-shrink-0 w-4 text-center">🔭</span>
+              <span className="text-xs font-medium text-muted-foreground w-20">Rozhledny</span>
+              <Slider
+                value={[viewpointLimit]}
+                onValueChange={(value) => setViewpointLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.viewpoints, 5)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(viewpointLimit, poiCounts.viewpoints)}/{poiCounts.viewpoints}
+              </span>
+            </div>
+          )}
+
+          {/* POI density — castles (hrady, zříceniny) */}
+          {gpxData && poiCounts.castles > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-base flex-shrink-0 w-4 text-center">🏰</span>
+              <span className="text-xs font-medium text-muted-foreground w-20">Hrady</span>
+              <Slider
+                value={[castleLimit]}
+                onValueChange={(value) => setCastleLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.castles, 5)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(castleLimit, poiCounts.castles)}/{poiCounts.castles}
+              </span>
+            </div>
+          )}
+
+          {/* POI density — saddles (sedla) */}
+          {gpxData && poiCounts.saddles > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-base flex-shrink-0 w-4 text-center">⛰</span>
+              <span className="text-xs font-medium text-muted-foreground w-20">Sedla</span>
+              <Slider
+                value={[saddleLimit]}
+                onValueChange={(value) => setSaddleLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.saddles, 5)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(saddleLimit, poiCounts.saddles)}/{poiCounts.saddles}
+              </span>
+            </div>
+          )}
+
+          {/* POI density — pubs (hospody, restaurace) */}
+          {gpxData && poiCounts.pubs > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-base flex-shrink-0 w-4 text-center">🍺</span>
+              <span className="text-xs font-medium text-muted-foreground w-20">Hospody</span>
+              <Slider
+                value={[pubLimit]}
+                onValueChange={(value) => setPubLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.pubs, 5)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(pubLimit, poiCounts.pubs)}/{poiCounts.pubs}
               </span>
             </div>
           )}
