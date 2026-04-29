@@ -888,7 +888,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               step={1}
               className="flex-1"
               disabled={flythrough.isFlying}
-            />
+             />
+            <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.mapPitch}°</span>
           </div>
 
           {gpxData && (
