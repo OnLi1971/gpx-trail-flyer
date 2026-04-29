@@ -773,9 +773,35 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
-          {/* Fullscreen / Presentation toggle */}
+          {/* Basemap toggle + Fullscreen / Presentation toggle */}
           {gpxData && (
-            <div className="absolute top-2 right-2 z-20">
+            <div className="absolute top-2 right-2 z-20 flex gap-2">
+              <div className="inline-flex rounded-md shadow-md overflow-hidden border bg-background/80 backdrop-blur-sm">
+                <button
+                  type="button"
+                  onClick={() => setBasemap('terrain')}
+                  className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+                    basemap === 'terrain'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-muted'
+                  }`}
+                  title="Topografická mapa s vrstevnicemi"
+                >
+                  3D terén
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBasemap('satellite')}
+                  className={`px-2.5 py-1 text-xs font-medium transition-colors border-l ${
+                    basemap === 'satellite'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-muted'
+                  }`}
+                  title="Satelitní snímky"
+                >
+                  Satelit
+                </button>
+              </div>
               <Button
                 size="sm"
                 variant="secondary"
