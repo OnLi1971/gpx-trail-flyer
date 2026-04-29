@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mountain, Route, Timer, Loader2, LogIn, Upload, Sliders, Play, Video, Sparkles } from 'lucide-react';
+import { Mountain, Route, Timer, Loader2, LogIn, Upload, Sliders, Play, Video } from 'lucide-react';
 
 const ANIMATION_DURATION = 10000;
 
