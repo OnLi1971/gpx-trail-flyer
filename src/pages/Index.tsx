@@ -56,19 +56,7 @@ const Index = () => {
     }, 50);
   }, []);
 
-  const handleLoadDemo = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/demo-trail.gpx');
-      if (!res.ok) throw new Error('Demo soubor nenalezen');
-      const content = await res.text();
-      handleFileUpload(content, 'Demo — okruh přes Sněžku.gpx');
-    } catch (err) {
-      console.error(err);
-      toast.error('Nepodařilo se načíst demo trasu');
-      setIsLoading(false);
-    }
-  }, [handleFileUpload]);
+
 
   const handlePlayPause = useCallback(() => {
     if (!isPlaying) {
