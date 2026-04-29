@@ -547,6 +547,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const onPoisFetchedRef = useRef(onPoisFetched);
   useEffect(() => { onPoisFetchedRef.current = onPoisFetched; }, [onPoisFetched]);
 
+  // Helper: spočítej kategorie POI
+  const buildCounts = (nearby: import('@/utils/overpassApi').POIPoint[], rawTotal: number) => ({
+    peaks: nearby.filter(p => p.type === 'peak').length,
+    places: nearby.filter(p => p.type === 'place').length,
+    viewpoints: nearby.filter(p => p.type === 'viewpoint').length,
+    castles: nearby.filter(p => p.type === 'castle').length,
+    saddles: nearby.filter(p => p.type === 'saddle').length,
+    pubs: nearby.filter(p => p.type === 'pub').length,
+    raw: rawTotal,
+    filtered: nearby.length,
+  });
+
   const loadPOIs = useCallback(async (forceRefresh = false) => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
     const track = gpxData.tracks[0];
@@ -562,12 +574,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (!forceRefresh && cached && cached.length > 0) {
       const nearbyPois = cached;
       allNearbyPoisRef.current = nearbyPois;
-      const peakList = nearbyPois.filter(p => p.type === 'peak');
-      const placeList = nearbyPois.filter(p => p.type === 'place');
-      setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: nearbyPois.length, filtered: nearbyPois.length });
+      setPoiCounts(buildCounts(nearbyPois, nearbyPois.length));
       setPoiStatus('success');
 
       if (!hasInitialPoiRef.current) {
+        const peakList = nearbyPois.filter(p => p.type === 'peak');
         const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
         setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
         setPeakSelectionMode('auto');
@@ -586,12 +597,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       const nearbyPois = filterPOIsNearTrack(pois, track.points, 2);
       allNearbyPoisRef.current = nearbyPois;
 
-      const peakList = nearbyPois.filter(p => p.type === 'peak');
-      const placeList = nearbyPois.filter(p => p.type === 'place');
-      setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: pois.length, filtered: nearbyPois.length });
+      setPoiCounts(buildCounts(nearbyPois, pois.length));
       setPoiStatus('success');
 
       if (!hasInitialPoiRef.current) {
+        const peakList = nearbyPois.filter(p => p.type === 'peak');
         const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
         setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
         setPeakSelectionMode('auto');
@@ -631,7 +641,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (allNearbyPoisRef.current.length > 0) {
       renderPoiMarkers(allNearbyPoisRef.current);
     }
-  }, [peakLimit, placeLimit, peakSelectionMode, selectedPeakKeys, renderPoiMarkers]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, renderPoiMarkers]);
 
 
   // Click-to-pick custom peak coords
@@ -681,9 +691,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     allNearbyPoisRef.current = updated;
 
     // Aktualizovat čítače a vybrat ho
-    const peakList = updated.filter(p => p.type === 'peak');
-    const placeList = updated.filter(p => p.type === 'place');
-    setPoiCounts({ peaks: peakList.length, places: placeList.length, raw: updated.length, filtered: updated.length });
+    setPoiCounts(buildCounts(updated, updated.length));
     setSelectedPeakKeys(prev => {
       const next = new Set(prev);
       next.add(k);
