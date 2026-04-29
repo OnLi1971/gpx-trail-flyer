@@ -21,6 +21,10 @@ import { toast } from 'sonner';
 export interface PoiSettings {
   peakLimit: number;
   placeLimit: number;
+  viewpointLimit: number;
+  castleLimit: number;
+  saddleLimit: number;
+  pubLimit: number;
   peakSelectionMode: 'auto' | 'manual';
   selectedPeakKeys: string[];
 }
@@ -58,13 +62,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   // POI debug state (visible on mobile)
   const [poiStatus, setPoiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [poiCounts, setPoiCounts] = useState({ peaks: 0, places: 0, raw: 0, filtered: 0 });
+  const [poiCounts, setPoiCounts] = useState({
+    peaks: 0, places: 0, viewpoints: 0, castles: 0, saddles: 0, pubs: 0,
+    raw: 0, filtered: 0,
+  });
   const [poiError, setPoiError] = useState<string | null>(null);
   const [poiPanelExpanded, setPoiPanelExpanded] = useState(false);
 
-  // POI density — separate limits for peaks (hory) and places (města)
+  // POI density — separate limits per category
   const [peakLimit, setPeakLimit] = useState(initialPoiSettings?.peakLimit ?? 25);
   const [placeLimit, setPlaceLimit] = useState(initialPoiSettings?.placeLimit ?? 15);
+  const [viewpointLimit, setViewpointLimit] = useState(initialPoiSettings?.viewpointLimit ?? 15);
+  const [castleLimit, setCastleLimit] = useState(initialPoiSettings?.castleLimit ?? 15);
+  const [saddleLimit, setSaddleLimit] = useState(initialPoiSettings?.saddleLimit ?? 15);
+  const [pubLimit, setPubLimit] = useState(initialPoiSettings?.pubLimit ?? 10);
   // Manual peak selection
   const [peakSelectionMode, setPeakSelectionMode] = useState<'auto' | 'manual'>(initialPoiSettings?.peakSelectionMode ?? 'auto');
   const [selectedPeakKeys, setSelectedPeakKeys] = useState<Set<string>>(
@@ -93,6 +104,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     hasInitialPoiRef.current = true;
     setPeakLimit(initialPoiSettings.peakLimit);
     setPlaceLimit(initialPoiSettings.placeLimit);
+    setViewpointLimit(initialPoiSettings.viewpointLimit);
+    setCastleLimit(initialPoiSettings.castleLimit);
+    setSaddleLimit(initialPoiSettings.saddleLimit);
+    setPubLimit(initialPoiSettings.pubLimit);
     setPeakSelectionMode(initialPoiSettings.peakSelectionMode);
     setSelectedPeakKeys(new Set(initialPoiSettings.selectedPeakKeys));
   }, [initialPoiSettings]);
@@ -103,10 +118,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     onPoiSettingsChange({
       peakLimit,
       placeLimit,
+      viewpointLimit,
+      castleLimit,
+      saddleLimit,
+      pubLimit,
       peakSelectionMode,
       selectedPeakKeys: [...selectedPeakKeys],
     });
-  }, [peakLimit, placeLimit, peakSelectionMode, selectedPeakKeys, onPoiSettingsChange]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, onPoiSettingsChange]);
 
   // Helper: stable key per peak
   const peakKey = (p: import('@/utils/overpassApi').POIPoint) =>
