@@ -1,39 +1,31 @@
-# Náhled pro sdílení na Facebooku
+## Přepnutí na satelitní podklad
 
-Aby tvoje stránka `gpx-trail-flyer.vercel.app` měla na FB / Twitteru / Messengeru hezký velký náhled s obrázkem a popisem (místo holého URL).
+POI vrstvy (vrcholy, hrady, rozhledny, sedla, hospody) jsou samostatné Maplibre vrstvy nezávislé na podkladu — zůstanou viditelné i na satelitu beze změny. Trasa, marker pozice, 3D terén a nahrávání videa fungují stejně.
 
-## Co se udělá
+### Co se změní
 
-### 1. Náhledový obrázek (1200×630)
-Už je vygenerovaný a uložený jako `public/og-image.jpg` — tmavé pozadí s horami, slunce, oranžová svítící GPX trasa, zelený start / červený cíl, velký nápis **"GPX Trail Flyer"** a podtitul **"Z tvé GPS trasy 3D průlet"** + URL.
+V `src/components/TrailMap.tsx` (řádky ~225–250) v inicializaci mapy:
 
-```text
-┌──────────────────────────────────────────┐
-│ GPX TRAIL FLYER              ☀          │
-│ Z tvé GPS trasy 3D průlet               │
-│                                          │
-│        ▲▲▲   ▲▲   ▲▲▲▲   ▲▲             │
-│      ▲▲  ▲▲▲  ▲▲▲▲  ▲▲▲▲  ▲▲▲           │
-│   ●━━╱╲━━╱╲━━╱╲━━╱╲━━╱╲━━●              │
-│ gpx-trail-flyer.vercel.app              │
-└──────────────────────────────────────────┘
-```
+- Zdroj `cyclosm-tiles` → `satellite-tiles` používající **Esri World Imagery**:
+  - URL: `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}`
+  - `tileSize: 256`, `maxzoom: 19`
+  - Atribuce: `Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community`
+- Vrstva `cyclosm-layer` → `satellite-layer` (type `raster`, source `satellite-tiles`)
+- 3D terén (`terrain-dem` + Terrarium DEM) zůstává beze změny — exaggeration slider funguje dál
+- `preserveDrawingBuffer: true` zachováno (nutné pro nahrávání videa)
 
-### 2. Aktualizace `index.html`
-Nahradí současné generické Lovable meta tagy za:
+### Co zůstává
 
-- `<title>` a `<meta description>` v češtině
-- `og:title`, `og:description`, `og:url`, `og:image` (s rozměry 1200×630)
-- `og:locale = cs_CZ`
-- Twitter card (`summary_large_image`)
-- `<html lang="cs">`
+- Všech 6 kategorií POI s ikonami a popisky (Overpass API → vlastní vrstvy nad podkladem)
+- GPX trasa, gradient podle výšky, marker animované pozice
+- 3D průlet, ovládání náklonu/zoomu, nahrávání WebM/MP4
+- Výška mapy 500px, jednosloupcové UI
+- Sdílení tras, ukládání POI nastavení
 
-## Po nasazení
+### Pamět
 
-1. Po publishi otevři **Facebook Sharing Debugger** (https://developers.facebook.com/tools/debug/) a zadej `https://gpx-trail-flyer.vercel.app/` → klikni „Scrape Again". Tím se FB cache obnoví a uvidíš nový náhled hned.
-2. Stejné pro Twitter: https://cards-dev.twitter.com/validator
-3. Pokud sdílíš konkrétní trasu (`/trail/...`), náhled bude zatím stejný pro celý web. Per-trasa náhledy by vyžadovaly server-side rendering nebo edge funkci — to bych dělal samostatně.
+Aktualizuji `mem://style/map-konfigurace` — z „Tiles: CycloOSM" na „Tiles: Esri World Imagery (satellite)" a Core řádek v indexu.
 
-## Soubory
-- `public/og-image.jpg` (nový, ~70 kB)
-- `index.html` (upravené meta tagy)
+### Proč Esri a ne MapTiler
+
+Esri World Imagery nepotřebuje API klíč, má globální pokrytí v dobré kvalitě a je standardně používaná pro tento účel. Pokud bys chtěl ostřejší satelit nebo evropsky lepší rozlišení, můžeme později přejít na MapTiler Satellite (vyžaduje klíč) nebo Mapbox Satellite.
