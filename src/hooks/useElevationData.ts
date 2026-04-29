@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { GPXData, PhotoPoint } from '@/types/gpx';
+import { GPXData } from '@/types/gpx';
 
 interface ChartDataPoint {
   distance: number;
@@ -8,35 +8,27 @@ interface ChartDataPoint {
   originalIndex: number;
 }
 
-interface PhotoOnChart {
-  id: string;
-  chartDistance: number;
-  chartElevation: number;
-}
-
 interface ElevationDataResult {
   chartData: ChartDataPoint[];
   currentChartPoint: ChartDataPoint | null;
-  photosOnChart: PhotoOnChart[];
 }
 
 export function useElevationData(
   gpxData: GPXData | null,
-  photos: PhotoPoint[],
   currentPosition: number,
   flyingIndex: number | null,
   elevationExaggeration: number
 ): ElevationDataResult {
   return useMemo(() => {
     if (!gpxData || gpxData.tracks.length === 0) {
-      return { chartData: [], currentChartPoint: null, photosOnChart: [] };
+      return { chartData: [], currentChartPoint: null };
     }
 
     const track = gpxData.tracks[0];
     const pointsWithElevation = track.points.filter(point => point.ele !== undefined);
 
     if (pointsWithElevation.length === 0) {
-      return { chartData: [], currentChartPoint: null, photosOnChart: [] };
+      return { chartData: [], currentChartPoint: null };
     }
 
     const baseElevation = Math.min(...pointsWithElevation.map(p => p.ele!));
@@ -52,7 +44,6 @@ export function useElevationData(
       };
     });
 
-    // Current position on chart
     const totalPoints = track.points.length;
     const currentPointIndex = flyingIndex !== null
       ? flyingIndex
@@ -77,49 +68,6 @@ export function useElevationData(
       });
     }
 
-    // Photo positions on chart — primárně podle triggerKm, fallback podle GPS
-    const totalKm = track.totalDistance / 1000;
-    const photosOnChart: PhotoOnChart[] = photos.map(photo => {
-      let chartDistance: number;
-      let pointIndex: number;
-
-      if (photo.triggerKm !== undefined && totalKm > 0) {
-        chartDistance = Math.max(0, Math.min(totalKm, photo.triggerKm));
-        // Najdi originalIndex bodu odpovídající tomu km (lineární odhad)
-        pointIndex = Math.round((chartDistance / totalKm) * (track.points.length - 1));
-      } else {
-        // Fallback — nejbližší GPS bod
-        let closestPoint = track.points[0];
-        let minDist = Number.MAX_VALUE;
-        track.points.forEach(point => {
-          const dist = Math.sqrt(
-            Math.pow(point.lat - photo.lat, 2) + Math.pow(point.lon - photo.lon, 2)
-          );
-          if (dist < minDist) {
-            minDist = dist;
-            closestPoint = point;
-          }
-        });
-        pointIndex = track.points.indexOf(closestPoint);
-        const chartPoint = chartData.find(data => data.originalIndex === pointIndex);
-        chartDistance = chartPoint?.distance || 0;
-      }
-
-      // Najdi nejbližší chart bod pro elevaci
-      let chartElevation = 0;
-      let bestDiff = Infinity;
-      for (const cp of chartData) {
-        const diff = Math.abs(cp.originalIndex - pointIndex);
-        if (diff < bestDiff) { bestDiff = diff; chartElevation = cp.elevation; }
-      }
-
-      return {
-        id: photo.id,
-        chartDistance,
-        chartElevation,
-      };
-    });
-
-    return { chartData, currentChartPoint, photosOnChart };
-  }, [gpxData, photos, currentPosition, flyingIndex, elevationExaggeration]);
+    return { chartData, currentChartPoint };
+  }, [gpxData, currentPosition, flyingIndex, elevationExaggeration]);
 }
