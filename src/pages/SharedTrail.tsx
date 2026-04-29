@@ -44,7 +44,7 @@ export default function SharedTrail() {
       setLoading(true);
       const { data: trail, error: tErr } = await supabase
         .from('trails')
-        .select('id, name, gpx_data, user_id, peak_limit, place_limit, peak_selection_mode, selected_peak_keys, cached_pois, pois_cached_at')
+        .select('id, name, gpx_data, user_id, peak_limit, place_limit, viewpoint_limit, castle_limit, saddle_limit, pub_limit, peak_selection_mode, selected_peak_keys, cached_pois, pois_cached_at')
         .eq('slug', slug)
         .maybeSingle();
 
@@ -62,6 +62,10 @@ export default function SharedTrail() {
       const poi: PoiSettings = {
         peakLimit: (trail as any).peak_limit ?? 25,
         placeLimit: (trail as any).place_limit ?? 15,
+        viewpointLimit: (trail as any).viewpoint_limit ?? 15,
+        castleLimit: (trail as any).castle_limit ?? 15,
+        saddleLimit: (trail as any).saddle_limit ?? 15,
+        pubLimit: (trail as any).pub_limit ?? 10,
         peakSelectionMode: ((trail as any).peak_selection_mode ?? 'auto') as 'auto' | 'manual',
         selectedPeakKeys: Array.isArray((trail as any).selected_peak_keys)
           ? ((trail as any).selected_peak_keys as string[])
@@ -113,6 +117,10 @@ export default function SharedTrail() {
   const poiDirty = !!isOwner && !!currentPoi && !!savedPoi && (
     currentPoi.peakLimit !== savedPoi.peakLimit ||
     currentPoi.placeLimit !== savedPoi.placeLimit ||
+    currentPoi.viewpointLimit !== savedPoi.viewpointLimit ||
+    currentPoi.castleLimit !== savedPoi.castleLimit ||
+    currentPoi.saddleLimit !== savedPoi.saddleLimit ||
+    currentPoi.pubLimit !== savedPoi.pubLimit ||
     currentPoi.peakSelectionMode !== savedPoi.peakSelectionMode ||
     currentPoi.selectedPeakKeys.length !== savedPoi.selectedPeakKeys.length ||
     currentPoi.selectedPeakKeys.some((k) => !savedPoi.selectedPeakKeys.includes(k))
@@ -127,6 +135,10 @@ export default function SharedTrail() {
         .update({
           peak_limit: currentPoi.peakLimit,
           place_limit: currentPoi.placeLimit,
+          viewpoint_limit: currentPoi.viewpointLimit,
+          castle_limit: currentPoi.castleLimit,
+          saddle_limit: currentPoi.saddleLimit,
+          pub_limit: currentPoi.pubLimit,
           peak_selection_mode: currentPoi.peakSelectionMode,
           selected_peak_keys: currentPoi.selectedPeakKeys as any,
         })
