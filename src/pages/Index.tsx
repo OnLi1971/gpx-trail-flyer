@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mountain, Route, Timer, Loader2, LogIn, Upload, Sliders, Play, Video, Sparkles } from 'lucide-react';
+import { Mountain, Route, Timer, Loader2, LogIn, Upload, Sliders, Play, Video } from 'lucide-react';
 
 const ANIMATION_DURATION = 10000;
 
@@ -56,19 +56,7 @@ const Index = () => {
     }, 50);
   }, []);
 
-  const handleLoadDemo = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch('/demo-trail.gpx');
-      if (!res.ok) throw new Error('Demo soubor nenalezen');
-      const content = await res.text();
-      handleFileUpload(content, 'Demo — okruh přes Sněžku.gpx');
-    } catch (err) {
-      console.error(err);
-      toast.error('Nepodařilo se načíst demo trasu');
-      setIsLoading(false);
-    }
-  }, [handleFileUpload]);
+
 
   const handlePlayPause = useCallback(() => {
     if (!isPlaying) {
@@ -197,23 +185,6 @@ const Index = () => {
             </Card>
 
             <FileUpload onFileUpload={handleFileUpload} />
-
-            <div className="flex items-center gap-3">
-              <div className="flex-1 h-px bg-border" />
-              <span className="text-xs text-muted-foreground uppercase tracking-wider">nebo</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-
-            <Button
-              onClick={handleLoadDemo}
-              disabled={isLoading}
-              size="lg"
-              variant="secondary"
-              className="w-full gap-2"
-            >
-              <Sparkles className="w-5 h-5" />
-              Spustit demo (okruh přes Sněžku)
-            </Button>
           </div>
         ) : (
           <div className="space-y-6">
