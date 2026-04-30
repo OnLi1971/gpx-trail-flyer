@@ -150,7 +150,7 @@ export function useFlythrough(
     }
 
     onCompleteRef.current?.(reason);
-  }, [map, gpxData]);
+  }, [map, gpxData, mapPitch]);
 
   const startFlythrough = useCallback(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
