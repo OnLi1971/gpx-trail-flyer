@@ -143,15 +143,14 @@ export function useFlythrough(
       map.current.flyTo({
         center: bounds.getCenter(),
         zoom: 12,
-        pitch: 0,
+        pitch: mapPitch,
         bearing: 0,
         duration: 1500,
       });
-      setMapPitchState(0);
     }
 
     onCompleteRef.current?.(reason);
-  }, [map, gpxData]);
+  }, [map, gpxData, mapPitch]);
 
   const startFlythrough = useCallback(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
