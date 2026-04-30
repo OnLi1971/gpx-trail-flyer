@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileUpload } from '@/components/FileUpload';
 import { TrailMap } from '@/components/TrailMap';
+import { TrailStats } from '@/components/TrailStats';
 import { AnimationControls } from '@/components/AnimationControls';
 import { AppHeader } from '@/components/AppHeader';
 import { SaveTrailDialog } from '@/components/SaveTrailDialog';
@@ -205,6 +206,8 @@ const Index = () => {
                   currentPosition={currentPosition}
                   animationSettings={animationSettings}
                 />
+
+                <TrailStats gpxData={gpxData} />
             </div>
 
             <Card>
