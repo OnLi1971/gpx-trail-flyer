@@ -679,6 +679,17 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
   }, [gpxData, loadPOIs]);
 
+  // Refetch when search radius changes (skip first mount)
+  const radiusInitRef = useRef(true);
+  useEffect(() => {
+    if (radiusInitRef.current) {
+      radiusInitRef.current = false;
+      return;
+    }
+    if (!map.current || !gpxData) return;
+    loadPOIs(true);
+  }, [poiRadiusKm]);
+
   // Re-render markers when limits change (without re-fetching)
   useEffect(() => {
     if (allNearbyPoisRef.current.length > 0) {
