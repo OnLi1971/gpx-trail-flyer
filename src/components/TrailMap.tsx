@@ -659,7 +659,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       setPoiStatus('error');
       setPoiError(err instanceof Error ? err.message : 'Neznámá chyba');
     }
-  }, [gpxData]);
+  }, [gpxData, poiRadiusKm]);
 
   // POI fetch — only on gpx change
   useEffect(() => {
