@@ -1054,6 +1054,24 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </>
           )}
 
+          {/* POI search radius */}
+          {gpxData && (
+            <div className="flex items-center gap-3">
+              <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Okolí POI</span>
+              <Slider
+                value={[poiRadiusKm]}
+                onValueChange={(value) => setPoiRadiusKm(value[0])}
+                min={1}
+                max={10}
+                step={1}
+                className="flex-1"
+                disabled={poiStatus === 'loading'}
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">{poiRadiusKm} km</span>
+            </div>
+          )}
+
           {/* POI density — peaks (hory) */}
           {gpxData && poiCounts.peaks > 0 && (
             <div className="space-y-2">
