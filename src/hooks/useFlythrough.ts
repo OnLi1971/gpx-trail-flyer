@@ -396,6 +396,7 @@ export function useFlythrough(
     dynamicSpeed,
     setDynamicSpeed,
     hasTimeData,
-    speedMultiplier,
+    dynamicIntensity,
+    setDynamicIntensity,
   };
 }
