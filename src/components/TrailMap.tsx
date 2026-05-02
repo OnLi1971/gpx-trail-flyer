@@ -986,12 +986,29 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 </p>
               )}
 
+              {/* Intenzita dynamiky — jen v dynamickém režimu */}
+              {flythrough.dynamicSpeed && flythrough.hasTimeData && (
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <span className="text-xs font-medium text-muted-foreground w-20">Intenzita</span>
+                  <Slider
+                    value={[flythrough.dynamicIntensity]}
+                    onValueChange={(value) => flythrough.setDynamicIntensity(value[0])}
+                    min={0}
+                    max={100}
+                    step={1}
+                    className="flex-1"
+                  />
+                  <span className="text-xs text-muted-foreground w-10 text-right">
+                    {flythrough.dynamicIntensity}%
+                  </span>
+                </div>
+              )}
+
               {/* Speed slider */}
               <div className="flex items-center gap-3">
                 <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <span className="text-xs font-medium text-muted-foreground w-20">
-                  {flythrough.dynamicSpeed ? 'Násobič' : 'Rychlost'}
-                </span>
+                <span className="text-xs font-medium text-muted-foreground w-20">Rychlost</span>
                 <Slider
                   value={[flythrough.flySpeed]}
                   onValueChange={(value) => flythrough.setFlySpeed(value[0])}
@@ -1000,11 +1017,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   step={1}
                   className="flex-1"
                 />
-                <span className="text-xs text-muted-foreground w-10 text-right">
-                  {flythrough.dynamicSpeed
-                    ? `${flythrough.speedMultiplier.toFixed(2)}×`
-                    : `${flythrough.flySpeed}%`}
-                </span>
+                <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.flySpeed}%</span>
               </div>
 
               {/* Rotation slider */}

@@ -90,14 +90,22 @@ export function useFlythrough(
   const elevationExaggerationRef = useRef(1.9);
   const lastBearingRef = useRef(0);
   const flyMarkerRef = useRef<Marker | null>(null);
+  const avgRealDtRef = useRef<number>(0);
   const [markerIcon, setMarkerIconState] = useState<MarkerIcon>('bike');
   const markerIconRef = useRef<MarkerIcon>('bike');
   const [dynamicSpeed, setDynamicSpeedState] = useState(false);
   const dynamicSpeedRef = useRef(false);
+  const [dynamicIntensity, setDynamicIntensityState] = useState(70);
+  const dynamicIntensityRef = useRef(70);
 
   const setDynamicSpeed = useCallback((value: boolean) => {
     setDynamicSpeedState(value);
     dynamicSpeedRef.current = value;
+  }, []);
+
+  const setDynamicIntensity = useCallback((value: number) => {
+    setDynamicIntensityState(value);
+    dynamicIntensityRef.current = value;
   }, []);
 
   const hasTimeData = !!(gpxData && gpxData.tracks[0]?.points.some((p) => !!p.time));
@@ -116,38 +124,30 @@ export function useFlythrough(
   //   duration_ms = max(16, 800 - speed*7.7)
   //   čekání mezi kroky = duration_ms * 0.8 → reálný čas na krok ≈ duration_ms (easeTo + setTimeout 0.8d běží paralelně)
   // V praxi se používá duration jako čas na jeden krok.
-  // V dynamickém režimu (flySpeed jako násobič 1–100 → 0.25×–4×) jde duration z reálných timestampů.
-  const speedMultiplier = (() => {
-    // Mapování 1..100 → 0.25..4 (logaritmicky, default 50 ≈ 1×)
-    const t = (flySpeed - 1) / 99; // 0..1
-    return Math.pow(4, t * 2 - 1); // 0.25 .. 4
-  })();
+
+
+  // Pomocná: průměrná délka kroku v ms podle slideru Rychlost (stejně jako statický režim).
+  const avgStepMsForSpeed = (speed: number) => Math.max(16, 800 - speed * 7.7);
 
   const flyDurationSec = (() => {
     if (!gpxData || gpxData.tracks.length === 0) return 60;
     const points = gpxData.tracks[0].points;
     if (points.length < 2) return 60;
 
+    const speed = flySpeed;
+    const avgStepMs = avgStepMsForSpeed(speed);
+
     if (dynamicSpeed && hasTimeData) {
-      let totalMs = 0;
-      for (let i = 0; i < points.length - 1; i++) {
-        const t1 = points[i].time ? new Date(points[i].time!).getTime() : NaN;
-        const t2 = points[i + 1].time ? new Date(points[i + 1].time!).getTime() : NaN;
-        if (!isNaN(t1) && !isNaN(t2)) {
-          let dt = t2 - t1;
-          if (dt < 0) dt = 0;
-          if (dt > 2000) dt = 2000; // cap pauz
-          totalMs += dt;
-        }
-      }
-      return Math.max(5, Math.round((2000 + totalMs / speedMultiplier) / 1000));
+      // V dynamickém režimu krok = 1 bod, průměrná doba kroku = avgStepMs.
+      // Intenzita posunuje rozložení mezi rovnoměrné (avgStepMs) a reálné (∝ dt).
+      // Celková délka průletu je ≈ numSteps * avgStepMs (intenzita rozložení nemění průměr).
+      const numSteps = points.length - 1;
+      return Math.max(5, Math.round((2000 + numSteps * avgStepMs) / 1000));
     }
 
-    const speed = flySpeed;
     const step = Math.max(1, Math.floor(speed / 10));
-    const duration = Math.max(16, 800 - speed * 7.7);
     const numSteps = Math.ceil((points.length - 1) / step);
-    return Math.max(5, Math.round((2000 + numSteps * duration) / 1000));
+    return Math.max(5, Math.round((2000 + numSteps * avgStepMs) / 1000));
   })();
 
   const setFlySpeed = useCallback((value: number) => {
@@ -234,6 +234,21 @@ export function useFlythrough(
     let currentIndex = 0;
     const totalPoints = track.points.length;
 
+    // Spočítat průměrné dt pro dynamický režim
+    let sumDt = 0;
+    let countDt = 0;
+    for (let i = 0; i < track.points.length - 1; i++) {
+      const a = track.points[i].time ? new Date(track.points[i].time!).getTime() : NaN;
+      const b = track.points[i + 1].time ? new Date(track.points[i + 1].time!).getTime() : NaN;
+      if (!isNaN(a) && !isNaN(b) && b > a) {
+        let dt = b - a;
+        if (dt > 5000) dt = 5000;
+        sumDt += dt;
+        countDt++;
+      }
+    }
+    avgRealDtRef.current = countDt > 0 ? sumDt / countDt : 1000;
+
     const animateStep = () => {
       if (!map.current || currentIndex >= totalPoints - 1) {
         stopFlythrough('finished');
@@ -242,29 +257,35 @@ export function useFlythrough(
 
       const speed = flySpeedRef.current;
       const useDynamic = dynamicSpeedRef.current;
+      const baseDuration = Math.max(16, 800 - (speed * 7.7));
 
       let step: number;
       let duration: number;
 
       if (useDynamic) {
         step = 1;
-        const t = (speed - 1) / 99;
-        const mult = Math.pow(4, t * 2 - 1); // 0.25..4
+        const intensity = Math.max(0, Math.min(100, dynamicIntensityRef.current)) / 100;
         const cur = track.points[currentIndex];
         const nxt = track.points[Math.min(currentIndex + 1, totalPoints - 1)];
         const t1 = cur.time ? new Date(cur.time).getTime() : NaN;
         const t2 = nxt.time ? new Date(nxt.time).getTime() : NaN;
+        const avg = avgRealDtRef.current || 1000;
+
         if (!isNaN(t1) && !isNaN(t2) && t2 > t1) {
-          let dt = (t2 - t1) / mult;
-          if (dt > 2000) dt = 2000;
-          duration = Math.max(16, dt);
+          let realDt = t2 - t1;
+          if (realDt > 5000) realDt = 5000; // cap pauz
+          // ratio relativně k průměru: 1 = průměr, >1 pomalejší úsek, <1 rychlejší
+          const ratio = realDt / avg;
+          // intensity 0 → ratio = 1 (rovnoměrně), 1 → ratio plně dle reality
+          const blended = 1 + (ratio - 1) * intensity;
+          duration = Math.max(16, Math.min(2500, baseDuration * blended));
         } else {
-          duration = Math.max(16, 400 / mult);
+          duration = baseDuration;
         }
       } else {
         // 3x faster max: bigger steps and shorter duration
         step = Math.max(1, Math.floor(speed / 10));
-        duration = Math.max(16, 800 - (speed * 7.7));
+        duration = baseDuration;
       }
 
       const currentPoint = track.points[currentIndex];
@@ -375,6 +396,7 @@ export function useFlythrough(
     dynamicSpeed,
     setDynamicSpeed,
     hasTimeData,
-    speedMultiplier,
+    dynamicIntensity,
+    setDynamicIntensity,
   };
 }
