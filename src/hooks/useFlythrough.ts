@@ -123,12 +123,7 @@ export function useFlythrough(
   //   duration_ms = max(16, 800 - speed*7.7)
   //   čekání mezi kroky = duration_ms * 0.8 → reálný čas na krok ≈ duration_ms (easeTo + setTimeout 0.8d běží paralelně)
   // V praxi se používá duration jako čas na jeden krok.
-  // V dynamickém režimu (flySpeed jako násobič 1–100 → 0.25×–4×) jde duration z reálných timestampů.
-  const speedMultiplier = (() => {
-    // Mapování 1..100 → 0.25..4 (logaritmicky, default 50 ≈ 1×)
-    const t = (flySpeed - 1) / 99; // 0..1
-    return Math.pow(4, t * 2 - 1); // 0.25 .. 4
-  })();
+
 
   // Pomocná: průměrná délka kroku v ms podle slideru Rychlost (stejně jako statický režim).
   const avgStepMsForSpeed = (speed: number) => Math.max(16, 800 - speed * 7.7);
