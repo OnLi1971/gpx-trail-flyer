@@ -92,6 +92,15 @@ export function useFlythrough(
   const flyMarkerRef = useRef<Marker | null>(null);
   const [markerIcon, setMarkerIconState] = useState<MarkerIcon>('bike');
   const markerIconRef = useRef<MarkerIcon>('bike');
+  const [dynamicSpeed, setDynamicSpeedState] = useState(false);
+  const dynamicSpeedRef = useRef(false);
+
+  const setDynamicSpeed = useCallback((value: boolean) => {
+    setDynamicSpeedState(value);
+    dynamicSpeedRef.current = value;
+  }, []);
+
+  const hasTimeData = !!(gpxData && gpxData.tracks[0]?.points.some((p) => !!p.time));
 
   const setMarkerIcon = useCallback((icon: MarkerIcon) => {
     setMarkerIconState(icon);
