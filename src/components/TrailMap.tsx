@@ -1014,6 +1014,30 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 />
                 <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.elevationExaggeration}×</span>
               </div>
+
+              {/* Marker icon picker */}
+              <div className="flex items-center gap-3">
+                <CircleDot className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground w-20">Ikonka</span>
+                <ToggleGroup
+                  type="single"
+                  value={flythrough.markerIcon}
+                  onValueChange={(v) => v && flythrough.setMarkerIcon(v as 'bike' | 'walk' | 'car')}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 justify-start"
+                >
+                  <ToggleGroupItem value="bike" aria-label="Kolo">
+                    <Bike className="w-4 h-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="walk" aria-label="Chodec">
+                    <PersonStanding className="w-4 h-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="car" aria-label="Auto">
+                    <Car className="w-4 h-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
             </>
           )}
 
