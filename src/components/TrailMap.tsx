@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { fetchPeaksAndPlaces, filterPOIsNearTrack } from '@/utils/overpassApi';
 import { useFlythrough } from '@/hooks/useFlythrough';
 import { useElevationData } from '@/hooks/useElevationData';
