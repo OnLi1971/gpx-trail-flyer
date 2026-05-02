@@ -90,6 +90,7 @@ export function useFlythrough(
   const elevationExaggerationRef = useRef(1.9);
   const lastBearingRef = useRef(0);
   const flyMarkerRef = useRef<Marker | null>(null);
+  const avgRealDtRef = useRef<number>(0);
   const [markerIcon, setMarkerIconState] = useState<MarkerIcon>('bike');
   const markerIconRef = useRef<MarkerIcon>('bike');
   const [dynamicSpeed, setDynamicSpeedState] = useState(false);
