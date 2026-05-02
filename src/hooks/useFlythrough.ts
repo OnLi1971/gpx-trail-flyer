@@ -254,9 +254,26 @@ export function useFlythrough(
         markerElement.innerHTML = MARKER_ICON_SVGS[markerIconRef.current];
         markerElement.style.color = '#ef4444';
         markerElement.style.filter = 'drop-shadow(0 0 6px rgba(239, 68, 68, 0.8))';
+        markerElement.style.transformOrigin = 'center center';
+        markerElement.style.willChange = 'transform';
         flyMarkerRef.current = new Marker({ element: markerElement })
           .setLngLat([currentPoint.lon, currentPoint.lat])
           .addTo(map.current!);
+      }
+
+      // Natoč ikonku podle směru jízdy vůči obrazovce
+      // (targetBearing = směr trasy vůči severu, mapBearing = rotace kamery)
+      // Chodec je symetrický, kolo i auto míří doprava (východ = 90°), proto -90°.
+      const screenBearing = targetBearing - smoothBearing;
+      const iconRotation = markerIconRef.current === 'walk'
+        ? 0
+        : screenBearing - 90;
+      const el = flyMarkerRef.current.getElement();
+      const inner = el.firstElementChild as HTMLElement | null;
+      if (inner) {
+        inner.style.transform = `rotate(${iconRotation}deg)`;
+        inner.style.transformOrigin = 'center center';
+        inner.style.transition = 'transform 200ms linear';
       }
 
       flyStepTimeoutRef.current = setTimeout(() => {
