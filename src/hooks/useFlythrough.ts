@@ -242,29 +242,35 @@ export function useFlythrough(
 
       const speed = flySpeedRef.current;
       const useDynamic = dynamicSpeedRef.current;
+      const baseDuration = Math.max(16, 800 - (speed * 7.7));
 
       let step: number;
       let duration: number;
 
       if (useDynamic) {
         step = 1;
-        const t = (speed - 1) / 99;
-        const mult = Math.pow(4, t * 2 - 1); // 0.25..4
+        const intensity = Math.max(0, Math.min(100, dynamicIntensityRef.current)) / 100;
         const cur = track.points[currentIndex];
         const nxt = track.points[Math.min(currentIndex + 1, totalPoints - 1)];
         const t1 = cur.time ? new Date(cur.time).getTime() : NaN;
         const t2 = nxt.time ? new Date(nxt.time).getTime() : NaN;
+        const avg = avgRealDtRef.current || 1000;
+
         if (!isNaN(t1) && !isNaN(t2) && t2 > t1) {
-          let dt = (t2 - t1) / mult;
-          if (dt > 2000) dt = 2000;
-          duration = Math.max(16, dt);
+          let realDt = t2 - t1;
+          if (realDt > 5000) realDt = 5000; // cap pauz
+          // ratio relativně k průměru: 1 = průměr, >1 pomalejší úsek, <1 rychlejší
+          const ratio = realDt / avg;
+          // intensity 0 → ratio = 1 (rovnoměrně), 1 → ratio plně dle reality
+          const blended = 1 + (ratio - 1) * intensity;
+          duration = Math.max(16, Math.min(2500, baseDuration * blended));
         } else {
-          duration = Math.max(16, 400 / mult);
+          duration = baseDuration;
         }
       } else {
         // 3x faster max: bigger steps and shorter duration
         step = Math.max(1, Math.floor(speed / 10));
-        duration = Math.max(16, 800 - (speed * 7.7));
+        duration = baseDuration;
       }
 
       const currentPoint = track.points[currentIndex];
