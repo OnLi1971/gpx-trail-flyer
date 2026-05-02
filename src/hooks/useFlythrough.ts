@@ -138,10 +138,9 @@ export function useFlythrough(
     const avgStepMs = avgStepMsForSpeed(speed);
 
     if (dynamicSpeed && hasTimeData) {
-      // V dynamickém režimu krok = 1 bod, průměrná doba kroku = avgStepMs.
-      // Intenzita posunuje rozložení mezi rovnoměrné (avgStepMs) a reálné (∝ dt).
-      // Celková délka průletu je ≈ numSteps * avgStepMs (intenzita rozložení nemění průměr).
-      const numSteps = points.length - 1;
+      // V dynamickém režimu používáme stejný step jako statický.
+      const stepDyn = Math.max(1, Math.floor(speed / 10));
+      const numSteps = Math.ceil((points.length - 1) / stepDyn);
       return Math.max(5, Math.round((2000 + numSteps * avgStepMs) / 1000));
     }
 
@@ -263,20 +262,22 @@ export function useFlythrough(
       let duration: number;
 
       if (useDynamic) {
-        step = 1;
+        // V dynamickém režimu krok roste s rychlostí stejně jako ve statickém,
+        // ale duration se modifikuje podle reálného dt vůči průměru.
+        step = Math.max(1, Math.floor(speed / 10));
         const intensity = Math.max(0, Math.min(100, dynamicIntensityRef.current)) / 100;
         const cur = track.points[currentIndex];
-        const nxt = track.points[Math.min(currentIndex + 1, totalPoints - 1)];
+        const nxtIdx = Math.min(currentIndex + step, totalPoints - 1);
+        const nxt = track.points[nxtIdx];
         const t1 = cur.time ? new Date(cur.time).getTime() : NaN;
         const t2 = nxt.time ? new Date(nxt.time).getTime() : NaN;
-        const avg = avgRealDtRef.current || 1000;
+        const avg = (avgRealDtRef.current || 1000) * step; // průměr na step bodů
 
         if (!isNaN(t1) && !isNaN(t2) && t2 > t1) {
           let realDt = t2 - t1;
-          if (realDt > 5000) realDt = 5000; // cap pauz
-          // ratio relativně k průměru: 1 = průměr, >1 pomalejší úsek, <1 rychlejší
+          const cap = 5000 * step;
+          if (realDt > cap) realDt = cap;
           const ratio = realDt / avg;
-          // intensity 0 → ratio = 1 (rovnoměrně), 1 → ratio plně dle reality
           const blended = 1 + (ratio - 1) * intensity;
           duration = Math.max(16, Math.min(2500, baseDuration * blended));
         } else {
