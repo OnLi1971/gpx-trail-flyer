@@ -241,9 +241,31 @@ export function useFlythrough(
       }
 
       const speed = flySpeedRef.current;
-      // 3x faster max: bigger steps and shorter duration
-      const step = Math.max(1, Math.floor(speed / 10));
-      const duration = Math.max(16, 800 - (speed * 7.7));
+      const useDynamic = dynamicSpeedRef.current;
+
+      let step: number;
+      let duration: number;
+
+      if (useDynamic) {
+        step = 1;
+        const t = (speed - 1) / 99;
+        const mult = Math.pow(4, t * 2 - 1); // 0.25..4
+        const cur = track.points[currentIndex];
+        const nxt = track.points[Math.min(currentIndex + 1, totalPoints - 1)];
+        const t1 = cur.time ? new Date(cur.time).getTime() : NaN;
+        const t2 = nxt.time ? new Date(nxt.time).getTime() : NaN;
+        if (!isNaN(t1) && !isNaN(t2) && t2 > t1) {
+          let dt = (t2 - t1) / mult;
+          if (dt > 2000) dt = 2000;
+          duration = Math.max(16, dt);
+        } else {
+          duration = Math.max(16, 400 / mult);
+        }
+      } else {
+        // 3x faster max: bigger steps and shorter duration
+        step = Math.max(1, Math.floor(speed / 10));
+        duration = Math.max(16, 800 - (speed * 7.7));
+      }
 
       const currentPoint = track.points[currentIndex];
       const nextIndex = Math.min(currentIndex + step, totalPoints - 1);
