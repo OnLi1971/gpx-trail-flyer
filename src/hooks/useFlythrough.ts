@@ -130,31 +130,28 @@ export function useFlythrough(
     return Math.pow(4, t * 2 - 1); // 0.25 .. 4
   })();
 
+  // Pomocná: průměrná délka kroku v ms podle slideru Rychlost (stejně jako statický režim).
+  const avgStepMsForSpeed = (speed: number) => Math.max(16, 800 - speed * 7.7);
+
   const flyDurationSec = (() => {
     if (!gpxData || gpxData.tracks.length === 0) return 60;
     const points = gpxData.tracks[0].points;
     if (points.length < 2) return 60;
 
+    const speed = flySpeed;
+    const avgStepMs = avgStepMsForSpeed(speed);
+
     if (dynamicSpeed && hasTimeData) {
-      let totalMs = 0;
-      for (let i = 0; i < points.length - 1; i++) {
-        const t1 = points[i].time ? new Date(points[i].time!).getTime() : NaN;
-        const t2 = points[i + 1].time ? new Date(points[i + 1].time!).getTime() : NaN;
-        if (!isNaN(t1) && !isNaN(t2)) {
-          let dt = t2 - t1;
-          if (dt < 0) dt = 0;
-          if (dt > 2000) dt = 2000; // cap pauz
-          totalMs += dt;
-        }
-      }
-      return Math.max(5, Math.round((2000 + totalMs / speedMultiplier) / 1000));
+      // V dynamickém režimu krok = 1 bod, průměrná doba kroku = avgStepMs.
+      // Intenzita posunuje rozložení mezi rovnoměrné (avgStepMs) a reálné (∝ dt).
+      // Celková délka průletu je ≈ numSteps * avgStepMs (intenzita rozložení nemění průměr).
+      const numSteps = points.length - 1;
+      return Math.max(5, Math.round((2000 + numSteps * avgStepMs) / 1000));
     }
 
-    const speed = flySpeed;
     const step = Math.max(1, Math.floor(speed / 10));
-    const duration = Math.max(16, 800 - speed * 7.7);
     const numSteps = Math.ceil((points.length - 1) / step);
-    return Math.max(5, Math.round((2000 + numSteps * duration) / 1000));
+    return Math.max(5, Math.round((2000 + numSteps * avgStepMs) / 1000));
   })();
 
   const setFlySpeed = useCallback((value: number) => {
