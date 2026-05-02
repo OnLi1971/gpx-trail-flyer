@@ -138,10 +138,9 @@ export function useFlythrough(
     const avgStepMs = avgStepMsForSpeed(speed);
 
     if (dynamicSpeed && hasTimeData) {
-      // V dynamickém režimu krok = 1 bod, průměrná doba kroku = avgStepMs.
-      // Intenzita posunuje rozložení mezi rovnoměrné (avgStepMs) a reálné (∝ dt).
-      // Celková délka průletu je ≈ numSteps * avgStepMs (intenzita rozložení nemění průměr).
-      const numSteps = points.length - 1;
+      // V dynamickém režimu používáme stejný step jako statický.
+      const stepDyn = Math.max(1, Math.floor(speed / 10));
+      const numSteps = Math.ceil((points.length - 1) / stepDyn);
       return Math.max(5, Math.round((2000 + numSteps * avgStepMs) / 1000));
     }
 
