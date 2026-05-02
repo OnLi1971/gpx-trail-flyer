@@ -372,5 +372,9 @@ export function useFlythrough(
     flyStartTimestamp,
     markerIcon,
     setMarkerIcon,
+    dynamicSpeed,
+    setDynamicSpeed,
+    hasTimeData,
+    speedMultiplier,
   };
 }
