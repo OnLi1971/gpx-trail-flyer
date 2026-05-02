@@ -307,5 +307,7 @@ export function useFlythrough(
     stopFlythrough,
     flyDurationSec,
     flyStartTimestamp,
+    markerIcon,
+    setMarkerIcon,
   };
 }
