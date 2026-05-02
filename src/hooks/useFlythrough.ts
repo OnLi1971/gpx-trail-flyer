@@ -90,6 +90,17 @@ export function useFlythrough(
   const elevationExaggerationRef = useRef(1.9);
   const lastBearingRef = useRef(0);
   const flyMarkerRef = useRef<Marker | null>(null);
+  const [markerIcon, setMarkerIconState] = useState<MarkerIcon>('bike');
+  const markerIconRef = useRef<MarkerIcon>('bike');
+
+  const setMarkerIcon = useCallback((icon: MarkerIcon) => {
+    setMarkerIconState(icon);
+    markerIconRef.current = icon;
+    if (flyMarkerRef.current) {
+      const el = flyMarkerRef.current.getElement();
+      el.innerHTML = MARKER_ICON_SVGS[icon];
+    }
+  }, []);
 
   // Vypočítaná délka průletu (sekundy) — odvozeno přesně podle vzorce v animateStep:
   //   step = max(1, floor(speed/10))
