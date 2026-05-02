@@ -234,6 +234,21 @@ export function useFlythrough(
     let currentIndex = 0;
     const totalPoints = track.points.length;
 
+    // Spočítat průměrné dt pro dynamický režim
+    let sumDt = 0;
+    let countDt = 0;
+    for (let i = 0; i < track.points.length - 1; i++) {
+      const a = track.points[i].time ? new Date(track.points[i].time!).getTime() : NaN;
+      const b = track.points[i + 1].time ? new Date(track.points[i + 1].time!).getTime() : NaN;
+      if (!isNaN(a) && !isNaN(b) && b > a) {
+        let dt = b - a;
+        if (dt > 5000) dt = 5000;
+        sumDt += dt;
+        countDt++;
+      }
+    }
+    avgRealDtRef.current = countDt > 0 ? sumDt / countDt : 1000;
+
     const animateStep = () => {
       if (!map.current || currentIndex >= totalPoints - 1) {
         stopFlythrough('finished');
