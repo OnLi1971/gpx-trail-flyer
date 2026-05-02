@@ -27,9 +27,9 @@ export async function fetchPeaksAndPlaces(bounds: {
   maxLat: number;
   minLon: number;
   maxLon: number;
-}): Promise<POIPoint[]> {
-  // Add buffer (~2km) around bounds
-  const buffer = 0.02;
+}, bufferKm: number = 2): Promise<POIPoint[]> {
+  // Buffer in degrees (~111 km / °)
+  const buffer = bufferKm / 111;
   const south = bounds.minLat - buffer;
   const north = bounds.maxLat + buffer;
   const west = bounds.minLon - buffer;

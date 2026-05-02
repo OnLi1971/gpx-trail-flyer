@@ -80,6 +80,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [castleLimit, setCastleLimit] = useState(initialPoiSettings?.castleLimit ?? 15);
   const [saddleLimit, setSaddleLimit] = useState(initialPoiSettings?.saddleLimit ?? 15);
   const [pubLimit, setPubLimit] = useState(initialPoiSettings?.pubLimit ?? 10);
+  // POI search radius around track (km)
+  const [poiRadiusKm, setPoiRadiusKm] = useState<number>(2);
   // Manual peak selection
   const [peakSelectionMode, setPeakSelectionMode] = useState<'auto' | 'manual'>(initialPoiSettings?.peakSelectionMode ?? 'auto');
   const [selectedPeakKeys, setSelectedPeakKeys] = useState<Set<string>>(
@@ -632,10 +634,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     setPoiStatus('loading');
     setPoiError(null);
     try {
-      const pois = await fetchPeaksAndPlaces(gpxData.bounds);
+      const pois = await fetchPeaksAndPlaces(gpxData.bounds, poiRadiusKm);
       if (token.cancelled || !map.current) return;
 
-      const nearbyPois = filterPOIsNearTrack(pois, track.points, 2);
+      const nearbyPois = filterPOIsNearTrack(pois, track.points, poiRadiusKm);
       allNearbyPoisRef.current = nearbyPois;
 
       setPoiCounts(buildCounts(nearbyPois, pois.length));
@@ -657,7 +659,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       setPoiStatus('error');
       setPoiError(err instanceof Error ? err.message : 'Neznámá chyba');
     }
-  }, [gpxData]);
+  }, [gpxData, poiRadiusKm]);
 
   // POI fetch — only on gpx change
   useEffect(() => {
@@ -676,6 +678,17 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       poiMarkersRef.current = [];
     };
   }, [gpxData, loadPOIs]);
+
+  // Refetch when search radius changes (skip first mount)
+  const radiusInitRef = useRef(true);
+  useEffect(() => {
+    if (radiusInitRef.current) {
+      radiusInitRef.current = false;
+      return;
+    }
+    if (!map.current || !gpxData) return;
+    loadPOIs(true);
+  }, [poiRadiusKm]);
 
   // Re-render markers when limits change (without re-fetching)
   useEffect(() => {
@@ -1039,6 +1052,24 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 </ToggleGroup>
               </div>
             </>
+          )}
+
+          {/* POI search radius */}
+          {gpxData && (
+            <div className="flex items-center gap-3">
+              <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Okolí POI</span>
+              <Slider
+                value={[poiRadiusKm]}
+                onValueChange={(value) => setPoiRadiusKm(value[0])}
+                min={1}
+                max={10}
+                step={1}
+                className="flex-1"
+                disabled={poiStatus === 'loading'}
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">{poiRadiusKm} km</span>
+            </div>
           )}
 
           {/* POI density — peaks (hory) */}
