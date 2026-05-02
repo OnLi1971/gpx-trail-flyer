@@ -634,10 +634,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     setPoiStatus('loading');
     setPoiError(null);
     try {
-      const pois = await fetchPeaksAndPlaces(gpxData.bounds);
+      const pois = await fetchPeaksAndPlaces(gpxData.bounds, poiRadiusKm);
       if (token.cancelled || !map.current) return;
 
-      const nearbyPois = filterPOIsNearTrack(pois, track.points, 2);
+      const nearbyPois = filterPOIsNearTrack(pois, track.points, poiRadiusKm);
       allNearbyPoisRef.current = nearbyPois;
 
       setPoiCounts(buildCounts(nearbyPois, pois.length));
