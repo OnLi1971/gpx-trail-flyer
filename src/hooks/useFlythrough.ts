@@ -94,10 +94,17 @@ export function useFlythrough(
   const markerIconRef = useRef<MarkerIcon>('bike');
   const [dynamicSpeed, setDynamicSpeedState] = useState(false);
   const dynamicSpeedRef = useRef(false);
+  const [dynamicIntensity, setDynamicIntensityState] = useState(70);
+  const dynamicIntensityRef = useRef(70);
 
   const setDynamicSpeed = useCallback((value: boolean) => {
     setDynamicSpeedState(value);
     dynamicSpeedRef.current = value;
+  }, []);
+
+  const setDynamicIntensity = useCallback((value: number) => {
+    setDynamicIntensityState(value);
+    dynamicIntensityRef.current = value;
   }, []);
 
   const hasTimeData = !!(gpxData && gpxData.tracks[0]?.points.some((p) => !!p.time));
