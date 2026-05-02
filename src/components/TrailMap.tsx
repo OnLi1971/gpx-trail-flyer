@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { fetchPeaksAndPlaces, filterPOIsNearTrack } from '@/utils/overpassApi';
 import { useFlythrough } from '@/hooks/useFlythrough';
 import { useElevationData } from '@/hooks/useElevationData';
@@ -968,10 +969,29 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
           {gpxData && (
             <>
+              {/* Dynamická rychlost dle GPX časů */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground flex-1">
+                  Dynamická rychlost (dle GPX)
+                </span>
+                <Switch
+                  checked={flythrough.dynamicSpeed}
+                  onCheckedChange={flythrough.setDynamicSpeed}
+                  disabled={!flythrough.hasTimeData || flythrough.isFlying}
+                />
+              </div>
+              {!flythrough.hasTimeData && (
+                <p className="text-[10px] text-muted-foreground -mt-2 pl-1">
+                  GPX neobsahuje časové značky
+                </p>
+              )}
+
               {/* Speed slider */}
               <div className="flex items-center gap-3">
                 <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-                <span className="text-xs font-medium text-muted-foreground w-20">Rychlost</span>
+                <span className="text-xs font-medium text-muted-foreground w-20">
+                  {flythrough.dynamicSpeed ? 'Násobič' : 'Rychlost'}
+                </span>
                 <Slider
                   value={[flythrough.flySpeed]}
                   onValueChange={(value) => flythrough.setFlySpeed(value[0])}
@@ -980,7 +1000,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   step={1}
                   className="flex-1"
                 />
-                <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.flySpeed}%</span>
+                <span className="text-xs text-muted-foreground w-10 text-right">
+                  {flythrough.dynamicSpeed
+                    ? `${flythrough.speedMultiplier.toFixed(2)}×`
+                    : `${flythrough.flySpeed}%`}
+                </span>
               </div>
 
               {/* Rotation slider */}

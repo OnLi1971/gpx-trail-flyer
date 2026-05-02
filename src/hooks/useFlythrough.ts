@@ -92,6 +92,15 @@ export function useFlythrough(
   const flyMarkerRef = useRef<Marker | null>(null);
   const [markerIcon, setMarkerIconState] = useState<MarkerIcon>('bike');
   const markerIconRef = useRef<MarkerIcon>('bike');
+  const [dynamicSpeed, setDynamicSpeedState] = useState(false);
+  const dynamicSpeedRef = useRef(false);
+
+  const setDynamicSpeed = useCallback((value: boolean) => {
+    setDynamicSpeedState(value);
+    dynamicSpeedRef.current = value;
+  }, []);
+
+  const hasTimeData = !!(gpxData && gpxData.tracks[0]?.points.some((p) => !!p.time));
 
   const setMarkerIcon = useCallback((icon: MarkerIcon) => {
     setMarkerIconState(icon);
@@ -107,15 +116,37 @@ export function useFlythrough(
   //   duration_ms = max(16, 800 - speed*7.7)
   //   čekání mezi kroky = duration_ms * 0.8 → reálný čas na krok ≈ duration_ms (easeTo + setTimeout 0.8d běží paralelně)
   // V praxi se používá duration jako čas na jeden krok.
+  // V dynamickém režimu (flySpeed jako násobič 1–100 → 0.25×–4×) jde duration z reálných timestampů.
+  const speedMultiplier = (() => {
+    // Mapování 1..100 → 0.25..4 (logaritmicky, default 50 ≈ 1×)
+    const t = (flySpeed - 1) / 99; // 0..1
+    return Math.pow(4, t * 2 - 1); // 0.25 .. 4
+  })();
+
   const flyDurationSec = (() => {
     if (!gpxData || gpxData.tracks.length === 0) return 60;
-    const totalPoints = gpxData.tracks[0].points.length;
-    if (totalPoints < 2) return 60;
+    const points = gpxData.tracks[0].points;
+    if (points.length < 2) return 60;
+
+    if (dynamicSpeed && hasTimeData) {
+      let totalMs = 0;
+      for (let i = 0; i < points.length - 1; i++) {
+        const t1 = points[i].time ? new Date(points[i].time!).getTime() : NaN;
+        const t2 = points[i + 1].time ? new Date(points[i + 1].time!).getTime() : NaN;
+        if (!isNaN(t1) && !isNaN(t2)) {
+          let dt = t2 - t1;
+          if (dt < 0) dt = 0;
+          if (dt > 2000) dt = 2000; // cap pauz
+          totalMs += dt;
+        }
+      }
+      return Math.max(5, Math.round((2000 + totalMs / speedMultiplier) / 1000));
+    }
+
     const speed = flySpeed;
     const step = Math.max(1, Math.floor(speed / 10));
     const duration = Math.max(16, 800 - speed * 7.7);
-    const numSteps = Math.ceil((totalPoints - 1) / step);
-    // 2 s úvodní flyTo + numSteps * duration
+    const numSteps = Math.ceil((points.length - 1) / step);
     return Math.max(5, Math.round((2000 + numSteps * duration) / 1000));
   })();
 
@@ -210,9 +241,31 @@ export function useFlythrough(
       }
 
       const speed = flySpeedRef.current;
-      // 3x faster max: bigger steps and shorter duration
-      const step = Math.max(1, Math.floor(speed / 10));
-      const duration = Math.max(16, 800 - (speed * 7.7));
+      const useDynamic = dynamicSpeedRef.current;
+
+      let step: number;
+      let duration: number;
+
+      if (useDynamic) {
+        step = 1;
+        const t = (speed - 1) / 99;
+        const mult = Math.pow(4, t * 2 - 1); // 0.25..4
+        const cur = track.points[currentIndex];
+        const nxt = track.points[Math.min(currentIndex + 1, totalPoints - 1)];
+        const t1 = cur.time ? new Date(cur.time).getTime() : NaN;
+        const t2 = nxt.time ? new Date(nxt.time).getTime() : NaN;
+        if (!isNaN(t1) && !isNaN(t2) && t2 > t1) {
+          let dt = (t2 - t1) / mult;
+          if (dt > 2000) dt = 2000;
+          duration = Math.max(16, dt);
+        } else {
+          duration = Math.max(16, 400 / mult);
+        }
+      } else {
+        // 3x faster max: bigger steps and shorter duration
+        step = Math.max(1, Math.floor(speed / 10));
+        duration = Math.max(16, 800 - (speed * 7.7));
+      }
 
       const currentPoint = track.points[currentIndex];
       const nextIndex = Math.min(currentIndex + step, totalPoints - 1);
@@ -319,5 +372,9 @@ export function useFlythrough(
     flyStartTimestamp,
     markerIcon,
     setMarkerIcon,
+    dynamicSpeed,
+    setDynamicSpeed,
+    hasTimeData,
+    speedMultiplier,
   };
 }
