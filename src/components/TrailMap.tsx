@@ -80,6 +80,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [castleLimit, setCastleLimit] = useState(initialPoiSettings?.castleLimit ?? 15);
   const [saddleLimit, setSaddleLimit] = useState(initialPoiSettings?.saddleLimit ?? 15);
   const [pubLimit, setPubLimit] = useState(initialPoiSettings?.pubLimit ?? 10);
+  // POI search radius around track (km)
+  const [poiRadiusKm, setPoiRadiusKm] = useState<number>(2);
   // Manual peak selection
   const [peakSelectionMode, setPeakSelectionMode] = useState<'auto' | 'manual'>(initialPoiSettings?.peakSelectionMode ?? 'auto');
   const [selectedPeakKeys, setSelectedPeakKeys] = useState<Set<string>>(
