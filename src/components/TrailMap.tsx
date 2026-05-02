@@ -4,7 +4,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, AnimationSettings } from '@/types/gpx';
 
 import { ElevationChart } from './ElevationChart';
-import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot, Maximize2, Minimize2 } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot, Maximize2, Minimize2, Bike, PersonStanding, Car } from 'lucide-react';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -1012,6 +1013,30 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   className="flex-1"
                 />
                 <span className="text-xs text-muted-foreground w-10 text-right">{flythrough.elevationExaggeration}×</span>
+              </div>
+
+              {/* Marker icon picker */}
+              <div className="flex items-center gap-3">
+                <CircleDot className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground w-20">Ikonka</span>
+                <ToggleGroup
+                  type="single"
+                  value={flythrough.markerIcon}
+                  onValueChange={(v) => v && flythrough.setMarkerIcon(v as 'bike' | 'walk' | 'car')}
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 justify-start"
+                >
+                  <ToggleGroupItem value="bike" aria-label="Kolo">
+                    <Bike className="w-4 h-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="walk" aria-label="Chodec">
+                    <PersonStanding className="w-4 h-4" />
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="car" aria-label="Auto">
+                    <Car className="w-4 h-4" />
+                  </ToggleGroupItem>
+                </ToggleGroup>
               </div>
             </>
           )}

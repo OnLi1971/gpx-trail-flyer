@@ -2,6 +2,34 @@ import { useState, useRef, useCallback, MutableRefObject } from 'react';
 import { Map, Marker, LngLatBounds } from 'maplibre-gl';
 import { GPXData } from '@/types/gpx';
 
+export type MarkerIcon = 'bike' | 'walk' | 'car';
+
+const MARKER_ICON_SVGS: Record<MarkerIcon, string> = {
+  // bike (původní)
+  bike: `
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="18.5" cy="17.5" r="3.5"/>
+      <circle cx="5.5" cy="17.5" r="3.5"/>
+      <circle cx="15" cy="5" r="1"/>
+      <path d="M12 17.5V14l-3-3 4-3 2 3h2"/>
+    </svg>`,
+  // chodec (lucide PersonStanding)
+  walk: `
+    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="5" r="1"/>
+      <path d="M9 20l3-6 3 6"/>
+      <path d="M6 8l6 2 6-2"/>
+      <path d="M12 10v4"/>
+    </svg>`,
+  // auto (lucide Car)
+  car: `
+    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/>
+      <circle cx="7" cy="17" r="2"/>
+      <circle cx="17" cy="17" r="2"/>
+    </svg>`,
+};
+
 function calculateBearing(start: { lat: number; lon: number }, end: { lat: number; lon: number }) {
   const startLat = start.lat * Math.PI / 180;
   const startLon = start.lon * Math.PI / 180;
@@ -62,6 +90,17 @@ export function useFlythrough(
   const elevationExaggerationRef = useRef(1.9);
   const lastBearingRef = useRef(0);
   const flyMarkerRef = useRef<Marker | null>(null);
+  const [markerIcon, setMarkerIconState] = useState<MarkerIcon>('bike');
+  const markerIconRef = useRef<MarkerIcon>('bike');
+
+  const setMarkerIcon = useCallback((icon: MarkerIcon) => {
+    setMarkerIconState(icon);
+    markerIconRef.current = icon;
+    if (flyMarkerRef.current) {
+      const el = flyMarkerRef.current.getElement();
+      el.innerHTML = MARKER_ICON_SVGS[icon];
+    }
+  }, []);
 
   // Vypočítaná délka průletu (sekundy) — odvozeno přesně podle vzorce v animateStep:
   //   step = max(1, floor(speed/10))
@@ -212,14 +251,7 @@ export function useFlythrough(
         flyMarkerRef.current.setLngLat([currentPoint.lon, currentPoint.lat]);
       } else {
         const markerElement = document.createElement('div');
-        markerElement.innerHTML = `
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="18.5" cy="17.5" r="3.5"/>
-            <circle cx="5.5" cy="17.5" r="3.5"/>
-            <circle cx="15" cy="5" r="1"/>
-            <path d="M12 17.5V14l-3-3 4-3 2 3h2"/>
-          </svg>
-        `;
+        markerElement.innerHTML = MARKER_ICON_SVGS[markerIconRef.current];
         markerElement.style.color = '#ef4444';
         markerElement.style.filter = 'drop-shadow(0 0 6px rgba(239, 68, 68, 0.8))';
         flyMarkerRef.current = new Marker({ element: markerElement })
@@ -275,5 +307,7 @@ export function useFlythrough(
     stopFlythrough,
     flyDurationSec,
     flyStartTimestamp,
+    markerIcon,
+    setMarkerIcon,
   };
 }
