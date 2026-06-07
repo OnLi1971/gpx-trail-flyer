@@ -657,23 +657,39 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       onPoisFetchedRef.current?.(nearbyPois);
     } catch (err) {
       if (token.cancelled) return;
+      console.error('[POI] fetch failed', err);
       setPoiStatus('error');
       setPoiError(err instanceof Error ? err.message : 'Neznámá chyba');
     }
   }, [gpxData, poiRadiusKm]);
 
-  // POI fetch — only on gpx change
+  // POI fetch — on gpx change. Robust k tomu, jestli už style mapy stihl naloadovat.
   useEffect(() => {
-    if (!map.current || !gpxData) return;
+    if (!gpxData) return;
+    let disposed = false;
 
-    const run = () => loadPOIs(false);
-    if (map.current.isStyleLoaded()) {
-      run();
-    } else {
-      map.current.once('load', run);
-    }
+    const tryRun = (attempt = 0) => {
+      if (disposed) return;
+      const m = map.current;
+      if (!m) {
+        if (attempt < 50) setTimeout(() => tryRun(attempt + 1), 100);
+        return;
+      }
+      if (m.isStyleLoaded?.() || (m as any).loaded?.()) {
+        loadPOIs(false);
+      } else {
+        const onReady = () => { m.off('load', onReady); m.off('idle', onReady); if (!disposed) loadPOIs(false); };
+        m.once('load', onReady);
+        m.once('idle', onReady);
+        // pojistka — kdyby ani 'load' ani 'idle' nepřišly
+        setTimeout(() => { if (!disposed) loadPOIs(false); }, 1500);
+      }
+    };
+
+    tryRun();
 
     return () => {
+      disposed = true;
       if (poiCancelRef.current) poiCancelRef.current.cancelled = true;
       poiMarkersRef.current.forEach(m => m.remove());
       poiMarkersRef.current = [];
@@ -687,7 +703,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       radiusInitRef.current = false;
       return;
     }
-    if (!map.current || !gpxData) return;
+    if (!gpxData) return;
     loadPOIs(true);
   }, [poiRadiusKm]);
 
