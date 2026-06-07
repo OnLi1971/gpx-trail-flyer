@@ -657,6 +657,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       onPoisFetchedRef.current?.(nearbyPois);
     } catch (err) {
       if (token.cancelled) return;
+      console.error('[POI] fetch failed', err);
       setPoiStatus('error');
       setPoiError(err instanceof Error ? err.message : 'Neznámá chyba');
     }
