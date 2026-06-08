@@ -531,27 +531,32 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     });
   }, [currentPosition, flythrough.flyingIndex, flythrough.showSummary, gpxData, poiVisibilityKm, poiVersion, outroMode]);
 
-  // Závěrečný orbit: POI se postupně fade-in podle úhlu kamery vůči středu trasy
+  // Závěrečný orbit: POI se postupně fade-in podle pořadí na trase (start → cíl)
   useEffect(() => {
     if (!flythrough.showSummary || !map.current || !gpxData || gpxData.tracks.length === 0) return;
 
-    // Spočítat střed trasy
     const track = gpxData.tracks[0];
-    let sumLat = 0, sumLon = 0, n = 0;
-    let minLat = Infinity, maxLat = -Infinity, minLon = Infinity, maxLon = -Infinity;
-    track.points.forEach(p => {
-      sumLat += p.lat; sumLon += p.lon; n++;
-      if (p.lat < minLat) minLat = p.lat;
-      if (p.lat > maxLat) maxLat = p.lat;
-      if (p.lon < minLon) minLon = p.lon;
-      if (p.lon > maxLon) maxLon = p.lon;
-    });
-    const centerLat = (minLat + maxLat) / 2;
-    const centerLon = (minLon + maxLon) / 2;
-    const cosLat = Math.cos((centerLat * Math.PI) / 180);
+    const pts = track.points;
+    if (pts.length === 0) return;
 
-    // Inicializace markerů — schovat všechny, připravit transition
-    const revealed = new Set<number>();
+    // Pro každý POI najdi index nejbližšího bodu na trase
+    const cosLat0 = Math.cos((pts[0].lat * Math.PI) / 180);
+    const poiTrackIdx: number[] = poiMarkersRef.current.map(({ lat, lon }) => {
+      let bestI = 0;
+      let bestD = Infinity;
+      for (let i = 0; i < pts.length; i++) {
+        const dLat = (pts[i].lat - lat) * 111;
+        const dLon = (pts[i].lon - lon) * 111 * cosLat0;
+        const d = dLat * dLat + dLon * dLon;
+        if (d < bestD) { bestD = d; bestI = i; }
+      }
+      return bestI;
+    });
+
+    // Seřazené indexy POI podle pozice na trase
+    const order = poiMarkersRef.current.map((_, i) => i).sort((a, b) => poiTrackIdx[a] - poiTrackIdx[b]);
+
+    // Init — schovat
     poiMarkersRef.current.forEach(({ marker }) => {
       const el = marker.getElement();
       el.style.display = '';
@@ -560,48 +565,26 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       el.style.transform = 'scale(0.7)';
     });
 
-    // Spočítat úhel každého POI vůči středu (0° = sever, ve směru maplibre bearing)
-    const poiAngles: number[] = poiMarkersRef.current.map(({ lat, lon }) => {
-      const dx = (lon - centerLon) * cosLat;
-      const dy = lat - centerLat;
-      // bearing: 0=sever, 90=východ
-      const angle = (Math.atan2(dx, dy) * 180) / Math.PI;
-      return (angle + 360) % 360;
+    // Postupně odhalovat — celé odhalení trvá ~5 s, začne po fitBounds (1.6 s)
+    const REVEAL_DURATION_MS = 5000;
+    const START_DELAY_MS = 1700;
+    const count = order.length;
+    const timeouts: ReturnType<typeof setTimeout>[] = [];
+
+    order.forEach((poiIdx, k) => {
+      const delay = START_DELAY_MS + (count > 1 ? (k / (count - 1)) * REVEAL_DURATION_MS : 0);
+      const t = setTimeout(() => {
+        const m = poiMarkersRef.current[poiIdx];
+        if (!m) return;
+        const el = m.marker.getElement();
+        el.style.opacity = '1';
+        el.style.transform = 'scale(1)';
+      }, delay);
+      timeouts.push(t);
     });
 
-    const THRESHOLD = 35; // ° — POI se objeví, když je v tomto úhlovém okně před kamerou
-    const LEAD = 15; // ° — předstih, aby se objevil těsně předtím, než ho kamera „mine"
-
-    const angularDist = (a: number, b: number) => {
-      const d = Math.abs(((a - b + 540) % 360) - 180);
-      return d;
-    };
-
-    const update = () => {
-      if (!map.current) return;
-      const bearing = ((map.current.getBearing() + LEAD) % 360 + 360) % 360;
-      poiMarkersRef.current.forEach((_, i) => {
-        if (revealed.has(i)) return;
-        if (angularDist(bearing, poiAngles[i]) < THRESHOLD) {
-          revealed.add(i);
-          const el = poiMarkersRef.current[i].marker.getElement();
-          el.style.opacity = '1';
-          el.style.transform = 'scale(1)';
-        }
-      });
-    };
-
-    const mapInstance = map.current;
-    mapInstance.on('rotate', update);
-    mapInstance.on('move', update);
-    // První tick za chvilku, ať fitBounds doběhne
-    const t = setTimeout(update, 100);
-
     return () => {
-      clearTimeout(t);
-      mapInstance.off('rotate', update);
-      mapInstance.off('move', update);
-      // Reset stylů
+      timeouts.forEach(clearTimeout);
       poiMarkersRef.current.forEach(({ marker }) => {
         const el = marker.getElement();
         el.style.transition = '';
