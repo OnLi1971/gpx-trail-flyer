@@ -580,7 +580,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     poiMarkersRef.current.forEach(m => m.marker.remove());
     poiMarkersRef.current = [];
 
-    // Společný helper pro generování karty (bez tyčky — spodní okraj karty je přímo na bodu)
+    // Společný helper pro generování karty (tyčka se přidává zvlášť pod kartou)
     const buildCard = (opts: {
       icon: string;
       text: string;
@@ -698,7 +698,15 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         });
       });
 
-      const marker = new Marker({ element: el, anchor: 'bottom' })
+      // Centrální tyčka pod kartou
+      const pin = document.createElement('div');
+      pin.style.cssText = 'width:2px;height:14px;background:rgba(0,0,0,0.35);margin:0 auto;';
+      el.appendChild(pin);
+      const arrow = document.createElement('div');
+      arrow.style.cssText = 'width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid rgba(0,0,0,0.45);margin:0 auto;';
+      el.appendChild(arrow);
+
+      const marker = new Marker({ element: el, anchor: 'bottom', offset: [0, -10] })
         .setLngLat([poi.lon, poi.lat])
         .addTo(map.current!);
 
