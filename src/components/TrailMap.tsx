@@ -175,7 +175,13 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [presentationMode]);
 
+  const [outroMode, setOutroMode] = useState(false);
+
   const flythrough = useFlythrough(map, gpxData, (reason) => {
+    // Po dokončení průletu: skryj POI a ukaž 2D pohled shora
+    if (reason === 'finished') {
+      setOutroMode(true);
+    }
     // Pokud nahráváme, zastav nahrávání a otevři dialog s náhledem
     if (isRecordingRef.current) {
       isRecordingRef.current = false;
@@ -184,6 +190,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       setTimeout(() => setVideoDialogOpen(true), 300);
     }
   });
+
+  // Zruš outro při novém startu průletu
+  useEffect(() => {
+    if (flythrough.isFlying && outroMode) setOutroMode(false);
+  }, [flythrough.isFlying, outroMode]);
   
 
   const handleStartRecording = useCallback(() => {
