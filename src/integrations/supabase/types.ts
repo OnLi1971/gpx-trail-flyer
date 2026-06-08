@@ -60,6 +60,7 @@ export type Database = {
           cached_pois: Json | null
           castle_limit: number
           created_at: string
+          deselected_poi_keys: string[]
           gpx_data: Json
           id: string
           is_public: boolean
@@ -82,6 +83,7 @@ export type Database = {
           cached_pois?: Json | null
           castle_limit?: number
           created_at?: string
+          deselected_poi_keys?: string[]
           gpx_data: Json
           id?: string
           is_public?: boolean
@@ -104,6 +106,7 @@ export type Database = {
           cached_pois?: Json | null
           castle_limit?: number
           created_at?: string
+          deselected_poi_keys?: string[]
           gpx_data?: Json
           id?: string
           is_public?: boolean
