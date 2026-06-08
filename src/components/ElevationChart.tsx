@@ -21,6 +21,9 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
   chartData,
   currentChartPoint,
   variant = 'overlay',
+  trailColor = '#059669',
+  trailStyle = 'solid',
+  trailWidth = 2.5,
 }) => {
   if (chartData.length === 0) return null;
 
