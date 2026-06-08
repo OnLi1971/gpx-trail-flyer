@@ -1059,6 +1059,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
+          {/* Obnovit skryté POI (klikem v mapě) */}
+          {gpxData && deselectedPoiKeys.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setDeselectedPoiKeys(new Set())}
+              className="absolute top-2 right-2 z-10 bg-background/90 hover:bg-background border shadow-sm rounded-md px-3 py-1.5 text-xs font-medium flex items-center gap-1.5"
+              title="Obnovit skryté POI"
+            >
+              <X className="w-3 h-3" />
+              Obnovit {deselectedPoiKeys.size} skrytých POI
+            </button>
+          )}
+
+
           {/* POI debug — diskrétní ikona, klik rozbalí detail */}
           {gpxData && poiStatus !== 'idle' && (
             <div className="absolute bottom-2 left-2 z-10">
