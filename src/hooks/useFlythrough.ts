@@ -231,6 +231,7 @@ export function useFlythrough(
       if (reason === 'finished') {
         // Závěrečný 3D orbit pohled — kamera obkrouží celou trasu, terén zůstane viditelný
         const orbitPitch = 60;
+        setShowSummary(true);
         map.current.fitBounds(bounds, {
           padding: 60,
           pitch: orbitPitch,
@@ -251,7 +252,6 @@ export function useFlythrough(
         // Začni rotovat až po fitBounds, aby se to nervalo
         summaryTimeoutRef.current = setTimeout(() => {
           orbitAnimationRef.current = requestAnimationFrame(tick);
-          setShowSummary(true);
         }, 1600);
       } else {
         stopOrbit();
