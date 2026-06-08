@@ -952,6 +952,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
+          {/* Závěrečné shrnutí trasy po dokončení průletu */}
+          {gpxData && flythrough.showSummary && (
+            <TrailSummaryCard
+              gpxData={gpxData}
+              poiCounts={poiCounts}
+              flyDurationSec={flythrough.flyDurationSec}
+              trailColor={trailColor}
+              trailStyle={trailStyle}
+              trailWidth={trailWidth}
+              onClose={() => flythrough.dismissSummary()}
+            />
+          )}
+
           {/* Basemap toggle + Fullscreen / Presentation toggle */}
           {gpxData && (
             <div className="absolute top-2 right-2 z-20 flex gap-2">
