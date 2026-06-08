@@ -125,6 +125,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     setPubLimit(initialPoiSettings.pubLimit);
     setPeakSelectionMode(initialPoiSettings.peakSelectionMode);
     setSelectedPeakKeys(new Set(initialPoiSettings.selectedPeakKeys));
+    setPlaceSelectionMode(initialPoiSettings.placeSelectionMode ?? 'auto');
+    setSelectedPlaceKeys(new Set(initialPoiSettings.selectedPlaceKeys ?? []));
   }, [initialPoiSettings]);
 
   // Emit POI settings to parent when they change
@@ -139,12 +141,15 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       pubLimit,
       peakSelectionMode,
       selectedPeakKeys: [...selectedPeakKeys],
+      placeSelectionMode,
+      selectedPlaceKeys: [...selectedPlaceKeys],
     });
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, onPoiSettingsChange]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, onPoiSettingsChange]);
 
-  // Helper: stable key per peak
+  // Helper: stable key per POI (peak/place/…)
   const peakKey = (p: import('@/utils/overpassApi').POIPoint) =>
     `${p.name}@${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
+  const placeKey = peakKey;
 
   // Hooks — order matters: flythrough first (produces flyingIndex)
   const recorder = useFlythroughRecorder();
