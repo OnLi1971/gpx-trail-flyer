@@ -1180,6 +1180,25 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
+          {/* POI viditelnost od aktuální pozice */}
+          {gpxData && (
+            <div className="flex items-center gap-3">
+              <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Dohled POI</span>
+              <Slider
+                value={[poiVisibilityKm]}
+                onValueChange={(value) => setPoiVisibilityKm(value[0])}
+                min={0}
+                max={30}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-12 text-right">
+                {poiVisibilityKm === 0 ? 'vše' : `${poiVisibilityKm} km`}
+              </span>
+            </div>
+          )}
+
           {/* POI density — peaks (hory) */}
           {gpxData && poiCounts.peaks > 0 && (
             <div className="space-y-2">
