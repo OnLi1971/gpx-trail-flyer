@@ -62,7 +62,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
-  const poiMarkersRef = useRef<Marker[]>([]);
+  const poiMarkersRef = useRef<Array<{ marker: Marker; lat: number; lon: number }>>([]);
 
   // Basemap toggle: 3D terrain (OpenTopoMap, default) vs satellite (Esri)
   const [basemap, setBasemap] = useState<'terrain' | 'satellite'>('terrain');
@@ -85,6 +85,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [pubLimit, setPubLimit] = useState(initialPoiSettings?.pubLimit ?? 10);
   // POI search radius around track (km)
   const [poiRadiusKm, setPoiRadiusKm] = useState<number>(2);
+  // POI visibility distance from current position along track (km). 0 = vše viditelné.
+  const [poiVisibilityKm, setPoiVisibilityKm] = useState<number>(0);
   // Manual peak selection
   const [peakSelectionMode, setPeakSelectionMode] = useState<'auto' | 'manual'>(initialPoiSettings?.peakSelectionMode ?? 'auto');
   const [selectedPeakKeys, setSelectedPeakKeys] = useState<Set<string>>(
@@ -403,6 +405,28 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       .addTo(map.current);
   }, [currentPosition, gpxData]);
 
+  // Skryj POI dál než poiVisibilityKm od aktuální pozice na trase (0 = vypnuto, ukaž vše)
+  useEffect(() => {
+    if (!gpxData || gpxData.tracks.length === 0) return;
+    const track = gpxData.tracks[0];
+    const pointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
+    const cur = track.points[pointIndex];
+    if (!cur) return;
+    const cosLat = Math.cos((cur.lat * Math.PI) / 180);
+    const maxKm = poiVisibilityKm;
+    poiMarkersRef.current.forEach(({ marker, lat, lon }) => {
+      const el = marker.getElement();
+      if (maxKm <= 0) {
+        el.style.display = '';
+        return;
+      }
+      const dLat = (lat - cur.lat) * 111;
+      const dLon = (lon - cur.lon) * 111 * cosLat;
+      const distKm = Math.sqrt(dLat * dLat + dLon * dLon);
+      el.style.display = distKm <= maxKm ? '' : 'none';
+    });
+  }, [currentPosition, gpxData, poiVisibilityKm, poiVersion]);
+
   // POI markers — render helper using current limits per category
   const renderPoiMarkers = React.useCallback((pois: import('@/utils/overpassApi').POIPoint[]) => {
     if (!map.current) return;
@@ -451,7 +475,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       ...pubs.slice(0, pubLimit),
     ];
 
-    poiMarkersRef.current.forEach(m => m.remove());
+    poiMarkersRef.current.forEach(m => m.marker.remove());
     poiMarkersRef.current = [];
 
     // Společný helper pro generování karty s tyčkou
@@ -588,7 +612,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         .setLngLat([poi.lon, poi.lat])
         .addTo(map.current!);
 
-      poiMarkersRef.current.push(marker);
+      poiMarkersRef.current.push({ marker, lat: poi.lat, lon: poi.lon });
     });
   }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys]);
 
@@ -722,7 +746,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     return () => {
       disposed = true;
       if (poiCancelRef.current) poiCancelRef.current.cancelled = true;
-      poiMarkersRef.current.forEach(m => m.remove());
+      poiMarkersRef.current.forEach(m => m.marker.remove());
       poiMarkersRef.current = [];
     };
   }, [gpxData, loadPOIs]);
@@ -1153,6 +1177,25 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 disabled={poiStatus === 'loading'}
               />
               <span className="text-xs text-muted-foreground w-10 text-right">{poiRadiusKm} km</span>
+            </div>
+          )}
+
+          {/* POI viditelnost od aktuální pozice */}
+          {gpxData && (
+            <div className="flex items-center gap-3">
+              <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Dohled POI</span>
+              <Slider
+                value={[poiVisibilityKm]}
+                onValueChange={(value) => setPoiVisibilityKm(value[0])}
+                min={0}
+                max={30}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-12 text-right">
+                {poiVisibilityKm === 0 ? 'vše' : `${poiVisibilityKm} km`}
+              </span>
             </div>
           )}
 
