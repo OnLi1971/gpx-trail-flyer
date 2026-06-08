@@ -405,6 +405,28 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       .addTo(map.current);
   }, [currentPosition, gpxData]);
 
+  // Skryj POI dál než poiVisibilityKm od aktuální pozice na trase (0 = vypnuto, ukaž vše)
+  useEffect(() => {
+    if (!gpxData || gpxData.tracks.length === 0) return;
+    const track = gpxData.tracks[0];
+    const pointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
+    const cur = track.points[pointIndex];
+    if (!cur) return;
+    const cosLat = Math.cos((cur.lat * Math.PI) / 180);
+    const maxKm = poiVisibilityKm;
+    poiMarkersRef.current.forEach(({ marker, lat, lon }) => {
+      const el = marker.getElement();
+      if (maxKm <= 0) {
+        el.style.display = '';
+        return;
+      }
+      const dLat = (lat - cur.lat) * 111;
+      const dLon = (lon - cur.lon) * 111 * cosLat;
+      const distKm = Math.sqrt(dLat * dLat + dLon * dLon);
+      el.style.display = distKm <= maxKm ? '' : 'none';
+    });
+  }, [currentPosition, gpxData, poiVisibilityKm, poiVersion]);
+
   // POI markers — render helper using current limits per category
   const renderPoiMarkers = React.useCallback((pois: import('@/utils/overpassApi').POIPoint[]) => {
     if (!map.current) return;
