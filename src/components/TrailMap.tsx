@@ -451,7 +451,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       ...pubs.slice(0, pubLimit),
     ];
 
-    poiMarkersRef.current.forEach(m => m.remove());
+    poiMarkersRef.current.forEach(m => m.marker.remove());
     poiMarkersRef.current = [];
 
     // Společný helper pro generování karty s tyčkou
