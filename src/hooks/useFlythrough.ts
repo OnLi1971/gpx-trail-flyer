@@ -84,10 +84,10 @@ export function useFlythrough(
   const flyAnimationRef = useRef<number | null>(null);
   const flyStartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flyStepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const flySpeedRef = useRef(82);
-  const flyRotationRef = useRef(32);
-  const flyZoomRef = useRef(12.5);
-  const elevationExaggerationRef = useRef(1.9);
+  const flySpeedRef = useRef(93);
+  const flyRotationRef = useRef(24);
+  const flyZoomRef = useRef(12);
+  const elevationExaggerationRef = useRef(2.3);
   const lastBearingRef = useRef(0);
   const flyMarkerRef = useRef<Marker | null>(null);
   const avgRealDtRef = useRef<number>(0);
