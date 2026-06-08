@@ -626,9 +626,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             text: `${poi.name}${poi.ele ? ` ${poi.ele}\u202Fm` : ''}`,
             borderColor: '#b45309',
             textColor: '#78350f',
-            poleColorTop: '#b45309',
-            poleColorBottom: '#78350f',
-            dotColor: '#78350f',
             bold: true,
           });
           break;
@@ -638,9 +635,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             text: `${poi.name}${poi.ele ? ` ${poi.ele}\u202Fm` : ''}`,
             borderColor: '#a16207',
             textColor: '#713f12',
-            poleColorTop: '#a16207',
-            poleColorBottom: '#713f12',
-            dotColor: '#713f12',
           });
           break;
         case 'viewpoint':
@@ -649,9 +643,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             text: poi.name,
             borderColor: '#7c3aed',
             textColor: '#5b21b6',
-            poleColorTop: '#7c3aed',
-            poleColorBottom: '#5b21b6',
-            dotColor: '#5b21b6',
             bold: true,
           });
           break;
@@ -661,9 +652,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             text: poi.name,
             borderColor: '#9f1239',
             textColor: '#881337',
-            poleColorTop: '#9f1239',
-            poleColorBottom: '#881337',
-            dotColor: '#881337',
             bold: true,
           });
           break;
@@ -673,9 +661,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             text: poi.name,
             borderColor: '#15803d',
             textColor: '#14532d',
-            poleColorTop: '#15803d',
-            poleColorBottom: '#14532d',
-            dotColor: '#14532d',
             smallDot: true,
           });
           break;
@@ -696,8 +681,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             ">
               ${poi.name}
             </div>
-            <div style="width: 1.5px; height: 12px; background: #6b7280; opacity: 0.7;"></div>
-            <div style="width: 4px; height: 4px; border-radius: 50%; background: #6b7280;"></div>
           `;
           break;
       }
