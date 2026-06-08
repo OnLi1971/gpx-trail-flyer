@@ -409,6 +409,27 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     map.current.once('load', ensureTrailLayers);
   }, [gpxData]);
 
+  // Apply trail appearance (color / width / dash style) when state changes
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const apply = () => {
+      if (!m.getLayer('trail-line') || !m.getLayer('trail-glow')) return;
+      m.setPaintProperty('trail-glow', 'line-color', trailColor);
+      m.setPaintProperty('trail-glow', 'line-width', trailWidth * 2);
+      m.setPaintProperty('trail-line', 'line-color', trailColor);
+      m.setPaintProperty('trail-line', 'line-width', trailWidth);
+      const dash =
+        trailStyle === 'dashed' ? [2, 2] :
+        trailStyle === 'dotted' ? [0.1, 2] :
+        null;
+      // null odstraní dasharray (plná čára)
+      m.setPaintProperty('trail-line', 'line-dasharray', dash as any);
+    };
+    if (m.isStyleLoaded()) apply();
+    else m.once('idle', apply);
+  }, [trailColor, trailStyle, trailWidth, gpxData]);
+
   // Slider position marker
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
