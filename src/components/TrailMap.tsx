@@ -112,6 +112,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // Tick pro re-render po mutaci allNearbyPoisRef (přidání custom vrcholu)
   const [poiVersion, setPoiVersion] = useState(0);
 
+  // Vzhled trasy
+  const [trailColor, setTrailColor] = useState<string>('#059669');
+  const [trailStyle, setTrailStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
+  const [trailWidth, setTrailWidth] = useState<number>(4);
+
   // Pokud initialPoiSettings dorazí asynchronně (po mountu), aplikuj je jednou
   const initialAppliedRef = useRef<boolean>(!!initialPoiSettings);
   useEffect(() => {
@@ -365,20 +370,30 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       map.current.addSource('trail', { type: 'geojson', data: geojson });
 
+      const dash =
+        trailStyle === 'dashed' ? [2, 2] :
+        trailStyle === 'dotted' ? [0.1, 2] :
+        undefined;
+
       map.current.addLayer({
         id: 'trail-glow',
         type: 'line',
         source: 'trail',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#059669', 'line-width': 8, 'line-opacity': 0.3, 'line-blur': 2 },
+        paint: { 'line-color': trailColor, 'line-width': trailWidth * 2, 'line-opacity': 0.3, 'line-blur': 2 },
       });
 
       map.current.addLayer({
         id: 'trail-line',
         type: 'line',
         source: 'trail',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#059669', 'line-width': 4, 'line-opacity': 0.8 },
+        layout: { 'line-join': 'round', 'line-cap': trailStyle === 'dotted' ? 'round' : 'round' },
+        paint: {
+          'line-color': trailColor,
+          'line-width': trailWidth,
+          'line-opacity': 0.9,
+          ...(dash ? { 'line-dasharray': dash } : {}),
+        },
       });
 
       const bounds = new LngLatBounds();
@@ -393,6 +408,27 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     map.current.once('load', ensureTrailLayers);
   }, [gpxData]);
+
+  // Apply trail appearance (color / width / dash style) when state changes
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    const apply = () => {
+      if (!m.getLayer('trail-line') || !m.getLayer('trail-glow')) return;
+      m.setPaintProperty('trail-glow', 'line-color', trailColor);
+      m.setPaintProperty('trail-glow', 'line-width', trailWidth * 2);
+      m.setPaintProperty('trail-line', 'line-color', trailColor);
+      m.setPaintProperty('trail-line', 'line-width', trailWidth);
+      const dash =
+        trailStyle === 'dashed' ? [2, 2] :
+        trailStyle === 'dotted' ? [0.1, 2] :
+        null;
+      // null odstraní dasharray (plná čára)
+      m.setPaintProperty('trail-line', 'line-dasharray', dash as any);
+    };
+    if (m.isStyleLoaded()) apply();
+    else m.once('idle', apply);
+  }, [trailColor, trailStyle, trailWidth, gpxData]);
 
   // Slider position marker
   useEffect(() => {
@@ -1042,6 +1078,50 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         {/* 3D Controls */}
         {!presentationMode && (
         <div className="bg-muted/50 border-t p-4 space-y-3">
+          {/* Vzhled trasy: barva + styl + šířka */}
+          {gpxData && !readOnly && (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-medium text-muted-foreground w-20">Trasa</span>
+              <label className="inline-flex items-center gap-2 cursor-pointer" title="Barva trasy">
+                <input
+                  type="color"
+                  value={trailColor}
+                  onChange={(e) => setTrailColor(e.target.value)}
+                  className="w-8 h-8 rounded border border-border bg-transparent cursor-pointer p-0"
+                  aria-label="Barva trasy"
+                />
+                <span className="text-xs text-muted-foreground">Barva</span>
+              </label>
+              <ToggleGroup
+                type="single"
+                value={trailStyle}
+                onValueChange={(v) => v && setTrailStyle(v as 'solid' | 'dashed' | 'dotted')}
+                size="sm"
+              >
+                <ToggleGroupItem value="solid" aria-label="Plná čára" title="Plná">
+                  <span style={{ display: 'inline-block', width: 22, height: 0, borderTop: `3px solid ${trailColor}` }} />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="dashed" aria-label="Přerušovaná" title="Přerušovaná">
+                  <span style={{ display: 'inline-block', width: 22, height: 0, borderTop: `3px dashed ${trailColor}` }} />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="dotted" aria-label="Tečkovaná" title="Tečkovaná">
+                  <span style={{ display: 'inline-block', width: 22, height: 0, borderTop: `3px dotted ${trailColor}` }} />
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <div className="flex items-center gap-2 flex-1 min-w-[140px]">
+                <span className="text-xs text-muted-foreground">Šířka</span>
+                <Slider
+                  value={[trailWidth]}
+                  onValueChange={(v) => setTrailWidth(v[0])}
+                  min={2}
+                  max={10}
+                  step={1}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-6 text-right">{trailWidth}</span>
+              </div>
+            </div>
+          )}
           {/* Pitch slider */}
           <div className="flex items-center gap-3">
             <Mountain className="w-4 h-4 text-muted-foreground flex-shrink-0" />
