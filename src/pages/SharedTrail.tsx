@@ -44,7 +44,7 @@ export default function SharedTrail() {
       setLoading(true);
       const { data: trail, error: tErr } = await supabase
         .from('trails')
-        .select('id, name, gpx_data, user_id, peak_limit, place_limit, viewpoint_limit, castle_limit, saddle_limit, pub_limit, peak_selection_mode, selected_peak_keys, place_selection_mode, selected_place_keys, cached_pois, pois_cached_at')
+        .select('id, name, gpx_data, user_id, peak_limit, place_limit, viewpoint_limit, castle_limit, saddle_limit, pub_limit, peak_selection_mode, selected_peak_keys, place_selection_mode, selected_place_keys, deselected_poi_keys, cached_pois, pois_cached_at')
         .eq('slug', slug)
         .maybeSingle();
 
@@ -73,6 +73,9 @@ export default function SharedTrail() {
         placeSelectionMode: ((trail as any).place_selection_mode ?? 'auto') as 'auto' | 'manual',
         selectedPlaceKeys: Array.isArray((trail as any).selected_place_keys)
           ? ((trail as any).selected_place_keys as string[])
+          : [],
+        deselectedPoiKeys: Array.isArray((trail as any).deselected_poi_keys)
+          ? ((trail as any).deselected_poi_keys as string[])
           : [],
       };
       setInitialPoi(poi);
@@ -130,7 +133,9 @@ export default function SharedTrail() {
     currentPoi.selectedPeakKeys.some((k) => !savedPoi.selectedPeakKeys.includes(k)) ||
     (currentPoi.placeSelectionMode ?? 'auto') !== (savedPoi.placeSelectionMode ?? 'auto') ||
     (currentPoi.selectedPlaceKeys?.length ?? 0) !== (savedPoi.selectedPlaceKeys?.length ?? 0) ||
-    (currentPoi.selectedPlaceKeys ?? []).some((k) => !(savedPoi.selectedPlaceKeys ?? []).includes(k))
+    (currentPoi.selectedPlaceKeys ?? []).some((k) => !(savedPoi.selectedPlaceKeys ?? []).includes(k)) ||
+    (currentPoi.deselectedPoiKeys?.length ?? 0) !== (savedPoi.deselectedPoiKeys?.length ?? 0) ||
+    (currentPoi.deselectedPoiKeys ?? []).some((k) => !(savedPoi.deselectedPoiKeys ?? []).includes(k))
   );
 
   const handleSavePoi = async () => {
@@ -150,6 +155,7 @@ export default function SharedTrail() {
           selected_peak_keys: currentPoi.selectedPeakKeys as any,
           place_selection_mode: currentPoi.placeSelectionMode ?? 'auto',
           selected_place_keys: (currentPoi.selectedPlaceKeys ?? []) as any,
+          deselected_poi_keys: (currentPoi.deselectedPoiKeys ?? []) as any,
         })
         .eq('id', trailId);
       if (error) throw error;

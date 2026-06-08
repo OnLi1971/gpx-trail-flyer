@@ -1,0 +1,1 @@
+ALTER TABLE public.trails ADD COLUMN IF NOT EXISTS deselected_poi_keys text[] NOT NULL DEFAULT '{}';

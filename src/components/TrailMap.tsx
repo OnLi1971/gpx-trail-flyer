@@ -31,6 +31,7 @@ export interface PoiSettings {
   selectedPeakKeys: string[];
   placeSelectionMode?: 'auto' | 'manual';
   selectedPlaceKeys?: string[];
+  deselectedPoiKeys?: string[];
 }
 
 interface TrailMapProps {
@@ -99,6 +100,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     new Set(initialPoiSettings?.selectedPlaceKeys ?? [])
   );
   const [placeSearch, setPlaceSearch] = useState('');
+  // POI skryté kliknutím na mapě (klíče napříč všemi kategoriemi)
+  const [deselectedPoiKeys, setDeselectedPoiKeys] = useState<Set<string>>(
+    new Set(initialPoiSettings?.deselectedPoiKeys ?? [])
+  );
   const allNearbyPoisRef = useRef<import('@/utils/overpassApi').POIPoint[]>([]);
   const hasInitialPoiRef = useRef<boolean>(!!initialPoiSettings);
 
@@ -135,6 +140,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     setSelectedPeakKeys(new Set(initialPoiSettings.selectedPeakKeys));
     setPlaceSelectionMode(initialPoiSettings.placeSelectionMode ?? 'auto');
     setSelectedPlaceKeys(new Set(initialPoiSettings.selectedPlaceKeys ?? []));
+    setDeselectedPoiKeys(new Set(initialPoiSettings.deselectedPoiKeys ?? []));
   }, [initialPoiSettings]);
 
   // Emit POI settings to parent when they change
@@ -151,8 +157,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       selectedPeakKeys: [...selectedPeakKeys],
       placeSelectionMode,
       selectedPlaceKeys: [...selectedPlaceKeys],
+      deselectedPoiKeys: [...deselectedPoiKeys],
     });
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, onPoiSettingsChange]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys, onPoiSettingsChange]);
 
   // Helper: stable key per POI (peak/place/…)
   const peakKey = (p: import('@/utils/overpassApi').POIPoint) =>
@@ -558,7 +565,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       ? places.filter(p => selectedPlaceKeys.has(placeKey(p)))
       : places.slice(0, placeLimit);
 
-    const limited = [
+    const limitedRaw = [
       ...limitedPeaks,
       ...limitedPlaces,
       ...viewpoints.slice(0, viewpointLimit),
@@ -566,6 +573,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       ...saddles.slice(0, saddleLimit),
       ...pubs.slice(0, pubLimit),
     ];
+    // Skryj POI, které uživatel klikem odoznačil
+    const limited = limitedRaw.filter(p => !deselectedPoiKeys.has(peakKey(p)));
 
     poiMarkersRef.current.forEach(m => m.marker.remove());
     poiMarkersRef.current = [];
@@ -700,13 +709,25 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           break;
       }
 
+      // Klik = skrýt tento POI (přidat klíč do deselected)
+      const key = peakKey(poi);
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        setDeselectedPoiKeys(prev => {
+          const next = new Set(prev);
+          next.add(key);
+          return next;
+        });
+      });
+
       const marker = new Marker({ element: el, anchor: 'bottom' })
         .setLngLat([poi.lon, poi.lat])
         .addTo(map.current!);
 
       poiMarkersRef.current.push({ marker, lat: poi.lat, lon: poi.lon });
     });
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys]);
 
   // POI fetch — extrahováno, aby šlo zavolat i ručně přes tlačítko reload
   const poiCancelRef = useRef<{ cancelled: boolean } | null>(null);
@@ -1037,6 +1058,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               </button>
             </div>
           )}
+
+          {/* Obnovit skryté POI (klikem v mapě) */}
+          {gpxData && deselectedPoiKeys.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setDeselectedPoiKeys(new Set())}
+              className="absolute top-2 right-2 z-10 bg-background/90 hover:bg-background border shadow-sm rounded-md px-3 py-1.5 text-xs font-medium flex items-center gap-1.5"
+              title="Obnovit skryté POI"
+            >
+              <X className="w-3 h-3" />
+              Obnovit {deselectedPoiKeys.size} skrytých POI
+            </button>
+          )}
+
 
           {/* POI debug — diskrétní ikona, klik rozbalí detail */}
           {gpxData && poiStatus !== 'idle' && (
