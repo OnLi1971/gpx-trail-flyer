@@ -579,21 +579,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     poiMarkersRef.current.forEach(m => m.marker.remove());
     poiMarkersRef.current = [];
 
-    // Společný helper pro generování karty s tyčkou
+    // Společný helper pro generování karty (bez tyčky — spodní okraj karty je přímo na bodu)
     const buildCard = (opts: {
       icon: string;
       text: string;
       borderColor: string;
       textColor: string;
-      poleColorTop: string;
-      poleColorBottom: string;
-      dotColor: string;
       bold?: boolean;
       smallDot?: boolean;
     }) => {
       const fontWeight = opts.bold ? 700 : 600;
-      const dotSize = opts.smallDot ? 6 : 8;
-      const poleHeight = opts.smallDot ? 18 : 24;
       return `
         <div style="
           background: rgba(255,255,255,0.97);
@@ -613,8 +608,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           <span style="font-size:14px;line-height:1;">${opts.icon}</span>
           ${opts.text}
         </div>
-        <div style="width: 2px; height: ${poleHeight}px; background: linear-gradient(to bottom, ${opts.poleColorTop}, ${opts.poleColorBottom});"></div>
-        <div style="width: ${dotSize}px; height: ${dotSize}px; border-radius: 50%; background: ${opts.dotColor}; box-shadow: 0 1px 3px rgba(0,0,0,0.4);"></div>
       `;
     };
 
