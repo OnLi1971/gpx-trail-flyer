@@ -409,7 +409,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   useEffect(() => {
     if (!gpxData || gpxData.tracks.length === 0) return;
     const track = gpxData.tracks[0];
-    const pointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
+    const pointIndex = flythrough.flyingIndex != null
+      ? flythrough.flyingIndex
+      : Math.floor((currentPosition / 100) * (track.points.length - 1));
     const cur = track.points[pointIndex];
     if (!cur) return;
     const cosLat = Math.cos((cur.lat * Math.PI) / 180);
@@ -425,7 +427,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       const distKm = Math.sqrt(dLat * dLat + dLon * dLon);
       el.style.display = distKm <= maxKm ? '' : 'none';
     });
-  }, [currentPosition, gpxData, poiVisibilityKm, poiVersion]);
+  }, [currentPosition, flythrough.flyingIndex, gpxData, poiVisibilityKm, poiVersion]);
 
   // POI markers — render helper using current limits per category
   const renderPoiMarkers = React.useCallback((pois: import('@/utils/overpassApi').POIPoint[]) => {
