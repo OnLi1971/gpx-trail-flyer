@@ -431,6 +431,41 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     else m.once('idle', apply);
   }, [trailColor, trailStyle, trailWidth, gpxData]);
 
+  // Pokud je zapnuto „Stopa za jezdcem", zobrazujeme jen body do aktuálního flyingIndex.
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !gpxData || gpxData.tracks.length === 0) return;
+    const track = gpxData.tracks[0];
+    if (track.points.length === 0) return;
+
+    const apply = () => {
+      const src = m.getSource('trail') as any;
+      if (!src || !src.setData) return;
+
+      const showBehind =
+        trailBehindOnly && flythrough.isFlying && !outroMode && flythrough.flyingIndex != null;
+
+      const endIdx = showBehind
+        ? Math.max(1, Math.min(track.points.length, (flythrough.flyingIndex ?? 0) + 1))
+        : track.points.length;
+
+      const coords = track.points.slice(0, endIdx).map((p) => [p.lon, p.lat]);
+      src.setData({
+        type: 'FeatureCollection',
+        features: [
+          {
+            type: 'Feature',
+            properties: {},
+            geometry: { type: 'LineString', coordinates: coords },
+          },
+        ],
+      });
+    };
+
+    if (m.isStyleLoaded()) apply();
+    else m.once('idle', apply);
+  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, outroMode, gpxData]);
+
   // Slider position marker
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
