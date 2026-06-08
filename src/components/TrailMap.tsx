@@ -722,7 +722,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     return () => {
       disposed = true;
       if (poiCancelRef.current) poiCancelRef.current.cancelled = true;
-      poiMarkersRef.current.forEach(m => m.remove());
+      poiMarkersRef.current.forEach(m => m.marker.remove());
       poiMarkersRef.current = [];
     };
   }, [gpxData, loadPOIs]);
