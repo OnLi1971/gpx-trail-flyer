@@ -116,6 +116,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [trailColor, setTrailColor] = useState<string>('#059669');
   const [trailStyle, setTrailStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
   const [trailWidth, setTrailWidth] = useState<number>(4);
+  const [trailBehindOnly, setTrailBehindOnly] = useState<boolean>(false);
 
   // Pokud initialPoiSettings dorazí asynchronně (po mountu), aplikuj je jednou
   const initialAppliedRef = useRef<boolean>(!!initialPoiSettings);
