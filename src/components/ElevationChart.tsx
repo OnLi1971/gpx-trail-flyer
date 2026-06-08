@@ -12,6 +12,9 @@ interface ElevationChartProps {
   chartData: ChartDataPoint[];
   currentChartPoint: ChartDataPoint | null;
   variant?: 'overlay' | 'panel';
+  trailColor?: string;
+  trailStyle?: 'solid' | 'dashed' | 'dotted';
+  trailWidth?: number;
 }
 
 export const ElevationChart = React.memo<ElevationChartProps>(({
