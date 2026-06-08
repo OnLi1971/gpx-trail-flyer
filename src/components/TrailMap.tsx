@@ -580,7 +580,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     poiMarkersRef.current.forEach(m => m.marker.remove());
     poiMarkersRef.current = [];
 
-    // Společný helper pro generování karty (bez tyčky — spodní okraj karty je přímo na bodu)
+    // Společný helper pro generování karty (tyčka se přidává zvlášť pod kartou)
     const buildCard = (opts: {
       icon: string;
       text: string;
