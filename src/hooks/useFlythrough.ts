@@ -276,6 +276,8 @@ export function useFlythrough(
     const track = gpxData.tracks[0];
     if (track.points.length < 2) return;
 
+    stopOrbit();
+    setShowSummary(false);
     setIsFlying(true);
     setFlyingIndex(0);
     setFlyStartTimestamp(null); // nastaví se až po úvodním 2 s flyTo
