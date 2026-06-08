@@ -112,6 +112,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // Tick pro re-render po mutaci allNearbyPoisRef (přidání custom vrcholu)
   const [poiVersion, setPoiVersion] = useState(0);
 
+  // Vzhled trasy
+  const [trailColor, setTrailColor] = useState<string>('#059669');
+  const [trailStyle, setTrailStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
+  const [trailWidth, setTrailWidth] = useState<number>(4);
+
   // Pokud initialPoiSettings dorazí asynchronně (po mountu), aplikuj je jednou
   const initialAppliedRef = useRef<boolean>(!!initialPoiSettings);
   useEffect(() => {
