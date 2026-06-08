@@ -29,6 +29,8 @@ export interface PoiSettings {
   pubLimit: number;
   peakSelectionMode: 'auto' | 'manual';
   selectedPeakKeys: string[];
+  placeSelectionMode?: 'auto' | 'manual';
+  selectedPlaceKeys?: string[];
 }
 
 interface TrailMapProps {
@@ -89,6 +91,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     new Set(initialPoiSettings?.selectedPeakKeys ?? [])
   );
   const [peakSearch, setPeakSearch] = useState('');
+  // Manual place selection (města)
+  const [placeSelectionMode, setPlaceSelectionMode] = useState<'auto' | 'manual'>(initialPoiSettings?.placeSelectionMode ?? 'auto');
+  const [selectedPlaceKeys, setSelectedPlaceKeys] = useState<Set<string>>(
+    new Set(initialPoiSettings?.selectedPlaceKeys ?? [])
+  );
+  const [placeSearch, setPlaceSearch] = useState('');
   const allNearbyPoisRef = useRef<import('@/utils/overpassApi').POIPoint[]>([]);
   const hasInitialPoiRef = useRef<boolean>(!!initialPoiSettings);
 
@@ -117,6 +125,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     setPubLimit(initialPoiSettings.pubLimit);
     setPeakSelectionMode(initialPoiSettings.peakSelectionMode);
     setSelectedPeakKeys(new Set(initialPoiSettings.selectedPeakKeys));
+    setPlaceSelectionMode(initialPoiSettings.placeSelectionMode ?? 'auto');
+    setSelectedPlaceKeys(new Set(initialPoiSettings.selectedPlaceKeys ?? []));
   }, [initialPoiSettings]);
 
   // Emit POI settings to parent when they change
@@ -131,12 +141,15 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       pubLimit,
       peakSelectionMode,
       selectedPeakKeys: [...selectedPeakKeys],
+      placeSelectionMode,
+      selectedPlaceKeys: [...selectedPlaceKeys],
     });
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, onPoiSettingsChange]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, onPoiSettingsChange]);
 
-  // Helper: stable key per peak
+  // Helper: stable key per POI (peak/place/…)
   const peakKey = (p: import('@/utils/overpassApi').POIPoint) =>
     `${p.name}@${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
+  const placeKey = peakKey;
 
   // Hooks — order matters: flythrough first (produces flyingIndex)
   const recorder = useFlythroughRecorder();
@@ -425,9 +438,13 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       ? peaks.filter(p => selectedPeakKeys.has(peakKey(p)))
       : peaks.slice(0, peakLimit);
 
+    const limitedPlaces = placeSelectionMode === 'manual'
+      ? places.filter(p => selectedPlaceKeys.has(placeKey(p)))
+      : places.slice(0, placeLimit);
+
     const limited = [
       ...limitedPeaks,
-      ...places.slice(0, placeLimit),
+      ...limitedPlaces,
       ...viewpoints.slice(0, viewpointLimit),
       ...castles.slice(0, castleLimit),
       ...saddles.slice(0, saddleLimit),
@@ -573,7 +590,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       poiMarkersRef.current.push(marker);
     });
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys]);
 
   // POI fetch — extrahováno, aby šlo zavolat i ručně přes tlačítko reload
   const poiCancelRef = useRef<{ cancelled: boolean } | null>(null);
@@ -626,6 +643,13 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
         setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
         setPeakSelectionMode('auto');
+        const placeList = nearbyPois.filter(p => p.type === 'place');
+        const placeRankInit: Record<string, number> = { city: 0, town: 1, village: 2, hamlet: 3 };
+        const sortedPlaces = [...placeList].sort((a, b) =>
+          (placeRankInit[a.placeType ?? 'hamlet'] ?? 9) - (placeRankInit[b.placeType ?? 'hamlet'] ?? 9)
+        );
+        setSelectedPlaceKeys(new Set(sortedPlaces.slice(0, 15).map(placeKey)));
+        setPlaceSelectionMode('auto');
       }
       hasInitialPoiRef.current = false;
       renderPoiMarkersRef.current(nearbyPois);
@@ -649,6 +673,13 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
         setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
         setPeakSelectionMode('auto');
+        const placeList = nearbyPois.filter(p => p.type === 'place');
+        const placeRankInit: Record<string, number> = { city: 0, town: 1, village: 2, hamlet: 3 };
+        const sortedPlaces = [...placeList].sort((a, b) =>
+          (placeRankInit[a.placeType ?? 'hamlet'] ?? 9) - (placeRankInit[b.placeType ?? 'hamlet'] ?? 9)
+        );
+        setSelectedPlaceKeys(new Set(sortedPlaces.slice(0, 15).map(placeKey)));
+        setPlaceSelectionMode('auto');
       }
       hasInitialPoiRef.current = false;
 
@@ -712,7 +743,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (allNearbyPoisRef.current.length > 0) {
       renderPoiMarkers(allNearbyPoisRef.current);
     }
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, renderPoiMarkers]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, renderPoiMarkers]);
 
 
   // Click-to-pick custom peak coords
@@ -1318,20 +1349,137 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
           {/* POI density — places (města) */}
           {gpxData && poiCounts.places > 0 && (
-            <div className="flex items-center gap-3">
-              <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
-              <span className="text-xs font-medium text-muted-foreground w-20">Města</span>
-              <Slider
-                value={[placeLimit]}
-                onValueChange={(value) => setPlaceLimit(value[0])}
-                min={0}
-                max={Math.max(poiCounts.places, 5)}
-                step={1}
-                className="flex-1"
-              />
-              <span className="text-xs text-muted-foreground w-10 text-right">
-                {Math.min(placeLimit, poiCounts.places)}/{poiCounts.places}
-              </span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <MapPin className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-xs font-medium text-muted-foreground w-20">Města</span>
+                {placeSelectionMode === 'auto' ? (
+                  <Slider
+                    value={[placeLimit]}
+                    onValueChange={(value) => setPlaceLimit(value[0])}
+                    min={0}
+                    max={Math.max(poiCounts.places, 5)}
+                    step={1}
+                    className="flex-1"
+                  />
+                ) : (
+                  <div className="flex-1 text-xs text-muted-foreground">
+                    Vybráno {[...selectedPlaceKeys].filter(k =>
+                      allNearbyPoisRef.current.some(p => p.type === 'place' && placeKey(p) === k)
+                    ).length} z {poiCounts.places}
+                  </div>
+                )}
+                <span className="text-xs text-muted-foreground w-10 text-right">
+                  {placeSelectionMode === 'auto'
+                    ? `${Math.min(placeLimit, poiCounts.places)}/${poiCounts.places}`
+                    : `${[...selectedPlaceKeys].filter(k => allNearbyPoisRef.current.some(p => p.type === 'place' && placeKey(p) === k)).length}/${poiCounts.places}`}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 pl-7">
+                <Button
+                  size="sm"
+                  variant={placeSelectionMode === 'auto' ? 'default' : 'outline'}
+                  className="h-7 text-xs"
+                  onClick={() => setPlaceSelectionMode('auto')}
+                >
+                  Auto (top N)
+                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant={placeSelectionMode === 'manual' ? 'default' : 'outline'}
+                      className="h-7 text-xs gap-1"
+                      onClick={() => setPlaceSelectionMode('manual')}
+                    >
+                      <ListChecks className="w-3.5 h-3.5" />
+                      Vybrat města
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80 p-0" align="start">
+                    <div className="p-2 border-b space-y-2">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                        <Input
+                          value={placeSearch}
+                          onChange={(e) => setPlaceSearch(e.target.value)}
+                          placeholder="Hledat město…"
+                          className="h-8 pl-7 text-xs"
+                        />
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-xs flex-1"
+                          onClick={() => {
+                            const allKeys = allNearbyPoisRef.current
+                              .filter(p => p.type === 'place')
+                              .map(placeKey);
+                            setSelectedPlaceKeys(new Set(allKeys));
+                          }}
+                        >
+                          Vybrat vše
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-6 text-xs flex-1"
+                          onClick={() => setSelectedPlaceKeys(new Set())}
+                        >
+                          Zrušit vše
+                        </Button>
+                      </div>
+                    </div>
+                    <ScrollArea className="h-72">
+                      <div className="p-1">
+                        {(() => {
+                          const rank: Record<string, number> = { city: 0, town: 1, village: 2, hamlet: 3 };
+                          return allNearbyPoisRef.current
+                            .filter(p => p.type === 'place')
+                            .filter(p => !placeSearch || p.name.toLowerCase().includes(placeSearch.toLowerCase()))
+                            .sort((a, b) => (rank[a.placeType ?? 'hamlet'] ?? 9) - (rank[b.placeType ?? 'hamlet'] ?? 9))
+                            .map(p => {
+                              const k = placeKey(p);
+                              const checked = selectedPlaceKeys.has(k);
+                              return (
+                                <label
+                                  key={k}
+                                  className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-accent cursor-pointer text-xs"
+                                >
+                                  <Checkbox
+                                    checked={checked}
+                                    onCheckedChange={(v) => {
+                                      setSelectedPlaceKeys(prev => {
+                                        const next = new Set(prev);
+                                        if (v) next.add(k); else next.delete(k);
+                                        return next;
+                                      });
+                                    }}
+                                  />
+                                  <span className="flex-1 truncate">{p.name}</span>
+                                  {p.placeType && (
+                                    <span className="text-muted-foreground capitalize">
+                                      {p.placeType}
+                                    </span>
+                                  )}
+                                </label>
+                              );
+                            });
+                        })()}
+                        {allNearbyPoisRef.current.filter(p =>
+                          p.type === 'place' &&
+                          (!placeSearch || p.name.toLowerCase().includes(placeSearch.toLowerCase()))
+                        ).length === 0 && (
+                          <div className="px-2 py-4 text-center text-xs text-muted-foreground">
+                            Žádné město neodpovídá
+                          </div>
+                        )}
+                      </div>
+                    </ScrollArea>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           )}
 

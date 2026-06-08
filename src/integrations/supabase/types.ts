@@ -67,10 +67,12 @@ export type Database = {
           peak_limit: number
           peak_selection_mode: string
           place_limit: number
+          place_selection_mode: string
           pois_cached_at: string | null
           pub_limit: number
           saddle_limit: number
           selected_peak_keys: Json
+          selected_place_keys: Json
           slug: string
           updated_at: string
           user_id: string
@@ -87,10 +89,12 @@ export type Database = {
           peak_limit?: number
           peak_selection_mode?: string
           place_limit?: number
+          place_selection_mode?: string
           pois_cached_at?: string | null
           pub_limit?: number
           saddle_limit?: number
           selected_peak_keys?: Json
+          selected_place_keys?: Json
           slug: string
           updated_at?: string
           user_id: string
@@ -107,10 +111,12 @@ export type Database = {
           peak_limit?: number
           peak_selection_mode?: string
           place_limit?: number
+          place_selection_mode?: string
           pois_cached_at?: string | null
           pub_limit?: number
           saddle_limit?: number
           selected_peak_keys?: Json
+          selected_place_keys?: Json
           slug?: string
           updated_at?: string
           user_id?: string
