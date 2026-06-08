@@ -155,6 +155,7 @@ export default function SharedTrail() {
           selected_peak_keys: currentPoi.selectedPeakKeys as any,
           place_selection_mode: currentPoi.placeSelectionMode ?? 'auto',
           selected_place_keys: (currentPoi.selectedPlaceKeys ?? []) as any,
+          deselected_poi_keys: (currentPoi.deselectedPoiKeys ?? []) as any,
         })
         .eq('id', trailId);
       if (error) throw error;
