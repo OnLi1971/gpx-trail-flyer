@@ -74,6 +74,9 @@ export default function SharedTrail() {
         selectedPlaceKeys: Array.isArray((trail as any).selected_place_keys)
           ? ((trail as any).selected_place_keys as string[])
           : [],
+        deselectedPoiKeys: Array.isArray((trail as any).deselected_poi_keys)
+          ? ((trail as any).deselected_poi_keys as string[])
+          : [],
       };
       setInitialPoi(poi);
       setCurrentPoi(poi);
