@@ -72,10 +72,10 @@ export function useFlythrough(
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
   const [isFlying, setIsFlying] = useState(false);
-  const [flySpeed, setFlySpeedState] = useState(82);
-  const [flyRotation, setFlyRotationState] = useState(32);
-  const [flyZoom, setFlyZoomState] = useState(12.5);
-  const [elevationExaggeration, setElevationExaggerationState] = useState(1.9);
+  const [flySpeed, setFlySpeedState] = useState(93);
+  const [flyRotation, setFlyRotationState] = useState(24);
+  const [flyZoom, setFlyZoomState] = useState(12);
+  const [elevationExaggeration, setElevationExaggerationState] = useState(2.3);
   const [flyingIndex, setFlyingIndex] = useState<number | null>(null);
   const [currentGrade, setCurrentGrade] = useState<number | null>(null);
   const [mapPitch, setMapPitchState] = useState(73);
