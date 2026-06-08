@@ -78,16 +78,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [poiPanelExpanded, setPoiPanelExpanded] = useState(false);
 
   // POI density — separate limits per category
-  const [peakLimit, setPeakLimit] = useState(initialPoiSettings?.peakLimit ?? 25);
-  const [placeLimit, setPlaceLimit] = useState(initialPoiSettings?.placeLimit ?? 15);
-  const [viewpointLimit, setViewpointLimit] = useState(initialPoiSettings?.viewpointLimit ?? 15);
+  const [peakLimit, setPeakLimit] = useState(initialPoiSettings?.peakLimit ?? 10);
+  const [placeLimit, setPlaceLimit] = useState(initialPoiSettings?.placeLimit ?? 66);
+  const [viewpointLimit, setViewpointLimit] = useState(initialPoiSettings?.viewpointLimit ?? 0);
   const [castleLimit, setCastleLimit] = useState(initialPoiSettings?.castleLimit ?? 15);
   const [saddleLimit, setSaddleLimit] = useState(initialPoiSettings?.saddleLimit ?? 15);
-  const [pubLimit, setPubLimit] = useState(initialPoiSettings?.pubLimit ?? 10);
+  const [pubLimit, setPubLimit] = useState(initialPoiSettings?.pubLimit ?? 0);
   // POI search radius around track (km)
-  const [poiRadiusKm, setPoiRadiusKm] = useState<number>(2);
+  const [poiRadiusKm, setPoiRadiusKm] = useState<number>(3);
   // POI visibility distance from current position along track (km). 0 = vše viditelné.
-  const [poiVisibilityKm, setPoiVisibilityKm] = useState<number>(0);
+  const [poiVisibilityKm, setPoiVisibilityKm] = useState<number>(10);
   // Manual peak selection
   const [peakSelectionMode, setPeakSelectionMode] = useState<'auto' | 'manual'>(initialPoiSettings?.peakSelectionMode ?? 'auto');
   const [selectedPeakKeys, setSelectedPeakKeys] = useState<Set<string>>(
@@ -121,7 +121,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [trailColor, setTrailColor] = useState<string>('#059669');
   const [trailStyle, setTrailStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
   const [trailWidth, setTrailWidth] = useState<number>(4);
-  const [trailBehindOnly, setTrailBehindOnly] = useState<boolean>(false);
+  const [trailBehindOnly, setTrailBehindOnly] = useState<boolean>(true);
 
   // Pokud initialPoiSettings dorazí asynchronně (po mountu), aplikuj je jednou
   const initialAppliedRef = useRef<boolean>(!!initialPoiSettings);
