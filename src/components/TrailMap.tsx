@@ -643,6 +643,13 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         const sortedPeaks = [...peakList].sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
         setSelectedPeakKeys(new Set(sortedPeaks.slice(0, 25).map(peakKey)));
         setPeakSelectionMode('auto');
+        const placeList = nearbyPois.filter(p => p.type === 'place');
+        const placeRankInit: Record<string, number> = { city: 0, town: 1, village: 2, hamlet: 3 };
+        const sortedPlaces = [...placeList].sort((a, b) =>
+          (placeRankInit[a.placeType ?? 'hamlet'] ?? 9) - (placeRankInit[b.placeType ?? 'hamlet'] ?? 9)
+        );
+        setSelectedPlaceKeys(new Set(sortedPlaces.slice(0, 15).map(placeKey)));
+        setPlaceSelectionMode('auto');
       }
       hasInitialPoiRef.current = false;
       renderPoiMarkersRef.current(nearbyPois);
