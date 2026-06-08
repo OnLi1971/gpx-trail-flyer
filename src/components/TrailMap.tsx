@@ -370,20 +370,30 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       map.current.addSource('trail', { type: 'geojson', data: geojson });
 
+      const dash =
+        trailStyle === 'dashed' ? [2, 2] :
+        trailStyle === 'dotted' ? [0.1, 2] :
+        undefined;
+
       map.current.addLayer({
         id: 'trail-glow',
         type: 'line',
         source: 'trail',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#059669', 'line-width': 8, 'line-opacity': 0.3, 'line-blur': 2 },
+        paint: { 'line-color': trailColor, 'line-width': trailWidth * 2, 'line-opacity': 0.3, 'line-blur': 2 },
       });
 
       map.current.addLayer({
         id: 'trail-line',
         type: 'line',
         source: 'trail',
-        layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': '#059669', 'line-width': 4, 'line-opacity': 0.8 },
+        layout: { 'line-join': 'round', 'line-cap': trailStyle === 'dotted' ? 'round' : 'round' },
+        paint: {
+          'line-color': trailColor,
+          'line-width': trailWidth,
+          'line-opacity': 0.9,
+          ...(dash ? { 'line-dasharray': dash } : {}),
+        },
       });
 
       const bounds = new LngLatBounds();
