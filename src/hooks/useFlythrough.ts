@@ -209,13 +209,30 @@ export function useFlythrough(
         bounds.extend([point.lon, point.lat]);
       });
 
-      map.current.flyTo({
-        center: bounds.getCenter(),
-        zoom: 12,
-        pitch: mapPitch,
-        bearing: 0,
-        duration: 1500,
-      });
+      if (reason === 'finished') {
+        // Závěrečný 2D pohled shora na celou trasu (bez POI – řeší TrailMap přes onComplete)
+        map.current.easeTo({
+          pitch: 0,
+          bearing: 0,
+          duration: 1800,
+        });
+        setTimeout(() => {
+          map.current?.fitBounds(bounds, {
+            padding: 60,
+            pitch: 0,
+            bearing: 0,
+            duration: 1800,
+          });
+        }, 200);
+      } else {
+        map.current.flyTo({
+          center: bounds.getCenter(),
+          zoom: 12,
+          pitch: mapPitch,
+          bearing: 0,
+          duration: 1500,
+        });
+      }
     }
 
     onCompleteRef.current?.(reason);

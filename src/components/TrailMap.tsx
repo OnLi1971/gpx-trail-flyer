@@ -175,7 +175,13 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     return () => window.removeEventListener('keydown', onKey);
   }, [presentationMode]);
 
+  const [outroMode, setOutroMode] = useState(false);
+
   const flythrough = useFlythrough(map, gpxData, (reason) => {
+    // Po dokončení průletu: skryj POI a ukaž 2D pohled shora
+    if (reason === 'finished') {
+      setOutroMode(true);
+    }
     // Pokud nahráváme, zastav nahrávání a otevři dialog s náhledem
     if (isRecordingRef.current) {
       isRecordingRef.current = false;
@@ -184,6 +190,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       setTimeout(() => setVideoDialogOpen(true), 300);
     }
   });
+
+  // Zruš outro při novém startu průletu
+  useEffect(() => {
+    if (flythrough.isFlying && outroMode) setOutroMode(false);
+  }, [flythrough.isFlying, outroMode]);
   
 
   const handleStartRecording = useCallback(() => {
@@ -406,7 +417,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   }, [currentPosition, gpxData]);
 
   // Skryj POI dál než poiVisibilityKm od aktuální pozice na trase (0 = vypnuto, ukaž vše)
+  // V outro módu (2D pohled shora po dokončení průletu) skryj všechna POI.
   useEffect(() => {
+    if (outroMode) {
+      poiMarkersRef.current.forEach(({ marker }) => {
+        marker.getElement().style.display = 'none';
+      });
+      return;
+    }
     if (!gpxData || gpxData.tracks.length === 0) return;
     const track = gpxData.tracks[0];
     const pointIndex = flythrough.flyingIndex != null
@@ -427,7 +445,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       const distKm = Math.sqrt(dLat * dLat + dLon * dLon);
       el.style.display = distKm <= maxKm ? '' : 'none';
     });
-  }, [currentPosition, flythrough.flyingIndex, gpxData, poiVisibilityKm, poiVersion]);
+  }, [currentPosition, flythrough.flyingIndex, gpxData, poiVisibilityKm, poiVersion, outroMode]);
 
   // POI markers — render helper using current limits per category
   const renderPoiMarkers = React.useCallback((pois: import('@/utils/overpassApi').POIPoint[]) => {
