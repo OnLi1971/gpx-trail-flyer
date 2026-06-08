@@ -31,6 +31,7 @@ export interface PoiSettings {
   selectedPeakKeys: string[];
   placeSelectionMode?: 'auto' | 'manual';
   selectedPlaceKeys?: string[];
+  deselectedPoiKeys?: string[];
 }
 
 interface TrailMapProps {
