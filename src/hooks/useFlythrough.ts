@@ -423,7 +423,7 @@ export function useFlythrough(
       setFlyStartTimestamp(Date.now());
       flyAnimationRef.current = requestAnimationFrame(animateStep);
     }, 2000);
-  }, [map, gpxData, mapPitch, stopFlythrough]);
+  }, [map, gpxData, mapPitch, stopFlythrough, stopOrbit]);
 
   return {
     isFlying,
