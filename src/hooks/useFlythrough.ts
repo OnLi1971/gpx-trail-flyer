@@ -40,7 +40,7 @@ function calculateBearing(start: { lat: number; lon: number }, end: { lat: numbe
   const y = Math.sin(dLon) * Math.cos(endLat);
   const x = Math.cos(startLat) * Math.sin(endLat) - Math.sin(startLat) * Math.cos(endLat) * Math.cos(dLon);
 
-  let bearing = Math.atan2(y, x) * 180 / Math.PI;
+  const bearing = Math.atan2(y, x) * 180 / Math.PI;
   return (bearing + 360) % 360;
 }
 
@@ -231,6 +231,7 @@ export function useFlythrough(
       if (reason === 'finished') {
         // Závěrečný 3D orbit pohled — kamera obkrouží celou trasu, terén zůstane viditelný
         const orbitPitch = 60;
+        setShowSummary(true);
         map.current.fitBounds(bounds, {
           padding: 60,
           pitch: orbitPitch,
@@ -251,7 +252,6 @@ export function useFlythrough(
         // Začni rotovat až po fitBounds, aby se to nervalo
         summaryTimeoutRef.current = setTimeout(() => {
           orbitAnimationRef.current = requestAnimationFrame(tick);
-          setShowSummary(true);
         }, 1600);
       } else {
         stopOrbit();
