@@ -960,18 +960,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
-          {/* Závěrečné shrnutí trasy po dokončení průletu */}
-          {gpxData && flythrough.showSummary && (
-            <TrailSummaryCard
-              gpxData={gpxData}
-              poiCounts={poiCounts}
-              flyDurationSec={flythrough.flyDurationSec}
-              trailColor={trailColor}
-              trailStyle={trailStyle}
-              trailWidth={trailWidth}
-              onClose={() => { flythrough.dismissSummary(); setOutroMode(false); }}
-            />
-          )}
+          {/* Karta shrnutí odstraněna — závěr je čistý orbit s viditelnými POI */}
 
           {/* Basemap toggle + Fullscreen / Presentation toggle */}
           {gpxData && (
