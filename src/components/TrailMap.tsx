@@ -565,7 +565,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       ? places.filter(p => selectedPlaceKeys.has(placeKey(p)))
       : places.slice(0, placeLimit);
 
-    const limited = [
+    const limitedRaw = [
       ...limitedPeaks,
       ...limitedPlaces,
       ...viewpoints.slice(0, viewpointLimit),
@@ -573,6 +573,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       ...saddles.slice(0, saddleLimit),
       ...pubs.slice(0, pubLimit),
     ];
+    // Skryj POI, které uživatel klikem odoznačil
+    const limited = limitedRaw.filter(p => !deselectedPoiKeys.has(peakKey(p)));
 
     poiMarkersRef.current.forEach(m => m.marker.remove());
     poiMarkersRef.current = [];
