@@ -91,6 +91,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     new Set(initialPoiSettings?.selectedPeakKeys ?? [])
   );
   const [peakSearch, setPeakSearch] = useState('');
+  // Manual place selection (města)
+  const [placeSelectionMode, setPlaceSelectionMode] = useState<'auto' | 'manual'>(initialPoiSettings?.placeSelectionMode ?? 'auto');
+  const [selectedPlaceKeys, setSelectedPlaceKeys] = useState<Set<string>>(
+    new Set(initialPoiSettings?.selectedPlaceKeys ?? [])
+  );
+  const [placeSearch, setPlaceSearch] = useState('');
   const allNearbyPoisRef = useRef<import('@/utils/overpassApi').POIPoint[]>([]);
   const hasInitialPoiRef = useRef<boolean>(!!initialPoiSettings);
 
