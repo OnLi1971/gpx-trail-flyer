@@ -961,7 +961,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               trailColor={trailColor}
               trailStyle={trailStyle}
               trailWidth={trailWidth}
-              onClose={() => flythrough.dismissSummary()}
+              onClose={() => { flythrough.dismissSummary(); setOutroMode(false); }}
             />
           )}
 
