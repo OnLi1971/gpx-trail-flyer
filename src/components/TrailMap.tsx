@@ -1078,6 +1078,50 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         {/* 3D Controls */}
         {!presentationMode && (
         <div className="bg-muted/50 border-t p-4 space-y-3">
+          {/* Vzhled trasy: barva + styl + šířka */}
+          {gpxData && !readOnly && (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-xs font-medium text-muted-foreground w-20">Trasa</span>
+              <label className="inline-flex items-center gap-2 cursor-pointer" title="Barva trasy">
+                <input
+                  type="color"
+                  value={trailColor}
+                  onChange={(e) => setTrailColor(e.target.value)}
+                  className="w-8 h-8 rounded border border-border bg-transparent cursor-pointer p-0"
+                  aria-label="Barva trasy"
+                />
+                <span className="text-xs text-muted-foreground">Barva</span>
+              </label>
+              <ToggleGroup
+                type="single"
+                value={trailStyle}
+                onValueChange={(v) => v && setTrailStyle(v as 'solid' | 'dashed' | 'dotted')}
+                size="sm"
+              >
+                <ToggleGroupItem value="solid" aria-label="Plná čára" title="Plná">
+                  <span style={{ display: 'inline-block', width: 22, height: 0, borderTop: `3px solid ${trailColor}` }} />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="dashed" aria-label="Přerušovaná" title="Přerušovaná">
+                  <span style={{ display: 'inline-block', width: 22, height: 0, borderTop: `3px dashed ${trailColor}` }} />
+                </ToggleGroupItem>
+                <ToggleGroupItem value="dotted" aria-label="Tečkovaná" title="Tečkovaná">
+                  <span style={{ display: 'inline-block', width: 22, height: 0, borderTop: `3px dotted ${trailColor}` }} />
+                </ToggleGroupItem>
+              </ToggleGroup>
+              <div className="flex items-center gap-2 flex-1 min-w-[140px]">
+                <span className="text-xs text-muted-foreground">Šířka</span>
+                <Slider
+                  value={[trailWidth]}
+                  onValueChange={(v) => setTrailWidth(v[0])}
+                  min={2}
+                  max={10}
+                  step={1}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-6 text-right">{trailWidth}</span>
+              </div>
+            </div>
+          )}
           {/* Pitch slider */}
           <div className="flex items-center gap-3">
             <Mountain className="w-4 h-4 text-muted-foreground flex-shrink-0" />
