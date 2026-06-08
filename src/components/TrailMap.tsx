@@ -100,6 +100,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     new Set(initialPoiSettings?.selectedPlaceKeys ?? [])
   );
   const [placeSearch, setPlaceSearch] = useState('');
+  // POI skryté kliknutím na mapě (klíče napříč všemi kategoriemi)
+  const [deselectedPoiKeys, setDeselectedPoiKeys] = useState<Set<string>>(
+    new Set(initialPoiSettings?.deselectedPoiKeys ?? [])
+  );
   const allNearbyPoisRef = useRef<import('@/utils/overpassApi').POIPoint[]>([]);
   const hasInitialPoiRef = useRef<boolean>(!!initialPoiSettings);
 
