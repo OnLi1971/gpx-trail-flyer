@@ -1156,6 +1156,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 />
                 <span className="text-xs text-muted-foreground w-6 text-right">{trailWidth}</span>
               </div>
+              <label className="inline-flex items-center gap-2 cursor-pointer" title="Čára se kreslí jen za jezdcem">
+                <Switch checked={trailBehindOnly} onCheckedChange={setTrailBehindOnly} />
+                <span className="text-xs text-muted-foreground">Stopa za jezdcem</span>
+              </label>
             </div>
           )}
           {/* Pitch slider */}
