@@ -18,6 +18,7 @@ import { useFlythrough } from '@/hooks/useFlythrough';
 import { useElevationData } from '@/hooks/useElevationData';
 import { useFlythroughRecorder } from '@/hooks/useFlythroughRecorder';
 import { VideoPreviewDialog } from './VideoPreviewDialog';
+import { TrailSummaryCard } from './TrailSummaryCard';
 import { toast } from 'sonner';
 
 export interface PoiSettings {
