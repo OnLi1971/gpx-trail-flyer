@@ -192,15 +192,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [outroMode, setOutroMode] = useState(false);
 
   const flythrough = useFlythrough(map, gpxData, (reason) => {
-    // Po dokončení průletu: skryj POI a ukaž 2D pohled shora
-    if (reason === 'finished') {
-      setOutroMode(true);
-    }
+    // Po dokončení průletu NEzapínáme outroMode — POI zůstanou viditelné během orbit pohledu
     // Pokud nahráváme, zastav nahrávání a otevři dialog s náhledem
     if (isRecordingRef.current) {
       isRecordingRef.current = false;
       recorder.stopRecording();
-      // dialog otevřeme po onstop callbacku — ten naplní recorded
       setTimeout(() => setVideoDialogOpen(true), 300);
     }
   });
