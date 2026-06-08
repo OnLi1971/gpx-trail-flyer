@@ -450,5 +450,7 @@ export function useFlythrough(
     hasTimeData,
     dynamicIntensity,
     setDynamicIntensity,
+    showSummary,
+    dismissSummary,
   };
 }
