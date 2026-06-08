@@ -80,6 +80,7 @@ export function useFlythrough(
   const [currentGrade, setCurrentGrade] = useState<number | null>(null);
   const [mapPitch, setMapPitchState] = useState(73);
   const [flyStartTimestamp, setFlyStartTimestamp] = useState<number | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
 
   const flyAnimationRef = useRef<number | null>(null);
   const flyStartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,6 +92,8 @@ export function useFlythrough(
   const lastBearingRef = useRef(0);
   const flyMarkerRef = useRef<Marker | null>(null);
   const avgRealDtRef = useRef<number>(0);
+  const orbitAnimationRef = useRef<number | null>(null);
+  const summaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [markerIcon, setMarkerIconState] = useState<MarkerIcon>('bike');
   const markerIconRef = useRef<MarkerIcon>('bike');
   const [dynamicSpeed, setDynamicSpeedState] = useState(false);
