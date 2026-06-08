@@ -438,9 +438,13 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       ? peaks.filter(p => selectedPeakKeys.has(peakKey(p)))
       : peaks.slice(0, peakLimit);
 
+    const limitedPlaces = placeSelectionMode === 'manual'
+      ? places.filter(p => selectedPlaceKeys.has(placeKey(p)))
+      : places.slice(0, placeLimit);
+
     const limited = [
       ...limitedPeaks,
-      ...places.slice(0, placeLimit),
+      ...limitedPlaces,
       ...viewpoints.slice(0, viewpointLimit),
       ...castles.slice(0, castleLimit),
       ...saddles.slice(0, saddleLimit),
