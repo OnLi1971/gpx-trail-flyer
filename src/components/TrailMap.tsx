@@ -967,6 +967,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   chartData={elevationData.chartData}
                   currentChartPoint={elevationData.currentChartPoint}
                   variant="overlay"
+                  trailColor={trailColor}
+                  trailStyle={trailStyle}
+                  trailWidth={trailWidth}
                 />
               </div>
             </div>

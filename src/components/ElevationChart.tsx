@@ -12,12 +12,18 @@ interface ElevationChartProps {
   chartData: ChartDataPoint[];
   currentChartPoint: ChartDataPoint | null;
   variant?: 'overlay' | 'panel';
+  trailColor?: string;
+  trailStyle?: 'solid' | 'dashed' | 'dotted';
+  trailWidth?: number;
 }
 
 export const ElevationChart = React.memo<ElevationChartProps>(({
   chartData,
   currentChartPoint,
   variant = 'overlay',
+  trailColor = '#059669',
+  trailStyle = 'solid',
+  trailWidth = 2.5,
 }) => {
   if (chartData.length === 0) return null;
 
@@ -40,8 +46,8 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
             <LineChart data={chartData} margin={{ top: 6, right: 10, left: 8, bottom: 4 }}>
               <defs>
                 <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#059669" stopOpacity={0.8} />
-                  <stop offset="100%" stopColor="#059669" stopOpacity={0.1} />
+                  <stop offset="0%" stopColor={trailColor} stopOpacity={0.8} />
+                  <stop offset="100%" stopColor={trailColor} stopOpacity={0.1} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="1 1" stroke="#9ca3af" strokeOpacity={0.4} strokeWidth={0.5} />
@@ -68,8 +74,13 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
               <Line
                 type="monotone"
                 dataKey="elevation"
-                stroke="#059669"
-                strokeWidth={2.5}
+                stroke={trailColor}
+                strokeWidth={trailWidth}
+                strokeDasharray={
+                  trailStyle === 'dashed' ? '4 3' :
+                  trailStyle === 'dotted' ? '1 2' :
+                  undefined
+                }
                 dot={false}
                 fill="url(#elevationGradient)"
                 fillOpacity={0.3}
