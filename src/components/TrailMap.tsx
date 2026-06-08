@@ -709,13 +709,25 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           break;
       }
 
+      // Klik = skrýt tento POI (přidat klíč do deselected)
+      const key = peakKey(poi);
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        setDeselectedPoiKeys(prev => {
+          const next = new Set(prev);
+          next.add(key);
+          return next;
+        });
+      });
+
       const marker = new Marker({ element: el, anchor: 'bottom' })
         .setLngLat([poi.lon, poi.lat])
         .addTo(map.current!);
 
       poiMarkersRef.current.push({ marker, lat: poi.lat, lon: poi.lon });
     });
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys]);
 
   // POI fetch — extrahováno, aby šlo zavolat i ručně přes tlačítko reload
   const poiCancelRef = useRef<{ cancelled: boolean } | null>(null);
