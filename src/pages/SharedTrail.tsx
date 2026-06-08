@@ -127,7 +127,10 @@ export default function SharedTrail() {
     currentPoi.pubLimit !== savedPoi.pubLimit ||
     currentPoi.peakSelectionMode !== savedPoi.peakSelectionMode ||
     currentPoi.selectedPeakKeys.length !== savedPoi.selectedPeakKeys.length ||
-    currentPoi.selectedPeakKeys.some((k) => !savedPoi.selectedPeakKeys.includes(k))
+    currentPoi.selectedPeakKeys.some((k) => !savedPoi.selectedPeakKeys.includes(k)) ||
+    (currentPoi.placeSelectionMode ?? 'auto') !== (savedPoi.placeSelectionMode ?? 'auto') ||
+    (currentPoi.selectedPlaceKeys?.length ?? 0) !== (savedPoi.selectedPlaceKeys?.length ?? 0) ||
+    (currentPoi.selectedPlaceKeys ?? []).some((k) => !(savedPoi.selectedPlaceKeys ?? []).includes(k))
   );
 
   const handleSavePoi = async () => {
