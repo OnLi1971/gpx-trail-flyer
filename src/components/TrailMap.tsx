@@ -140,6 +140,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     setSelectedPeakKeys(new Set(initialPoiSettings.selectedPeakKeys));
     setPlaceSelectionMode(initialPoiSettings.placeSelectionMode ?? 'auto');
     setSelectedPlaceKeys(new Set(initialPoiSettings.selectedPlaceKeys ?? []));
+    setDeselectedPoiKeys(new Set(initialPoiSettings.deselectedPoiKeys ?? []));
   }, [initialPoiSettings]);
 
   // Emit POI settings to parent when they change
@@ -156,8 +157,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       selectedPeakKeys: [...selectedPeakKeys],
       placeSelectionMode,
       selectedPlaceKeys: [...selectedPlaceKeys],
+      deselectedPoiKeys: [...deselectedPoiKeys],
     });
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, onPoiSettingsChange]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys, onPoiSettingsChange]);
 
   // Helper: stable key per POI (peak/place/…)
   const peakKey = (p: import('@/utils/overpassApi').POIPoint) =>
