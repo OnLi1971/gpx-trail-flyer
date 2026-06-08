@@ -29,6 +29,8 @@ export interface PoiSettings {
   pubLimit: number;
   peakSelectionMode: 'auto' | 'manual';
   selectedPeakKeys: string[];
+  placeSelectionMode?: 'auto' | 'manual';
+  selectedPlaceKeys?: string[];
 }
 
 interface TrailMapProps {
