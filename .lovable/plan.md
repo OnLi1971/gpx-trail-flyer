@@ -1,40 +1,34 @@
-## Cíl
+## Závěr průletu: orbitální 3D rotace + statistická karta
 
-Aby se průlet zpomaloval ve stoupání / na pomalých úsecích a zrychloval při sjezdech / rovinkách — věrně podle reálné rychlosti zaznamenané v GPX (timestamps mezi body).
+### Co se změní
+Místo zploštění do 2D pohledu shora po dokončení průletu:
 
-## Jak to bude fungovat
+1. **Orbit fáze (~6 s)** – kamera zůstane v 3D (pitch ~60°), `fitBounds` na celou trasu, pak plynulá rotace bearing 0° → 360° kolem středu trasy. Terén a nakreslená trasa zůstanou viditelné.
+2. **Fade-in karta (~0.5 s)** – po skončení orbitu se přes mapu objeví poloprůhledná karta se shrnutím trasy. Mapa pomalu rotuje dál na pozadí jako kulisa.
+3. **Karta zůstane** dokud uživatel nezavře (×) nebo nespustí nový průlet.
 
-1. **Detekce dat**: Při načtení GPX zjistíme, jestli body obsahují `time`. Pokud ano, spočítáme reálnou rychlost (m/s) mezi sousedními body.
-2. **Nový režim "Dynamická rychlost"**: V panelu ovládání průletu přibude **přepínač (Switch)** „Dynamická rychlost podle GPX". Pokud GPX časy neobsahuje, přepínač bude disabled s popiskem „GPX neobsahuje časové značky".
-3. **Slider „Rychlost" se změní na násobič** (0.25× – 4×, default 1×) — určuje, jak moc zrychlit/zpomalit oproti reálnému tempu (např. 2× = dvakrát rychlejší než reálná jízda).
-4. **Animace průletu**: Místo konstantního `step` a `duration` se pro každý úsek mezi body spočítá délka kroku v ms z reálného času:
-   ```
-   realDtMs = (time[i+1] - time[i])
-   stepDuration = realDtMs / multiplier
-   ```
-   Krok zůstává `step = 1` (přechod mezi sousedními body), aby zachytil mikro-změny tempa.
-5. **Ochrany**: 
-   - Minimální `stepDuration` 16 ms (cap nahoře, aby UI neumřelo).
-   - Maximální `stepDuration` ~2000 ms (bod s extrémní pauzou se přeskočí plynule).
-   - Pokud je v GPX dlouhá pauza (stání), volitelně ji zkrátit na max 1 s reálného času.
+### Obsah karty
+- Název trasy
+- Vzdálenost, převýšení ↑/↓, max. nadm. výška
+- Doba průletu / odhad času
+- Počet POI podle kategorií (ikonky)
+- Mini výškový profil (reuse `ElevationChart` v kompaktní variantě)
 
-## Technické změny
+### Technické detaily
 
-**`src/hooks/useFlythrough.ts`**
-- Přidat state `dynamicSpeed: boolean` (default `false`) a setter.
-- `flySpeed` reinterpretovat jako násobič (1–400 → 0.01×–4×) jen v dynamickém režimu; v normálním režimu zůstává původní logika.
-- V `animateStep`: pokud `dynamicSpeed && currentPoint.time && nextPoint.time`, spočítat `duration` z reálných timestampů a násobiče. Jinak fallback na původní vzorec.
-- Přepočet `flyDurationSec`: v dynamickém režimu = (totalRealDuration / multiplier).
-- Při startu průletu zjistit, zda track má `time` – pokud ne, automaticky vypnout `dynamicSpeed`.
+**`src/hooks/useFlythrough.ts`** – v `stopFlythrough` při `reason === 'finished'`:
+- nahradit současný `easeTo({pitch:0})` + `fitBounds` za:
+  - `fitBounds(bounds, { padding: 60, pitch: 60, bearing: 0, duration: 1500 })`
+  - po dokončení spustit `requestAnimationFrame` smyčku, která inkrementuje `bearing` (~60°/s) přes `map.setBearing()` – uložit handle do nového `orbitAnimationRef`
+- exponovat nový state `showSummary: boolean` a `setShowSummary`
+- nastavit `setShowSummary(true)` ~1.5 s po startu orbitu
+- v `stopFlythrough('stopped')` a při startu nového průletu: zrušit orbit, `setShowSummary(false)`
 
-**`src/components/TrailMap.tsx`**
-- V panelu nad sliderem „Rychlost" přidat `Switch` s popiskem „Dynamická rychlost (dle GPX)".
-- Detekce dostupnosti: `hasTimeData = gpxData?.tracks[0]?.points.some(p => p.time)`.
-- Pokud `hasTimeData === false`, switch disabled + tooltip.
-- Label slideru přepínat mezi „Rychlost" (statický) a „Násobič" (dynamický), zobrazit `1.0×` místo `82%`.
+**`src/components/TrailMap.tsx`**:
+- nová komponenta `TrailSummaryCard` (nový soubor `src/components/TrailSummaryCard.tsx`) – fixed overlay nad mapou, poloprůhledné pozadí (`bg-background/85 backdrop-blur`), fade-in animace, close tlačítko
+- vykreslit ji podmíněně podle `showSummary` z hooku
+- předat jí už spočtené statistiky (distance, elevation gain/loss, max ele, poi counts) + `gpxData` pro mini profil
+- respektovat barvu/styl trasy (už máme `trailColor`, `trailStyle`, `trailWidth`) pro mini graf
 
-**`src/types/gpx.ts`** — beze změny (`time` už je).
-
-## UX poznámka
-
-V dynamickém režimu uvidíš v průletu reálný rytmus — zpomalí to v kopci, zrychlí na sjezdu. Násobič 1× = reálný čas trasy, 4× = čtyřikrát rychlejší.
+### Mimo rozsah
+- Nahrávání videa zůstane funkční – `preserveDrawingBuffer` nedotčeno, orbit běží přes stejné `map.setBearing`, takže se nahraje i závěrečná rotace. Karta je DOM overlay, do videa se nepromítne (to je v pořádku – uživatel ji v CapCutu nepotřebuje).

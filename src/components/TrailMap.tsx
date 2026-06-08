@@ -18,6 +18,7 @@ import { useFlythrough } from '@/hooks/useFlythrough';
 import { useElevationData } from '@/hooks/useElevationData';
 import { useFlythroughRecorder } from '@/hooks/useFlythroughRecorder';
 import { VideoPreviewDialog } from './VideoPreviewDialog';
+import { TrailSummaryCard } from './TrailSummaryCard';
 import { toast } from 'sonner';
 
 export interface PoiSettings {
@@ -949,6 +950,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 />
               </div>
             </div>
+          )}
+
+          {/* Závěrečné shrnutí trasy po dokončení průletu */}
+          {gpxData && flythrough.showSummary && (
+            <TrailSummaryCard
+              gpxData={gpxData}
+              poiCounts={poiCounts}
+              flyDurationSec={flythrough.flyDurationSec}
+              trailColor={trailColor}
+              trailStyle={trailStyle}
+              trailWidth={trailWidth}
+              onClose={() => { flythrough.dismissSummary(); setOutroMode(false); }}
+            />
           )}
 
           {/* Basemap toggle + Fullscreen / Presentation toggle */}

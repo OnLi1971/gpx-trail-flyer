@@ -80,6 +80,7 @@ export function useFlythrough(
   const [currentGrade, setCurrentGrade] = useState<number | null>(null);
   const [mapPitch, setMapPitchState] = useState(73);
   const [flyStartTimestamp, setFlyStartTimestamp] = useState<number | null>(null);
+  const [showSummary, setShowSummary] = useState(false);
 
   const flyAnimationRef = useRef<number | null>(null);
   const flyStartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -91,6 +92,8 @@ export function useFlythrough(
   const lastBearingRef = useRef(0);
   const flyMarkerRef = useRef<Marker | null>(null);
   const avgRealDtRef = useRef<number>(0);
+  const orbitAnimationRef = useRef<number | null>(null);
+  const summaryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [markerIcon, setMarkerIconState] = useState<MarkerIcon>('bike');
   const markerIconRef = useRef<MarkerIcon>('bike');
   const [dynamicSpeed, setDynamicSpeedState] = useState(false);
@@ -179,6 +182,22 @@ export function useFlythrough(
     }
   }, [map]);
 
+  const stopOrbit = useCallback(() => {
+    if (orbitAnimationRef.current) {
+      cancelAnimationFrame(orbitAnimationRef.current);
+      orbitAnimationRef.current = null;
+    }
+    if (summaryTimeoutRef.current) {
+      clearTimeout(summaryTimeoutRef.current);
+      summaryTimeoutRef.current = null;
+    }
+  }, []);
+
+  const dismissSummary = useCallback(() => {
+    stopOrbit();
+    setShowSummary(false);
+  }, [stopOrbit]);
+
   const stopFlythrough = useCallback((reason: 'finished' | 'stopped' = 'stopped') => {
     if (flyAnimationRef.current) {
       cancelAnimationFrame(flyAnimationRef.current);
@@ -210,21 +229,33 @@ export function useFlythrough(
       });
 
       if (reason === 'finished') {
-        // Závěrečný 2D pohled shora na celou trasu (bez POI – řeší TrailMap přes onComplete)
-        map.current.easeTo({
-          pitch: 0,
+        // Závěrečný 3D orbit pohled — kamera obkrouží celou trasu, terén zůstane viditelný
+        const orbitPitch = 60;
+        map.current.fitBounds(bounds, {
+          padding: 60,
+          pitch: orbitPitch,
           bearing: 0,
-          duration: 1800,
+          duration: 1500,
         });
-        setTimeout(() => {
-          map.current?.fitBounds(bounds, {
-            padding: 60,
-            pitch: 0,
-            bearing: 0,
-            duration: 1800,
-          });
-        }, 200);
+
+        // Spusť orbit rotaci ~6° za sekundu
+        const startTs = performance.now();
+        const orbitSpeedDegPerMs = 6 / 1000;
+        const tick = (now: number) => {
+          if (!map.current) return;
+          const elapsed = now - startTs;
+          const bearing = (elapsed * orbitSpeedDegPerMs) % 360;
+          map.current.setBearing(bearing);
+          orbitAnimationRef.current = requestAnimationFrame(tick);
+        };
+        // Začni rotovat až po fitBounds, aby se to nervalo
+        summaryTimeoutRef.current = setTimeout(() => {
+          orbitAnimationRef.current = requestAnimationFrame(tick);
+          setShowSummary(true);
+        }, 1600);
       } else {
+        stopOrbit();
+        setShowSummary(false);
         map.current.flyTo({
           center: bounds.getCenter(),
           zoom: 12,
@@ -236,7 +267,8 @@ export function useFlythrough(
     }
 
     onCompleteRef.current?.(reason);
-  }, [map, gpxData, mapPitch]);
+  }, [map, gpxData, mapPitch, stopOrbit]);
+
 
   const startFlythrough = useCallback(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
@@ -244,6 +276,8 @@ export function useFlythrough(
     const track = gpxData.tracks[0];
     if (track.points.length < 2) return;
 
+    stopOrbit();
+    setShowSummary(false);
     setIsFlying(true);
     setFlyingIndex(0);
     setFlyStartTimestamp(null); // nastaví se až po úvodním 2 s flyTo
@@ -389,7 +423,7 @@ export function useFlythrough(
       setFlyStartTimestamp(Date.now());
       flyAnimationRef.current = requestAnimationFrame(animateStep);
     }, 2000);
-  }, [map, gpxData, mapPitch, stopFlythrough]);
+  }, [map, gpxData, mapPitch, stopFlythrough, stopOrbit]);
 
   return {
     isFlying,
@@ -416,5 +450,7 @@ export function useFlythrough(
     hasTimeData,
     dynamicIntensity,
     setDynamicIntensity,
+    showSummary,
+    dismissSummary,
   };
 }
