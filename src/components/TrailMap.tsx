@@ -588,7 +588,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         .setLngLat([poi.lon, poi.lat])
         .addTo(map.current!);
 
-      poiMarkersRef.current.push(marker);
+      poiMarkersRef.current.push({ marker, lat: poi.lat, lon: poi.lon });
     });
   }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys]);
 
