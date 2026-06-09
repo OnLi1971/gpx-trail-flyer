@@ -230,9 +230,9 @@ out tags center geom;`;
 
 export async function fetchWaterwaysAlongTrack(
   trackPoints: TrackPoint[],
-  radiusKm = 0.25
+  radiusKm = 1
 ): Promise<POIPoint[]> {
-  const sampled = sampleTrackPoints(trackPoints, 8);
+  const sampled = sampleTrackPoints(trackPoints, Math.max(0.5, radiusKm * 1.5), 90);
   const radiusMeters = Math.max(80, Math.round(radiusKm * 1000));
   const clauses = sampled.flatMap(p => {
     const around = `(around:${radiusMeters},${p.lat},${p.lon})`;
