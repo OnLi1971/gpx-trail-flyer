@@ -126,6 +126,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [trailStyle, setTrailStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
   const [trailWidth, setTrailWidth] = useState<number>(4);
   const [trailBehindOnly, setTrailBehindOnly] = useState<boolean>(true);
+  const [showSummaryCard, setShowSummaryCard] = useState(false);
 
   // Pokud initialPoiSettings dorazí asynchronně (po mountu), aplikuj je jednou
   const initialAppliedRef = useRef<boolean>(!!initialPoiSettings);
@@ -208,7 +209,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   useEffect(() => {
     if (flythrough.isFlying && outroMode) setOutroMode(false);
   }, [flythrough.isFlying, outroMode]);
-  
+
+  // Karta shrnutí se objeví až po dokončení crossfade (~5s)
+  useEffect(() => {
+    if (!flythrough.showSummary) { setShowSummaryCard(false); return; }
+    const t = setTimeout(() => setShowSummaryCard(true), 5200);
+    return () => clearTimeout(t);
+  }, [flythrough.showSummary]);
+
 
   const handleStartRecording = useCallback(() => {
     if (!map.current) return;
@@ -1015,7 +1023,25 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
-          {/* Karta shrnutí odstraněna — závěr je čistý orbit s viditelnými POI */}
+          {/* Závěrečná karta shrnutí — zobrazí se po dokončení crossfade */}
+          {showSummaryCard && gpxData && (
+            <TrailSummaryCard
+              gpxData={gpxData}
+              poiCounts={{
+                peaks: poiCounts.peaks,
+                places: poiCounts.places,
+                viewpoints: poiCounts.viewpoints,
+                castles: poiCounts.castles,
+                saddles: poiCounts.saddles,
+                pubs: poiCounts.pubs,
+              }}
+              flyDurationSec={flythrough.flyDurationSec}
+              trailColor={trailColor}
+              trailStyle={trailStyle}
+              trailWidth={trailWidth}
+              onClose={() => flythrough.dismissSummary()}
+            />
+          )}
 
           {/* Basemap toggle + Fullscreen / Presentation toggle */}
           {gpxData && (
