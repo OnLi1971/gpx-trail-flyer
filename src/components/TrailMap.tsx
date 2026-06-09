@@ -543,7 +543,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (pts.length === 0) return;
 
     // Pro každý POI najdi index nejbližšího bodu na trase + min. vzdálenost (km)
-    const cosLat0 = Math.cos((pts[0].lat * Math.PI) / 180);
+    const midLat = pts[Math.floor(pts.length / 2)].lat;
+    const cosLat0 = Math.cos((midLat * Math.PI) / 180);
     const poiTrackIdx: number[] = [];
     const poiMinDistKm: number[] = [];
     poiMarkersRef.current.forEach(({ lat, lon }) => {
