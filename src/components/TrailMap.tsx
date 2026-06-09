@@ -127,11 +127,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [trailWidth, setTrailWidth] = useState<number>(4);
   const [trailBehindOnly, setTrailBehindOnly] = useState<boolean>(true);
   const [showSummaryCard, setShowSummaryCard] = useState(false);
-  useEffect(() => {
-    if (!flythrough.showSummary) { setShowSummaryCard(false); return; }
-    const t = setTimeout(() => setShowSummaryCard(true), 5200);
-    return () => clearTimeout(t);
-  }, [flythrough.showSummary]);
 
   // Pokud initialPoiSettings dorazí asynchronně (po mountu), aplikuj je jednou
   const initialAppliedRef = useRef<boolean>(!!initialPoiSettings);
