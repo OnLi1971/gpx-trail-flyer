@@ -570,35 +570,50 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     // Seřazené indexy POI podle pozice na trase
     const order = eligible.slice().sort((a, b) => poiTrackIdx[a] - poiTrackIdx[b]);
 
-    // Init — schovat vše
-    poiMarkersRef.current.forEach(({ marker }) => {
-      const el = marker.getElement();
-      el.style.display = '';
-      el.style.transition = 'opacity 350ms ease-out, transform 350ms ease-out';
-      el.style.opacity = '0';
-      el.style.transform = 'scale(0.7)';
-    });
-
-    // Postupně odhalovat — délka a startovní pauza řízeny slidery
     const REVEAL_DURATION_MS = outroRevealMs;
-    const START_DELAY_MS = outroHideDelayMs;
-    const count = order.length;
+    const HIDE_PAUSE_MS = outroHideDelayMs;
+    const HIDE_TRANSITION_MS = 350;
     const timeouts: ReturnType<typeof setTimeout>[] = [];
+    let cancelled = false;
 
-    order.forEach((poiIdx, k) => {
-      const delay = START_DELAY_MS + (count > 1 ? (k / (count - 1)) * REVEAL_DURATION_MS : 0);
-      const t = setTimeout(() => {
-        const m = poiMarkersRef.current[poiIdx];
-        if (!m) return;
-        const el = m.marker.getElement();
-        el.style.opacity = '1';
-        el.style.transform = 'scale(1)';
-      }, delay);
-      timeouts.push(t);
-    });
+    // Krok 1: počkat na konec fitBounds (moveend). POI zůstávají plně viditelné.
+    const startSequence = () => {
+      if (cancelled || !map.current) return;
+
+      // Krok 2: hide všech POI najednou
+      poiMarkersRef.current.forEach(({ marker }) => {
+        const el = marker.getElement();
+        el.style.display = '';
+        el.style.transition = `opacity ${HIDE_TRANSITION_MS}ms ease-out, transform ${HIDE_TRANSITION_MS}ms ease-out`;
+        el.style.opacity = '0';
+        el.style.transform = 'scale(0.7)';
+      });
+
+      // Krok 3: po dokončení hide + pauza → postupný reveal start → cíl
+      const revealStart = HIDE_TRANSITION_MS + HIDE_PAUSE_MS;
+      const count = order.length;
+      order.forEach((poiIdx, k) => {
+        const delay = revealStart + (count > 1 ? (k / (count - 1)) * REVEAL_DURATION_MS : 0);
+        const t = setTimeout(() => {
+          const m = poiMarkersRef.current[poiIdx];
+          if (!m) return;
+          const el = m.marker.getElement();
+          el.style.opacity = '1';
+          el.style.transform = 'scale(1)';
+        }, delay);
+        timeouts.push(t);
+      });
+    };
+
+    map.current.once('moveend', startSequence);
+    // Fallback kdyby moveend nepřišel (např. už je v cíli)
+    const fallback = setTimeout(startSequence, 6000);
+    timeouts.push(fallback);
 
     return () => {
+      cancelled = true;
       timeouts.forEach(clearTimeout);
+      if (map.current) map.current.off('moveend', startSequence);
       poiMarkersRef.current.forEach(({ marker }) => {
         const el = marker.getElement();
         el.style.transition = '';
