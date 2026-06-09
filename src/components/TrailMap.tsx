@@ -1027,15 +1027,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           {showSummaryCard && gpxData && (
             <TrailSummaryCard
               gpxData={gpxData}
-              poiCounts={{
-                peaks: poiCounts.peaks,
-                places: poiCounts.places,
-                viewpoints: poiCounts.viewpoints,
-                castles: poiCounts.castles,
-                saddles: poiCounts.saddles,
-                pubs: poiCounts.pubs,
-              }}
-              flyDurationSec={flythrough.flyDurationSec}
               trailColor={trailColor}
               trailStyle={trailStyle}
               trailWidth={trailWidth}
