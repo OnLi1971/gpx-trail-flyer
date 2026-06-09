@@ -498,13 +498,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // Skryj POI dál než poiVisibilityKm od aktuální pozice na trase (0 = vypnuto, ukaž vše)
   // V závěrečném 3D orbitu POI postupně fade-in podle úhlu kamery (sekvenční odhalování).
   useEffect(() => {
-    if (flythrough.showSummary) {
-      // Postupné odhalování během orbitu — řešeno v samostatném useEffectu níže.
-      return;
-    }
-    if (outroMode) {
+    if (flythrough.showSummary || outroMode) {
+      // V závěru schovej všechny POI markery
       poiMarkersRef.current.forEach(({ marker }) => {
-        marker.getElement().style.display = 'none';
+        const el = marker.getElement();
+        el.style.transition = '';
+        el.style.opacity = '';
+        el.style.transform = '';
+        el.style.display = 'none';
       });
       return;
     }
