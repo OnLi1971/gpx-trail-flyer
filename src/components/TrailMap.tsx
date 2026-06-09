@@ -640,6 +640,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       ...castles.slice(0, castleLimit),
       ...saddles.slice(0, saddleLimit),
       ...pubs.slice(0, pubLimit),
+      ...rivers.slice(0, riverLimit),
     ];
     // Skryj POI, které uživatel klikem odoznačil
     const limited = limitedRaw.filter(p => !deselectedPoiKeys.has(peakKey(p)));
