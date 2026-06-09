@@ -153,6 +153,7 @@ export default function SharedTrail() {
           castle_limit: currentPoi.castleLimit,
           saddle_limit: currentPoi.saddleLimit,
           pub_limit: currentPoi.pubLimit,
+          river_limit: currentPoi.riverLimit,
           peak_selection_mode: currentPoi.peakSelectionMode,
           selected_peak_keys: currentPoi.selectedPeakKeys as any,
           place_selection_mode: currentPoi.placeSelectionMode ?? 'auto',
