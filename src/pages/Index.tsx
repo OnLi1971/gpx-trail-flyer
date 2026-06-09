@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FileUpload } from '@/components/FileUpload';
 import { TrailMap } from '@/components/TrailMap';
 import { TrailStats } from '@/components/TrailStats';
-
+import { AnimationControls } from '@/components/AnimationControls';
 import { AppHeader } from '@/components/AppHeader';
 import { SaveTrailDialog } from '@/components/SaveTrailDialog';
 import { defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
@@ -190,6 +190,17 @@ const Index = () => {
         ) : (
           <div className="space-y-6">
             <div className="space-y-6">
+                <AnimationControls
+                  gpxData={gpxData}
+                  isPlaying={isPlaying}
+                  currentPosition={currentPosition}
+                  onPlayPause={handlePlayPause}
+                  onReset={handleReset}
+                  onPositionChange={handlePositionChange}
+                  animationSettings={animationSettings}
+                  onAnimationSettingsChange={setAnimationSettings}
+                />
+
                 <TrailMap
                   gpxData={gpxData}
                   currentPosition={currentPosition}
