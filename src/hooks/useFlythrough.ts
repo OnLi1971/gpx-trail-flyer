@@ -229,30 +229,16 @@ export function useFlythrough(
       });
 
       if (reason === 'finished') {
-        // Závěrečný 3D orbit pohled — kamera obkrouží celou trasu, terén zůstane viditelný
-        const orbitPitch = 60;
+        // Cinematic pull-back — kamera vyjede nahoru do ptačí perspektivy nad celou trasou
         setShowSummary(true);
         map.current.fitBounds(bounds, {
-          padding: 60,
-          pitch: orbitPitch,
+          padding: 80,
+          pitch: 0,
           bearing: 0,
-          duration: 1500,
+          duration: 5000,
+          essential: true,
         });
 
-        // Spusť orbit rotaci ~6° za sekundu
-        const startTs = performance.now();
-        const orbitSpeedDegPerMs = 6 / 1000;
-        const tick = (now: number) => {
-          if (!map.current) return;
-          const elapsed = now - startTs;
-          const bearing = (elapsed * orbitSpeedDegPerMs) % 360;
-          map.current.setBearing(bearing);
-          orbitAnimationRef.current = requestAnimationFrame(tick);
-        };
-        // Začni rotovat až po fitBounds, aby se to nervalo
-        summaryTimeoutRef.current = setTimeout(() => {
-          orbitAnimationRef.current = requestAnimationFrame(tick);
-        }, 1600);
       } else {
         stopOrbit();
         setShowSummary(false);
