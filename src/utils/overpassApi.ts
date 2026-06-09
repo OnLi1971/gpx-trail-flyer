@@ -185,7 +185,8 @@ out tags center geom;`;
           }
 
           // Řeka / potok / kanál (way nebo relation)
-          if (tags.waterway && /^(river|stream|canal)$/.test(tags.waterway)) {
+          const waterwayKind = tags.waterway || (tags.natural === 'water' && tags.water === 'river' ? 'river' : undefined) || (tags.type === 'waterway' ? 'river' : undefined);
+          if (waterwayKind && /^(river|stream|canal)$/.test(waterwayKind)) {
             let geometry: { lat: number; lon: number }[] | undefined;
             if (Array.isArray(el.geometry)) {
               geometry = el.geometry
@@ -203,7 +204,7 @@ out tags center geom;`;
               if (geometry && geometry.length === 0) geometry = undefined;
             }
 
-            return { ...base, type: 'river', waterwayKind: tags.waterway, geometry };
+            return { ...base, type: 'river', waterwayKind, geometry };
           }
 
           return null;
