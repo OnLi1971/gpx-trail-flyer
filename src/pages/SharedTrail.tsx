@@ -66,6 +66,7 @@ export default function SharedTrail() {
         castleLimit: (trail as any).castle_limit ?? 15,
         saddleLimit: (trail as any).saddle_limit ?? 15,
         pubLimit: (trail as any).pub_limit ?? 10,
+        riverLimit: (trail as any).river_limit ?? 5,
         peakSelectionMode: ((trail as any).peak_selection_mode ?? 'auto') as 'auto' | 'manual',
         selectedPeakKeys: Array.isArray((trail as any).selected_peak_keys)
           ? ((trail as any).selected_peak_keys as string[])
