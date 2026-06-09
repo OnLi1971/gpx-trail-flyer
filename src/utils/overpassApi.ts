@@ -53,8 +53,10 @@ export async function fetchPeaksAndPlaces(bounds: {
   node["mountain_pass"="yes"]["name"](${bbox});
   node["amenity"~"^(pub|bar|restaurant|cafe|biergarten)$"]["name"](${bbox});
   way["waterway"~"^(river|stream|canal)$"]["name"](${bbox});
+  relation["waterway"~"^(river|canal)$"]["name"](${bbox});
+  relation["type"="waterway"]["name"](${bbox});
 );
-out tags center geom 1200;`;
+out tags center geom 2000;`;
 
   let lastError: unknown = null;
   // 2 pokusy přes všechny servery (s krátkou prodlevou mezi koly) — Overpass občas vrací 502/504 pod zátěží
