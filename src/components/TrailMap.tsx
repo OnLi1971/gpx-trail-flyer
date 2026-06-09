@@ -798,6 +798,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     castles: nearby.filter(p => p.type === 'castle').length,
     saddles: nearby.filter(p => p.type === 'saddle').length,
     pubs: nearby.filter(p => p.type === 'pub').length,
+    rivers: nearby.filter(p => p.type === 'river').length,
     raw: rawTotal,
     filtered: nearby.length,
   });
