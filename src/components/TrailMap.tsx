@@ -73,7 +73,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // POI debug state (visible on mobile)
   const [poiStatus, setPoiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [poiCounts, setPoiCounts] = useState({
-    peaks: 0, places: 0, viewpoints: 0, castles: 0, saddles: 0, pubs: 0,
+    peaks: 0, places: 0, viewpoints: 0, castles: 0, saddles: 0, pubs: 0, rivers: 0,
     raw: 0, filtered: 0,
   });
   const [poiError, setPoiError] = useState<string | null>(null);
@@ -86,6 +86,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [castleLimit, setCastleLimit] = useState(initialPoiSettings?.castleLimit ?? 15);
   const [saddleLimit, setSaddleLimit] = useState(initialPoiSettings?.saddleLimit ?? 15);
   const [pubLimit, setPubLimit] = useState(initialPoiSettings?.pubLimit ?? 0);
+  const [riverLimit, setRiverLimit] = useState(initialPoiSettings?.riverLimit ?? 5);
   // POI search radius around track (km)
   const [poiRadiusKm, setPoiRadiusKm] = useState<number>(3);
   // POI visibility distance from current position along track (km). 0 = vše viditelné.
