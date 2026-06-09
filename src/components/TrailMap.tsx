@@ -564,27 +564,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       rafId = requestAnimationFrame(tick);
     }
 
-    const lightMarkers: Marker[] = [];
-    const places = poiMarkersRef.current.filter(
-      (mk) => mk.type === 'place' || mk.type === 'pub'
-    );
-    places.forEach(({ lat, lon }, i) => {
-      const el = document.createElement('div');
-      const size = 4 + Math.random() * 4;
-      el.style.width = `${size}px`;
-      el.style.height = `${size}px`;
-      el.style.borderRadius = '50%';
-      el.style.background = '#ffd27a';
-      el.style.boxShadow = '0 0 8px 2px rgba(255,210,122,0.9), 0 0 16px 4px rgba(255,180,80,0.5)';
-      el.style.opacity = '0';
-      el.style.transition = 'opacity 1200ms ease-in';
-      el.style.pointerEvents = 'none';
-      const mk = new Marker({ element: el }).setLngLat([lon, lat]).addTo(m);
-      lightMarkers.push(mk);
-      setTimeout(() => { el.style.opacity = '1'; }, 1500 + i * 40);
-    });
     return () => {
-      lightMarkers.forEach((mk) => mk.remove());
       if (rafId) cancelAnimationFrame(rafId);
       // Obnov původní stav basemap vrstev
       try {
@@ -1018,15 +998,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         <div className={`relative w-full ${presentationMode ? 'h-screen' : 'h-[500px]'}`}>
           <div ref={mapContainer} className="absolute inset-0" />
 
-          {/* Den → noc fade overlay v závěru */}
-          <div
-            className="absolute inset-0 z-[15] pointer-events-none"
-            style={{
-              background: 'radial-gradient(ellipse at center, rgba(8,12,38,0.55) 0%, rgba(2,4,18,0.95) 100%)',
-              opacity: flythrough.showSummary ? 1 : 0,
-              transition: 'opacity 5000ms ease-in',
-            }}
-          />
 
           {/* Elevation chart overlay */}
           {gpxData && (
