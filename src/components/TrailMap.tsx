@@ -209,7 +209,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   useEffect(() => {
     if (flythrough.isFlying && outroMode) setOutroMode(false);
   }, [flythrough.isFlying, outroMode]);
-  
+
+  // Karta shrnutí se objeví až po dokončení crossfade (~5s)
+  useEffect(() => {
+    if (!flythrough.showSummary) { setShowSummaryCard(false); return; }
+    const t = setTimeout(() => setShowSummaryCard(true), 5200);
+    return () => clearTimeout(t);
+  }, [flythrough.showSummary]);
+
 
   const handleStartRecording = useCallback(() => {
     if (!map.current) return;
