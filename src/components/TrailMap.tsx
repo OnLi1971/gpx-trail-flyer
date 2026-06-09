@@ -565,7 +565,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
 
     return () => {
-      lightMarkers.forEach((mk) => mk.remove());
       if (rafId) cancelAnimationFrame(rafId);
       // Obnov původní stav basemap vrstev
       try {
