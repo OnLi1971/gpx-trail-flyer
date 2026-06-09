@@ -190,6 +190,7 @@ const Index = () => {
         ) : (
           <div className="space-y-6">
             <div className="space-y-6">
+                <TrailMap
                   gpxData={gpxData}
                   currentPosition={currentPosition}
                   animationSettings={animationSettings}
