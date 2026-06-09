@@ -28,6 +28,7 @@ export interface PoiSettings {
   castleLimit: number;
   saddleLimit: number;
   pubLimit: number;
+  riverLimit: number;
   peakSelectionMode: 'auto' | 'manual';
   selectedPeakKeys: string[];
   placeSelectionMode?: 'auto' | 'manual';
@@ -72,7 +73,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // POI debug state (visible on mobile)
   const [poiStatus, setPoiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [poiCounts, setPoiCounts] = useState({
-    peaks: 0, places: 0, viewpoints: 0, castles: 0, saddles: 0, pubs: 0,
+    peaks: 0, places: 0, viewpoints: 0, castles: 0, saddles: 0, pubs: 0, rivers: 0,
     raw: 0, filtered: 0,
   });
   const [poiError, setPoiError] = useState<string | null>(null);
@@ -85,6 +86,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [castleLimit, setCastleLimit] = useState(initialPoiSettings?.castleLimit ?? 15);
   const [saddleLimit, setSaddleLimit] = useState(initialPoiSettings?.saddleLimit ?? 15);
   const [pubLimit, setPubLimit] = useState(initialPoiSettings?.pubLimit ?? 0);
+  const [riverLimit, setRiverLimit] = useState(initialPoiSettings?.riverLimit ?? 5);
   // POI search radius around track (km)
   const [poiRadiusKm, setPoiRadiusKm] = useState<number>(3);
   // POI visibility distance from current position along track (km). 0 = vše viditelné.
@@ -141,6 +143,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     setCastleLimit(initialPoiSettings.castleLimit);
     setSaddleLimit(initialPoiSettings.saddleLimit);
     setPubLimit(initialPoiSettings.pubLimit);
+    setRiverLimit(initialPoiSettings.riverLimit ?? 5);
     setPeakSelectionMode(initialPoiSettings.peakSelectionMode);
     setSelectedPeakKeys(new Set(initialPoiSettings.selectedPeakKeys));
     setPlaceSelectionMode(initialPoiSettings.placeSelectionMode ?? 'auto');
@@ -158,13 +161,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       castleLimit,
       saddleLimit,
       pubLimit,
+      riverLimit,
       peakSelectionMode,
       selectedPeakKeys: [...selectedPeakKeys],
       placeSelectionMode,
       selectedPlaceKeys: [...selectedPlaceKeys],
       deselectedPoiKeys: [...deselectedPoiKeys],
     });
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys, onPoiSettingsChange]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, riverLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys, onPoiSettingsChange]);
 
   // Helper: stable key per POI (peak/place/…)
   const peakKey = (p: import('@/utils/overpassApi').POIPoint) =>
@@ -599,6 +603,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     const castles = pois.filter(p => p.type === 'castle');
     const saddles = pois.filter(p => p.type === 'saddle');
     const pubs = pois.filter(p => p.type === 'pub');
+    const rivers = pois.filter(p => p.type === 'river');
 
     // Sort peaks & saddles by elevation desc
     peaks.sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
@@ -635,6 +640,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       ...castles.slice(0, castleLimit),
       ...saddles.slice(0, saddleLimit),
       ...pubs.slice(0, pubLimit),
+      ...rivers.slice(0, riverLimit),
     ];
     // Skryj POI, které uživatel klikem odoznačil
     const limited = limitedRaw.filter(p => !deselectedPoiKeys.has(peakKey(p)));
@@ -727,6 +733,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             smallDot: true,
           });
           break;
+        case 'river':
+          el.innerHTML = buildCard({
+            icon: poi.waterwayKind === 'stream' ? '〰️' : '🌊',
+            text: poi.name,
+            borderColor: '#0369a1',
+            textColor: '#0c4a6e',
+          });
+          break;
         case 'place':
         default:
           el.innerHTML = `
@@ -774,7 +788,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       poiMarkersRef.current.push({ marker, lat: poi.lat, lon: poi.lon, type: poi.type });
     });
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, riverLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys]);
 
   // POI fetch — extrahováno, aby šlo zavolat i ručně přes tlačítko reload
   const poiCancelRef = useRef<{ cancelled: boolean } | null>(null);
@@ -794,6 +808,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     castles: nearby.filter(p => p.type === 'castle').length,
     saddles: nearby.filter(p => p.type === 'saddle').length,
     pubs: nearby.filter(p => p.type === 'pub').length,
+    rivers: nearby.filter(p => p.type === 'river').length,
     raw: rawTotal,
     filtered: nearby.length,
   });
@@ -927,7 +942,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (allNearbyPoisRef.current.length > 0) {
       renderPoiMarkers(allNearbyPoisRef.current);
     }
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, renderPoiMarkers]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, riverLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, renderPoiMarkers]);
 
 
   // Click-to-pick custom peak coords
@@ -1163,6 +1178,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                         <div>⛰️ {poiCounts.peaks} · 🏘️ {poiCounts.places}</div>
                         <div>🔭 {poiCounts.viewpoints} · 🏰 {poiCounts.castles}</div>
                         <div>⛰ {poiCounts.saddles} · 🍺 {poiCounts.pubs}</div>
+                        <div>🌊 {poiCounts.rivers}</div>
                       </div>
                       <div className="text-muted-foreground">API vrátilo: <span className="text-foreground">{poiCounts.raw}</span></div>
                       <div className="text-muted-foreground">Po filtru 2 km: <span className="text-foreground">{poiCounts.filtered}</span></div>
@@ -1874,6 +1890,25 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               />
               <span className="text-xs text-muted-foreground w-10 text-right">
                 {Math.min(pubLimit, poiCounts.pubs)}/{poiCounts.pubs}
+              </span>
+            </div>
+          )}
+
+          {/* POI density — rivers (řeky, potoky) */}
+          {gpxData && poiCounts.rivers > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-base flex-shrink-0 w-4 text-center">🌊</span>
+              <span className="text-xs font-medium text-muted-foreground w-20">Řeky</span>
+              <Slider
+                value={[riverLimit]}
+                onValueChange={(value) => setRiverLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.rivers, 5)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(riverLimit, poiCounts.rivers)}/{poiCounts.rivers}
               </span>
             </div>
           )}

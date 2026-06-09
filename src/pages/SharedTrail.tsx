@@ -44,7 +44,7 @@ export default function SharedTrail() {
       setLoading(true);
       const { data: trail, error: tErr } = await supabase
         .from('trails')
-        .select('id, name, gpx_data, user_id, peak_limit, place_limit, viewpoint_limit, castle_limit, saddle_limit, pub_limit, peak_selection_mode, selected_peak_keys, place_selection_mode, selected_place_keys, deselected_poi_keys, cached_pois, pois_cached_at')
+        .select('id, name, gpx_data, user_id, peak_limit, place_limit, viewpoint_limit, castle_limit, saddle_limit, pub_limit, river_limit, peak_selection_mode, selected_peak_keys, place_selection_mode, selected_place_keys, deselected_poi_keys, cached_pois, pois_cached_at')
         .eq('slug', slug)
         .maybeSingle();
 
@@ -66,6 +66,7 @@ export default function SharedTrail() {
         castleLimit: (trail as any).castle_limit ?? 15,
         saddleLimit: (trail as any).saddle_limit ?? 15,
         pubLimit: (trail as any).pub_limit ?? 10,
+        riverLimit: (trail as any).river_limit ?? 5,
         peakSelectionMode: ((trail as any).peak_selection_mode ?? 'auto') as 'auto' | 'manual',
         selectedPeakKeys: Array.isArray((trail as any).selected_peak_keys)
           ? ((trail as any).selected_peak_keys as string[])
@@ -128,6 +129,7 @@ export default function SharedTrail() {
     currentPoi.castleLimit !== savedPoi.castleLimit ||
     currentPoi.saddleLimit !== savedPoi.saddleLimit ||
     currentPoi.pubLimit !== savedPoi.pubLimit ||
+    currentPoi.riverLimit !== savedPoi.riverLimit ||
     currentPoi.peakSelectionMode !== savedPoi.peakSelectionMode ||
     currentPoi.selectedPeakKeys.length !== savedPoi.selectedPeakKeys.length ||
     currentPoi.selectedPeakKeys.some((k) => !savedPoi.selectedPeakKeys.includes(k)) ||
@@ -151,6 +153,7 @@ export default function SharedTrail() {
           castle_limit: currentPoi.castleLimit,
           saddle_limit: currentPoi.saddleLimit,
           pub_limit: currentPoi.pubLimit,
+          river_limit: currentPoi.riverLimit,
           peak_selection_mode: currentPoi.peakSelectionMode,
           selected_peak_keys: currentPoi.selectedPeakKeys as any,
           place_selection_mode: currentPoi.placeSelectionMode ?? 'auto',

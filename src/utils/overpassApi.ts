@@ -1,4 +1,4 @@
-export type POIType = 'peak' | 'place' | 'viewpoint' | 'castle' | 'saddle' | 'pub';
+export type POIType = 'peak' | 'place' | 'viewpoint' | 'castle' | 'saddle' | 'pub' | 'river';
 
 export interface POIPoint {
   name: string;
@@ -14,6 +14,8 @@ export interface POIPoint {
   castleKind?: string;
   /** Pro 'pub': pub/bar/restaurant/cafe */
   pubKind?: string;
+  /** Pro 'river': river/stream/canal */
+  waterwayKind?: string;
 }
 
 const OVERPASS_ENDPOINTS = [
@@ -37,7 +39,7 @@ export async function fetchPeaksAndPlaces(bounds: {
 
   const bbox = `${south},${west},${north},${east}`;
 
-  // Single union query — peaks, places, viewpoints (vč. rozhleden), hrady/zříceniny, sedla, hospody/restaurace
+  // Single union query — peaks, places, viewpoints (vč. rozhleden), hrady/zříceniny, sedla, hospody/restaurace, řeky/potoky
   const query = `[out:json][timeout:30];
 (
   node["natural"="peak"]["name"](${bbox});
@@ -48,8 +50,9 @@ export async function fetchPeaksAndPlaces(bounds: {
   node["natural"~"^(saddle|mountain_pass)$"]["name"](${bbox});
   node["mountain_pass"="yes"]["name"](${bbox});
   node["amenity"~"^(pub|bar|restaurant|cafe|biergarten)$"]["name"](${bbox});
+  way["waterway"~"^(river|stream|canal)$"]["name"](${bbox});
 );
-out body 800;`;
+out tags center 1200;`;
 
   let lastError: unknown = null;
   // 2 pokusy přes všechny servery (s krátkou prodlevou mezi koly) — Overpass občas vrací 502/504 pod zátěží
@@ -79,7 +82,12 @@ out body 800;`;
           const name = tags.name;
           if (!name) return null;
 
-          const base = { name, lat: el.lat, lon: el.lon };
+          // U ways (řeky) je souřadnice v center.{lat,lon}
+          const lat = el.lat ?? el.center?.lat;
+          const lon = el.lon ?? el.center?.lon;
+          if (lat == null || lon == null) return null;
+
+          const base = { name, lat, lon };
 
           // Vrchol
           if (tags.natural === 'peak') {
@@ -127,6 +135,11 @@ out body 800;`;
           // Hospoda / restaurace / kavárna / bar
           if (tags.amenity && /^(pub|bar|restaurant|cafe|biergarten)$/.test(tags.amenity)) {
             return { ...base, type: 'pub', pubKind: tags.amenity };
+          }
+
+          // Řeka / potok / kanál
+          if (tags.waterway && /^(river|stream|canal)$/.test(tags.waterway)) {
+            return { ...base, type: 'river', waterwayKind: tags.waterway };
           }
 
           return null;

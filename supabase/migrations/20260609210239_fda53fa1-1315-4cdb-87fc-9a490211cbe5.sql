@@ -1,0 +1,1 @@
+ALTER TABLE public.trails ADD COLUMN IF NOT EXISTS river_limit integer NOT NULL DEFAULT 0;

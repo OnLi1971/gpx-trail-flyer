@@ -71,6 +71,7 @@ export type Database = {
           place_selection_mode: string
           pois_cached_at: string | null
           pub_limit: number
+          river_limit: number
           saddle_limit: number
           selected_peak_keys: Json
           selected_place_keys: Json
@@ -94,6 +95,7 @@ export type Database = {
           place_selection_mode?: string
           pois_cached_at?: string | null
           pub_limit?: number
+          river_limit?: number
           saddle_limit?: number
           selected_peak_keys?: Json
           selected_place_keys?: Json
@@ -117,6 +119,7 @@ export type Database = {
           place_selection_mode?: string
           pois_cached_at?: string | null
           pub_limit?: number
+          river_limit?: number
           saddle_limit?: number
           selected_peak_keys?: Json
           selected_place_keys?: Json
