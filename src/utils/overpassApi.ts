@@ -16,6 +16,8 @@ export interface POIPoint {
   pubKind?: string;
   /** Pro 'river': river/stream/canal */
   waterwayKind?: string;
+  /** Geometrie liniových POI (hlavně řeky/potoky) pro filtrování podle průsečíku s trasou */
+  geometry?: { lat: number; lon: number }[];
 }
 
 const OVERPASS_ENDPOINTS = [
@@ -52,7 +54,7 @@ export async function fetchPeaksAndPlaces(bounds: {
   node["amenity"~"^(pub|bar|restaurant|cafe|biergarten)$"]["name"](${bbox});
   way["waterway"~"^(river|stream|canal)$"]["name"](${bbox});
 );
-out tags center 1200;`;
+out tags center geom 1200;`;
 
   let lastError: unknown = null;
   // 2 pokusy přes všechny servery (s krátkou prodlevou mezi koly) — Overpass občas vrací 502/504 pod zátěží
@@ -139,7 +141,13 @@ out tags center 1200;`;
 
           // Řeka / potok / kanál
           if (tags.waterway && /^(river|stream|canal)$/.test(tags.waterway)) {
-            return { ...base, type: 'river', waterwayKind: tags.waterway };
+            const geometry = Array.isArray(el.geometry)
+              ? el.geometry
+                  .map((point: any) => ({ lat: point.lat, lon: point.lon }))
+                  .filter((point: { lat: number; lon: number }) => point.lat != null && point.lon != null)
+              : undefined;
+
+            return { ...base, type: 'river', waterwayKind: tags.waterway, geometry };
           }
 
           return null;
