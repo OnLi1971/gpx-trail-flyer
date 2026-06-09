@@ -122,28 +122,7 @@ export async function fetchPeaksAndPlaces(bounds: {
 );
 out tags center geom;`;
 
-  let lastError: unknown = null;
-  // 2 pokusy přes všechny servery (s krátkou prodlevou mezi koly) — Overpass občas vrací 502/504 pod zátěží
-  const MAX_ROUNDS = 2;
-  for (let round = 0; round < MAX_ROUNDS; round++) {
-    if (round > 0) {
-      await new Promise((r) => setTimeout(r, 1500));
-    }
-    for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: `data=${encodeURIComponent(query)}`,
-      });
-
-      if (!response.ok) {
-        lastError = new Error(`HTTP ${response.status}`);
-        continue;
-      }
-
-      const data = await response.json();
-
+  const data = await fetchOverpassJson(query);
       const result: POIPoint[] = (data.elements || [])
         .map((el: any): POIPoint | null => {
           const tags = el.tags || {};
@@ -246,13 +225,57 @@ out tags center geom;`;
       deduped.push(...riverByName.values());
 
       return deduped;
-    } catch (err) {
-      lastError = err;
-    }
-    }
+}
+
+export async function fetchWaterwaysAlongTrack(
+  trackPoints: TrackPoint[],
+  radiusKm = 0.25
+): Promise<POIPoint[]> {
+  const sampled = sampleTrackPoints(trackPoints, 8);
+  const around = sampled.map(p => `around:${Math.max(80, Math.round(radiusKm * 1000))},${p.lat},${p.lon}`).join(');(');
+  const query = `[out:json][timeout:30];
+(
+  way["waterway"~"^(river|stream|canal)$"]["name"](${around});
+  relation["waterway"~"^(river|canal)$"]["name"](${around});
+  relation["type"="waterway"]["name"](${around});
+  way["natural"="water"]["water"="river"]["name"](${around});
+  relation["natural"="water"]["water"="river"]["name"](${around});
+);
+out tags center geom;`;
+
+  const data = await fetchOverpassJson(query);
+  const byName = new Map<string, POIPoint>();
+
+  for (const el of data.elements || []) {
+    const tags = el.tags || {};
+    const name = tags.name;
+    const lat = el.lat ?? el.center?.lat;
+    const lon = el.lon ?? el.center?.lon;
+    if (!name || lat == null || lon == null) continue;
+
+    const geometry = Array.isArray(el.geometry)
+      ? el.geometry.map((p: any) => ({ lat: p.lat, lon: p.lon })).filter((p: TrackPoint) => p.lat != null && p.lon != null)
+      : Array.isArray(el.members)
+        ? el.members.flatMap((m: any) => Array.isArray(m.geometry)
+          ? m.geometry.map((p: any) => ({ lat: p.lat, lon: p.lon })).filter((p: TrackPoint) => p.lat != null && p.lon != null)
+          : [])
+        : undefined;
+
+    const poi: POIPoint = {
+      name,
+      lat,
+      lon,
+      type: 'river',
+      waterwayKind: tags.waterway || tags.water || 'river',
+      geometry: geometry && geometry.length > 0 ? geometry : undefined,
+    };
+
+    const key = name.toLowerCase();
+    const existing = byName.get(key);
+    if (!existing || (poi.geometry?.length ?? 0) > (existing.geometry?.length ?? 0)) byName.set(key, poi);
   }
 
-  throw new Error(`Všechny Overpass servery selhaly. ${lastError instanceof Error ? lastError.message : ''}`);
+  return [...byName.values()];
 }
 
 function distanceToSegmentSquared(
