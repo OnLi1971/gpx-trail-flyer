@@ -167,7 +167,21 @@ out tags center geom 2000;`;
         })
         .filter((p: POIPoint | null): p is POIPoint => p !== null);
 
-      return result;
+      // Deduplikace řek podle názvu — Vltava může přijít jako relace + mnoho ways.
+      // Necháme variantu s nejdelší geometrií (typicky relace).
+      const riverByName = new Map<string, POIPoint>();
+      const deduped: POIPoint[] = [];
+      for (const p of result) {
+        if (p.type !== 'river') { deduped.push(p); continue; }
+        const key = p.name.toLowerCase();
+        const existing = riverByName.get(key);
+        if (!existing || (p.geometry?.length ?? 0) > (existing.geometry?.length ?? 0)) {
+          riverByName.set(key, p);
+        }
+      }
+      deduped.push(...riverByName.values());
+
+      return deduped;
     } catch (err) {
       lastError = err;
     }
