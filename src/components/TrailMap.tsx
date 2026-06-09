@@ -603,6 +603,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     const castles = pois.filter(p => p.type === 'castle');
     const saddles = pois.filter(p => p.type === 'saddle');
     const pubs = pois.filter(p => p.type === 'pub');
+    const rivers = pois.filter(p => p.type === 'river');
 
     // Sort peaks & saddles by elevation desc
     peaks.sort((a, b) => (b.ele ?? 0) - (a.ele ?? 0));
