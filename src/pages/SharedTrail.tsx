@@ -249,7 +249,7 @@ export default function SharedTrail() {
             </div>
           )}
         </div>
-
+        <TrailMap
           gpxData={gpxData}
           currentPosition={currentPosition}
           animationSettings={animationSettings}
