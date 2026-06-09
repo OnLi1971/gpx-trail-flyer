@@ -1894,6 +1894,25 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
+          {/* POI density — rivers (řeky, potoky) */}
+          {gpxData && poiCounts.rivers > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-base flex-shrink-0 w-4 text-center">🌊</span>
+              <span className="text-xs font-medium text-muted-foreground w-20">Řeky</span>
+              <Slider
+                value={[riverLimit]}
+                onValueChange={(value) => setRiverLimit(value[0])}
+                min={0}
+                max={Math.max(poiCounts.rivers, 5)}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-10 text-right">
+                {Math.min(riverLimit, poiCounts.rivers)}/{poiCounts.rivers}
+              </span>
+            </div>
+          )}
+
           {gpxData && (
             <>
 
