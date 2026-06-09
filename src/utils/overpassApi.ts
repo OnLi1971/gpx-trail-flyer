@@ -233,14 +233,20 @@ export async function fetchWaterwaysAlongTrack(
   radiusKm = 0.25
 ): Promise<POIPoint[]> {
   const sampled = sampleTrackPoints(trackPoints, 8);
-  const around = sampled.map(p => `around:${Math.max(80, Math.round(radiusKm * 1000))},${p.lat},${p.lon}`).join(');(');
+  const radiusMeters = Math.max(80, Math.round(radiusKm * 1000));
+  const clauses = sampled.flatMap(p => {
+    const around = `(around:${radiusMeters},${p.lat},${p.lon})`;
+    return [
+      `way["waterway"~"^(river|stream|canal)$"]["name"]${around};`,
+      `relation["waterway"~"^(river|canal)$"]["name"]${around};`,
+      `relation["type"="waterway"]["name"]${around};`,
+      `way["natural"="water"]["water"="river"]["name"]${around};`,
+      `relation["natural"="water"]["water"="river"]["name"]${around};`,
+    ];
+  }).join('\n  ');
   const query = `[out:json][timeout:30];
 (
-  way["waterway"~"^(river|stream|canal)$"]["name"](${around});
-  relation["waterway"~"^(river|canal)$"]["name"](${around});
-  relation["type"="waterway"]["name"](${around});
-  way["natural"="water"]["water"="river"]["name"](${around});
-  relation["natural"="water"]["water"="river"]["name"](${around});
+  ${clauses}
 );
 out tags center geom;`;
 
