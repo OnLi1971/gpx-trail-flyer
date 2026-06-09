@@ -1178,6 +1178,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                         <div>⛰️ {poiCounts.peaks} · 🏘️ {poiCounts.places}</div>
                         <div>🔭 {poiCounts.viewpoints} · 🏰 {poiCounts.castles}</div>
                         <div>⛰ {poiCounts.saddles} · 🍺 {poiCounts.pubs}</div>
+                        <div>🌊 {poiCounts.rivers}</div>
                       </div>
                       <div className="text-muted-foreground">API vrátilo: <span className="text-foreground">{poiCounts.raw}</span></div>
                       <div className="text-muted-foreground">Po filtru 2 km: <span className="text-foreground">{poiCounts.filtered}</span></div>
