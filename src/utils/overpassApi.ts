@@ -26,6 +26,67 @@ const OVERPASS_ENDPOINTS = [
   'https://overpass.private.coffee/api/interpreter',
 ];
 
+type TrackPoint = { lat: number; lon: number };
+
+async function fetchOverpassJson(query: string) {
+  let lastError: unknown = null;
+  const MAX_ROUNDS = 2;
+
+  for (let round = 0; round < MAX_ROUNDS; round++) {
+    if (round > 0) await new Promise((r) => setTimeout(r, 1500));
+
+    for (const endpoint of OVERPASS_ENDPOINTS) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `data=${encodeURIComponent(query)}`,
+        });
+
+        if (!response.ok) {
+          lastError = new Error(`HTTP ${response.status}`);
+          continue;
+        }
+
+        return await response.json();
+      } catch (err) {
+        lastError = err;
+      }
+    }
+  }
+
+  throw new Error(`Všechny Overpass servery selhaly. ${lastError instanceof Error ? lastError.message : ''}`);
+}
+
+function distanceKm(a: TrackPoint, b: TrackPoint) {
+  const toRad = (value: number) => value * Math.PI / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLon = toRad(b.lon - a.lon);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+function sampleTrackPoints(trackPoints: TrackPoint[], spacingKm: number, maxPoints = 45) {
+  if (trackPoints.length <= 2) return trackPoints;
+
+  const sampled: TrackPoint[] = [trackPoints[0]];
+  let sinceLast = 0;
+  for (let i = 1; i < trackPoints.length; i++) {
+    sinceLast += distanceKm(trackPoints[i - 1], trackPoints[i]);
+    if (sinceLast >= spacingKm) {
+      sampled.push(trackPoints[i]);
+      sinceLast = 0;
+    }
+  }
+  sampled.push(trackPoints[trackPoints.length - 1]);
+
+  if (sampled.length <= maxPoints) return sampled;
+  const step = (sampled.length - 1) / (maxPoints - 1);
+  return Array.from({ length: maxPoints }, (_, i) => sampled[Math.round(i * step)]);
+}
+
 export async function fetchPeaksAndPlaces(bounds: {
   minLat: number;
   maxLat: number;
