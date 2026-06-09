@@ -733,6 +733,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             smallDot: true,
           });
           break;
+        case 'river':
+          el.innerHTML = buildCard({
+            icon: poi.waterwayKind === 'stream' ? '〰️' : '🌊',
+            text: poi.name,
+            borderColor: '#0369a1',
+            textColor: '#0c4a6e',
+          });
+          break;
         case 'place':
         default:
           el.innerHTML = `
