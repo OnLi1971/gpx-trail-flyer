@@ -190,18 +190,6 @@ const Index = () => {
         ) : (
           <div className="space-y-6">
             <div className="space-y-6">
-                <AnimationControls
-                  gpxData={gpxData}
-                  isPlaying={isPlaying}
-                  currentPosition={currentPosition}
-                  onPlayPause={handlePlayPause}
-                  onReset={handleReset}
-                  onPositionChange={handlePositionChange}
-                  animationSettings={animationSettings}
-                  onAnimationSettingsChange={setAnimationSettings}
-                />
-
-                <TrailMap
                   gpxData={gpxData}
                   currentPosition={currentPosition}
                   animationSettings={animationSettings}
