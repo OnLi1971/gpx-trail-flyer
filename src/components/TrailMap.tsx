@@ -861,7 +861,24 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       const pois = await fetchPeaksAndPlaces(gpxData.bounds, poiRadiusKm);
       if (token.cancelled || !map.current) return;
 
-      const nearbyPois = filterPOIsNearTrack(pois, track.points, poiRadiusKm);
+      let nearbyPois = filterPOIsNearTrack(pois, track.points, poiRadiusKm);
+
+      // Fallback pro řeky: široký bbox dotaz se může vrátit useknutý/pomalý a řeky v něm chybí.
+      // Proto při nule dotáhneme vodní prvky zvlášť přímo podél GPX trasy.
+      if (!nearbyPois.some(p => p.type === 'river')) {
+        try {
+          const waterways = await fetchWaterwaysAlongTrack(track.points);
+          if (token.cancelled || !map.current) return;
+          const nearbyWaterways = filterPOIsNearTrack(waterways, track.points, Math.max(0.5, poiRadiusKm));
+          const existingRiverNames = new Set(nearbyPois.filter(p => p.type === 'river').map(p => p.name.toLowerCase()));
+          nearbyPois = [
+            ...nearbyPois,
+            ...nearbyWaterways.filter(p => !existingRiverNames.has(p.name.toLowerCase())),
+          ];
+        } catch (riverErr) {
+          console.warn('[POI] waterway fallback failed', riverErr);
+        }
+      }
       allNearbyPoisRef.current = nearbyPois;
 
       setPoiCounts(buildCounts(nearbyPois, pois.length));
