@@ -579,9 +579,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       el.style.transform = 'scale(0.7)';
     });
 
-    // Postupně odhalovat — celé odhalení trvá 5 s, krátká pauza po skrytí
-    const REVEAL_DURATION_MS = 5000;
-    const START_DELAY_MS = 400;
+    // Postupně odhalovat — délka a startovní pauza řízeny slidery
+    const REVEAL_DURATION_MS = outroRevealMs;
+    const START_DELAY_MS = outroHideDelayMs;
     const count = order.length;
     const timeouts: ReturnType<typeof setTimeout>[] = [];
 
@@ -606,7 +606,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         el.style.transform = '';
       });
     };
-  }, [flythrough.showSummary, gpxData, poiVersion]);
+  }, [flythrough.showSummary, gpxData, poiVersion, outroHideDelayMs, outroRevealMs]);
 
   // POI markers — render helper using current limits per category
   const renderPoiMarkers = React.useCallback((pois: import('@/utils/overpassApi').POIPoint[]) => {
