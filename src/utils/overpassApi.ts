@@ -1,4 +1,4 @@
-export type POIType = 'peak' | 'place' | 'viewpoint' | 'castle' | 'saddle' | 'pub';
+export type POIType = 'peak' | 'place' | 'viewpoint' | 'castle' | 'saddle' | 'pub' | 'river';
 
 export interface POIPoint {
   name: string;
@@ -14,6 +14,8 @@ export interface POIPoint {
   castleKind?: string;
   /** Pro 'pub': pub/bar/restaurant/cafe */
   pubKind?: string;
+  /** Pro 'river': river/stream/canal */
+  waterwayKind?: string;
 }
 
 const OVERPASS_ENDPOINTS = [
