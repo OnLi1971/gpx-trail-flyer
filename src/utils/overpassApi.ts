@@ -164,6 +164,45 @@ out tags center geom 1200;`;
   throw new Error(`Všechny Overpass servery selhaly. ${lastError instanceof Error ? lastError.message : ''}`);
 }
 
+function distanceToSegmentSquared(
+  point: { lat: number; lon: number },
+  a: { lat: number; lon: number },
+  b: { lat: number; lon: number }
+) {
+  const x = point.lon;
+  const y = point.lat;
+  const x1 = a.lon;
+  const y1 = a.lat;
+  const x2 = b.lon;
+  const y2 = b.lat;
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  const lenSq = dx * dx + dy * dy;
+  const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / lenSq));
+  const lon = x1 + t * dx;
+  const lat = y1 + t * dy;
+  const dLon = x - lon;
+  const dLat = y - lat;
+
+  return { distanceSq: dLat * dLat + dLon * dLon, closest: { lat, lon } };
+}
+
+function findClosestPointOnLineToTrack(
+  line: { lat: number; lon: number }[],
+  trackPoints: { lat: number; lon: number }[]
+) {
+  let best: { distanceSq: number; closest: { lat: number; lon: number } } | null = null;
+
+  for (let i = 0; i < line.length - 1; i++) {
+    for (const trackPoint of trackPoints) {
+      const candidate = distanceToSegmentSquared(trackPoint, line[i], line[i + 1]);
+      if (!best || candidate.distanceSq < best.distanceSq) best = candidate;
+    }
+  }
+
+  return best;
+}
+
 /** Filter POIs to those within ~maxDistKm of any track point */
 export function filterPOIsNearTrack(
   pois: POIPoint[],
@@ -171,12 +210,24 @@ export function filterPOIsNearTrack(
   maxDistKm = 2
 ): POIPoint[] {
   const threshold = maxDistKm / 111; // rough degree threshold
+  const thresholdSq = threshold * threshold;
 
-  return pois.filter(poi =>
-    trackPoints.some(tp => {
+  return pois.reduce<POIPoint[]>((nearby, poi) => {
+    if (poi.type === 'river' && poi.geometry && poi.geometry.length > 1) {
+      const closest = findClosestPointOnLineToTrack(poi.geometry, trackPoints);
+      if (closest && closest.distanceSq < thresholdSq) {
+        nearby.push({ ...poi, lat: closest.closest.lat, lon: closest.closest.lon });
+      }
+      return nearby;
+    }
+
+    const isNearby = trackPoints.some(tp => {
       const dLat = poi.lat - tp.lat;
       const dLon = poi.lon - tp.lon;
-      return Math.sqrt(dLat * dLat + dLon * dLon) < threshold;
-    })
-  );
+      return dLat * dLat + dLon * dLon < thresholdSq;
+    });
+
+    if (isNearby) nearby.push(poi);
+    return nearby;
+  }, []);
 }
