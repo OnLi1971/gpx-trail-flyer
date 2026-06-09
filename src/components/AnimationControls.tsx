@@ -67,16 +67,6 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
               </div>
               <div className="text-xs text-muted-foreground">Stoupání</div>
             </div>
-            <div className="flex items-center justify-center">
-              {currentPoint && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
-                  <span>
-                    {currentPoint.lat.toFixed(5)}, {currentPoint.lon.toFixed(5)}
-                  </span>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Progress Slider */}
