@@ -137,6 +137,11 @@ out tags center 1200;`;
             return { ...base, type: 'pub', pubKind: tags.amenity };
           }
 
+          // Řeka / potok / kanál
+          if (tags.waterway && /^(river|stream|canal)$/.test(tags.waterway)) {
+            return { ...base, type: 'river', waterwayKind: tags.waterway };
+          }
+
           return null;
         })
         .filter((p: POIPoint | null): p is POIPoint => p !== null);
