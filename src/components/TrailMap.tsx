@@ -564,25 +564,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       rafId = requestAnimationFrame(tick);
     }
 
-    const lightMarkers: Marker[] = [];
-    const places = poiMarkersRef.current.filter(
-      (mk) => mk.type === 'place' || mk.type === 'pub'
-    );
-    places.forEach(({ lat, lon }, i) => {
-      const el = document.createElement('div');
-      const size = 4 + Math.random() * 4;
-      el.style.width = `${size}px`;
-      el.style.height = `${size}px`;
-      el.style.borderRadius = '50%';
-      el.style.background = '#ffd27a';
-      el.style.boxShadow = '0 0 8px 2px rgba(255,210,122,0.9), 0 0 16px 4px rgba(255,180,80,0.5)';
-      el.style.opacity = '0';
-      el.style.transition = 'opacity 1200ms ease-in';
-      el.style.pointerEvents = 'none';
-      const mk = new Marker({ element: el }).setLngLat([lon, lat]).addTo(m);
-      lightMarkers.push(mk);
-      setTimeout(() => { el.style.opacity = '1'; }, 1500 + i * 40);
-    });
     return () => {
       lightMarkers.forEach((mk) => mk.remove());
       if (rafId) cancelAnimationFrame(rafId);
