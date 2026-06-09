@@ -28,6 +28,7 @@ export interface PoiSettings {
   castleLimit: number;
   saddleLimit: number;
   pubLimit: number;
+  riverLimit: number;
   peakSelectionMode: 'auto' | 'manual';
   selectedPeakKeys: string[];
   placeSelectionMode?: 'auto' | 'manual';
