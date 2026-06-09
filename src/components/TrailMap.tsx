@@ -535,12 +535,38 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     });
   }, [currentPosition, flythrough.flyingIndex, flythrough.showSummary, gpxData, poiVisibilityKm, poiVersion, outroMode]);
 
-  // Závěr: den→noc fade overlay + světýlka u měst/vesnic
+  // Závěr: den→noc fade overlay + světýlka u měst/vesnic + crossfade basemap
   useEffect(() => {
     if (!flythrough.showSummary || !map.current) return;
+    const m = map.current;
+
+    // Crossfade basemap: druhá vrstva se postupně objeví přes aktuální
+    const fromLayer = basemap === 'terrain' ? 'terrain-layer' : 'satellite-layer';
+    const toLayer = basemap === 'terrain' ? 'satellite-layer' : 'terrain-layer';
+    let rafId: number | null = null;
+    if (m.getLayer(toLayer) && m.getLayer(fromLayer)) {
+      try {
+        m.setLayoutProperty(toLayer, 'visibility', 'visible');
+        m.setPaintProperty(toLayer, 'raster-opacity', 0);
+        m.setPaintProperty(fromLayer, 'raster-opacity', 1);
+      } catch {}
+      const duration = 5000;
+      const t0 = performance.now();
+      const tick = (now: number) => {
+        const t = Math.min(1, (now - t0) / duration);
+        const eased = t * t * (3 - 2 * t);
+        try {
+          m.setPaintProperty(toLayer, 'raster-opacity', eased);
+          m.setPaintProperty(fromLayer, 'raster-opacity', 1 - eased);
+        } catch {}
+        if (t < 1) rafId = requestAnimationFrame(tick);
+      };
+      rafId = requestAnimationFrame(tick);
+    }
+
     const lightMarkers: Marker[] = [];
     const places = poiMarkersRef.current.filter(
-      (m) => m.type === 'place' || m.type === 'pub'
+      (mk) => mk.type === 'place' || mk.type === 'pub'
     );
     places.forEach(({ lat, lon }, i) => {
       const el = document.createElement('div');
@@ -553,14 +579,26 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       el.style.opacity = '0';
       el.style.transition = 'opacity 1200ms ease-in';
       el.style.pointerEvents = 'none';
-      const m = new Marker({ element: el }).setLngLat([lon, lat]).addTo(map.current!);
-      lightMarkers.push(m);
+      const mk = new Marker({ element: el }).setLngLat([lon, lat]).addTo(m);
+      lightMarkers.push(mk);
       setTimeout(() => { el.style.opacity = '1'; }, 1500 + i * 40);
     });
     return () => {
-      lightMarkers.forEach((m) => m.remove());
+      lightMarkers.forEach((mk) => mk.remove());
+      if (rafId) cancelAnimationFrame(rafId);
+      // Obnov původní stav basemap vrstev
+      try {
+        if (m.getLayer(toLayer)) {
+          m.setPaintProperty(toLayer, 'raster-opacity', 1);
+          m.setLayoutProperty(toLayer, 'visibility', 'none');
+        }
+        if (m.getLayer(fromLayer)) {
+          m.setPaintProperty(fromLayer, 'raster-opacity', 1);
+          m.setLayoutProperty(fromLayer, 'visibility', 'visible');
+        }
+      } catch {}
     };
-  }, [flythrough.showSummary]);
+  }, [flythrough.showSummary, basemap]);
 
 
   // POI markers — render helper using current limits per category
