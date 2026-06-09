@@ -89,6 +89,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [poiRadiusKm, setPoiRadiusKm] = useState<number>(3);
   // POI visibility distance from current position along track (km). 0 = vše viditelné.
   const [poiVisibilityKm, setPoiVisibilityKm] = useState<number>(10);
+  // Závěrečný orbit — časování zmizení a postupného návratu POI
+  const [outroHideDelayMs, setOutroHideDelayMs] = useState<number>(400);
+  const [outroRevealMs, setOutroRevealMs] = useState<number>(5000);
   // Manual peak selection
   const [peakSelectionMode, setPeakSelectionMode] = useState<'auto' | 'manual'>(initialPoiSettings?.peakSelectionMode ?? 'auto');
   const [selectedPeakKeys, setSelectedPeakKeys] = useState<Set<string>>(
