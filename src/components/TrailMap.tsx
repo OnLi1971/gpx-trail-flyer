@@ -565,9 +565,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       el.style.transform = 'scale(0.7)';
     });
 
-    // Postupně odhalovat — celé odhalení trvá ~5 s, začne po fitBounds (1.6 s)
+    // Postupně odhalovat — celé odhalení trvá 5 s, krátká pauza po skrytí
     const REVEAL_DURATION_MS = 5000;
-    const START_DELAY_MS = 1700;
+    const START_DELAY_MS = 400;
     const count = order.length;
     const timeouts: ReturnType<typeof setTimeout>[] = [];
 
