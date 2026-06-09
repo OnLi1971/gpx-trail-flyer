@@ -82,7 +82,12 @@ out tags center 1200;`;
           const name = tags.name;
           if (!name) return null;
 
-          const base = { name, lat: el.lat, lon: el.lon };
+          // U ways (řeky) je souřadnice v center.{lat,lon}
+          const lat = el.lat ?? el.center?.lat;
+          const lon = el.lon ?? el.center?.lon;
+          if (lat == null || lon == null) return null;
+
+          const base = { name, lat, lon };
 
           // Vrchol
           if (tags.natural === 'peak') {
