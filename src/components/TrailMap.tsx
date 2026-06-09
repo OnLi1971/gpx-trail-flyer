@@ -1024,7 +1024,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           )}
 
           {/* Závěrečná karta shrnutí — zobrazí se po dokončení crossfade */}
-          {flythrough.showSummary && gpxData && (
+          {showSummaryCard && gpxData && (
             <TrailSummaryCard
               gpxData={gpxData}
               poiCounts={{
