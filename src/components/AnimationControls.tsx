@@ -30,18 +30,6 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
     return null;
   }
 
-  const track = gpxData.tracks[0];
-  const currentPointIndex = Math.floor((currentPosition / 100) * (track.points.length - 1));
-  const currentPoint = track.points[currentPointIndex];
-
-  const formatDistance = (distance: number) => {
-    if (distance >= 1000) {
-      return `${(distance / 1000).toFixed(1)} km`;
-    }
-    return `${Math.round(distance)} m`;
-  };
-
-  const currentDistance = (currentPosition / 100) * track.totalDistance;
 
   return (
     <Card>
