@@ -143,6 +143,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     setCastleLimit(initialPoiSettings.castleLimit);
     setSaddleLimit(initialPoiSettings.saddleLimit);
     setPubLimit(initialPoiSettings.pubLimit);
+    setRiverLimit(initialPoiSettings.riverLimit ?? 5);
     setPeakSelectionMode(initialPoiSettings.peakSelectionMode);
     setSelectedPeakKeys(new Set(initialPoiSettings.selectedPeakKeys));
     setPlaceSelectionMode(initialPoiSettings.placeSelectionMode ?? 'auto');
@@ -160,13 +161,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       castleLimit,
       saddleLimit,
       pubLimit,
+      riverLimit,
       peakSelectionMode,
       selectedPeakKeys: [...selectedPeakKeys],
       placeSelectionMode,
       selectedPlaceKeys: [...selectedPlaceKeys],
       deselectedPoiKeys: [...deselectedPoiKeys],
     });
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys, onPoiSettingsChange]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, riverLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys, onPoiSettingsChange]);
 
   // Helper: stable key per POI (peak/place/…)
   const peakKey = (p: import('@/utils/overpassApi').POIPoint) =>
