@@ -38,12 +38,22 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
   const innerClass = variant === 'overlay' ? 'h-full px-2 py-1' : 'h-full p-2';
   const chartHeight = variant === 'overlay' ? 'h-full' : 'h-20';
 
+  // Progressive reveal: line/fill drawn only up to current position; rest is hidden.
+  const progressive = !!currentChartPoint;
+  const cutoff = currentChartPoint ? currentChartPoint.distance : Infinity;
+  const displayData = progressive
+    ? chartData.map((d) => ({
+        ...d,
+        elevationPast: d.distance <= cutoff ? d.elevation : null,
+      }))
+    : chartData.map((d) => ({ ...d, elevationPast: d.elevation }));
+
   return (
     <div className={wrapperClass}>
       <div className={innerClass}>
         <div className={`${chartHeight} relative`}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 6, right: 10, left: 8, bottom: 4 }}>
+            <LineChart data={displayData} margin={{ top: 6, right: 10, left: 8, bottom: 4 }}>
               <defs>
                 <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={trailColor} stopOpacity={0.8} />
@@ -73,7 +83,7 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
               />
               <Line
                 type="monotone"
-                dataKey="elevation"
+                dataKey="elevationPast"
                 stroke={trailColor}
                 strokeWidth={trailWidth}
                 strokeDasharray={
@@ -85,6 +95,7 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
                 fill="url(#elevationGradient)"
                 fillOpacity={0.3}
                 isAnimationActive={false}
+                connectNulls={false}
               />
 
               {currentChartPoint && (
