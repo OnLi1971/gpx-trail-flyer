@@ -29,7 +29,7 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
   if (!gpxData || gpxData.tracks.length === 0) {
     return null;
   }
-
+  const track = gpxData.tracks[0];
 
   return (
     <Card>
