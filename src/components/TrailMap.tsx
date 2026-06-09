@@ -1445,6 +1445,44 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
+          {/* Závěrečný orbit — pauza před návratem POI */}
+          {gpxData && (
+            <div className="flex items-center gap-3">
+              <Square className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Outro pauza</span>
+              <Slider
+                value={[outroHideDelayMs]}
+                onValueChange={(value) => setOutroHideDelayMs(value[0])}
+                min={0}
+                max={5000}
+                step={100}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-12 text-right">
+                {(outroHideDelayMs / 1000).toFixed(1)} s
+              </span>
+            </div>
+          )}
+
+          {/* Závěrečný orbit — délka postupného odhalení POI */}
+          {gpxData && (
+            <div className="flex items-center gap-3">
+              <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Outro návrat</span>
+              <Slider
+                value={[outroRevealMs]}
+                onValueChange={(value) => setOutroRevealMs(value[0])}
+                min={500}
+                max={15000}
+                step={250}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-12 text-right">
+                {(outroRevealMs / 1000).toFixed(1)} s
+              </span>
+            </div>
+          )}
+
           {/* POI density — peaks (hory) */}
           {gpxData && poiCounts.peaks > 0 && (
             <div className="space-y-2">
