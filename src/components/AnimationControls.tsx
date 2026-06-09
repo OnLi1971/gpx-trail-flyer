@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, RotateCcw, MapPin } from 'lucide-react';
+import { Play, Pause, RotateCcw } from 'lucide-react';
 import { GPXData, AnimationSettings } from '@/types/gpx';
 
 interface AnimationControlsProps {
@@ -66,16 +66,6 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
                 {Math.round(track.elevationGain)}m
               </div>
               <div className="text-xs text-muted-foreground">Stoupání</div>
-            </div>
-            <div className="flex items-center justify-center">
-              {currentPoint && (
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="w-4 h-4" />
-                  <span>
-                    {currentPoint.lat.toFixed(5)}, {currentPoint.lon.toFixed(5)}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 
