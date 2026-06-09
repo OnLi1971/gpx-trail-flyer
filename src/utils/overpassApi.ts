@@ -102,15 +102,10 @@ export async function fetchPeaksAndPlaces(bounds: {
 
   const bbox = `${south},${west},${north},${east}`;
 
-  // Single union query — řeky první, aby se neztratily při větším množství běžných POI v širokém bboxu.
-  // Bez tvrdého limitu: limit 2000 dřív uřízl odpověď před liniovými vodními prvky.
+  // Běžné bodové POI. Vodní prvky se načítají samostatně podél trasy,
+  // protože široký bbox + limit odpovědi je dřív často uřízl.
   const query = `[out:json][timeout:30];
 (
-  way["waterway"~"^(river|stream|canal)$"]["name"](${bbox});
-  relation["waterway"~"^(river|canal)$"]["name"](${bbox});
-  relation["type"="waterway"]["name"](${bbox});
-  way["natural"="water"]["water"="river"]["name"](${bbox});
-  relation["natural"="water"]["water"="river"]["name"](${bbox});
   node["natural"="peak"]["name"](${bbox});
   node["place"~"^(city|town|village|hamlet)$"]["name"](${bbox});
   node["tourism"="viewpoint"]["name"](${bbox});
@@ -120,7 +115,7 @@ export async function fetchPeaksAndPlaces(bounds: {
   node["mountain_pass"="yes"]["name"](${bbox});
   node["amenity"~"^(pub|bar|restaurant|cafe|biergarten)$"]["name"](${bbox});
 );
-out tags center geom;`;
+out tags center 2000;`;
 
   const data = await fetchOverpassJson(query);
       const result: POIPoint[] = (data.elements || [])
