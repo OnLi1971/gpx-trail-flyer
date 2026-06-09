@@ -44,7 +44,7 @@ export default function SharedTrail() {
       setLoading(true);
       const { data: trail, error: tErr } = await supabase
         .from('trails')
-        .select('id, name, gpx_data, user_id, peak_limit, place_limit, viewpoint_limit, castle_limit, saddle_limit, pub_limit, peak_selection_mode, selected_peak_keys, place_selection_mode, selected_place_keys, deselected_poi_keys, cached_pois, pois_cached_at')
+        .select('id, name, gpx_data, user_id, peak_limit, place_limit, viewpoint_limit, castle_limit, saddle_limit, pub_limit, river_limit, peak_selection_mode, selected_peak_keys, place_selection_mode, selected_place_keys, deselected_poi_keys, cached_pois, pois_cached_at')
         .eq('slug', slug)
         .maybeSingle();
 
