@@ -47,29 +47,6 @@ export const AnimationControls: React.FC<AnimationControlsProps> = ({
     <Card>
       <CardContent className="p-4">
         <div className="space-y-4">
-          {/* Stats Row */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-            <div>
-              <div className="text-2xl font-bold text-primary">
-                {formatDistance(currentDistance)}
-              </div>
-              <div className="text-xs text-muted-foreground">Aktuální pozice</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold">
-                {formatDistance(track.totalDistance)}
-              </div>
-              <div className="text-xs text-muted-foreground">Celková vzdálenost</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-trail-active">
-                {Math.round(track.elevationGain)}m
-              </div>
-              <div className="text-xs text-muted-foreground">Stoupání</div>
-            </div>
-          </div>
-
-          {/* Progress Slider */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <span>Průběh animace</span>
