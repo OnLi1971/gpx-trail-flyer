@@ -1030,6 +1030,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               trailColor={trailColor}
               trailStyle={trailStyle}
               trailWidth={trailWidth}
+              activity={flythrough.markerIcon}
               onClose={() => flythrough.dismissSummary()}
             />
           )}
