@@ -539,9 +539,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     const pts = track.points;
     if (pts.length === 0) return;
 
-    // Pro každý POI najdi index nejbližšího bodu na trase
+    // Pro každý POI najdi index nejbližšího bodu na trase + min. vzdálenost (km)
     const cosLat0 = Math.cos((pts[0].lat * Math.PI) / 180);
-    const poiTrackIdx: number[] = poiMarkersRef.current.map(({ lat, lon }) => {
+    const poiTrackIdx: number[] = [];
+    const poiMinDistKm: number[] = [];
+    poiMarkersRef.current.forEach(({ lat, lon }) => {
       let bestI = 0;
       let bestD = Infinity;
       for (let i = 0; i < pts.length; i++) {
@@ -550,13 +552,22 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         const d = dLat * dLat + dLon * dLon;
         if (d < bestD) { bestD = d; bestI = i; }
       }
-      return bestI;
+      poiTrackIdx.push(bestI);
+      poiMinDistKm.push(Math.sqrt(bestD));
+    });
+
+    // Filtr: města (place) jen do 1 km od trasy; ostatní POI všechny
+    const PLACE_MAX_KM = 1;
+    const eligible: number[] = [];
+    poiMarkersRef.current.forEach((m, i) => {
+      if (m.type === 'place' && poiMinDistKm[i] > PLACE_MAX_KM) return;
+      eligible.push(i);
     });
 
     // Seřazené indexy POI podle pozice na trase
-    const order = poiMarkersRef.current.map((_, i) => i).sort((a, b) => poiTrackIdx[a] - poiTrackIdx[b]);
+    const order = eligible.slice().sort((a, b) => poiTrackIdx[a] - poiTrackIdx[b]);
 
-    // Init — schovat
+    // Init — schovat vše
     poiMarkersRef.current.forEach(({ marker }) => {
       const el = marker.getElement();
       el.style.display = '';
