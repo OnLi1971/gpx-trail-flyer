@@ -141,13 +141,24 @@ out tags center geom 2000;`;
             return { ...base, type: 'pub', pubKind: tags.amenity };
           }
 
-          // Řeka / potok / kanál
+          // Řeka / potok / kanál (way nebo relation)
           if (tags.waterway && /^(river|stream|canal)$/.test(tags.waterway)) {
-            const geometry = Array.isArray(el.geometry)
-              ? el.geometry
-                  .map((point: any) => ({ lat: point.lat, lon: point.lon }))
-                  .filter((point: { lat: number; lon: number }) => point.lat != null && point.lon != null)
-              : undefined;
+            let geometry: { lat: number; lon: number }[] | undefined;
+            if (Array.isArray(el.geometry)) {
+              geometry = el.geometry
+                .map((point: any) => ({ lat: point.lat, lon: point.lon }))
+                .filter((p: { lat: number; lon: number }) => p.lat != null && p.lon != null);
+            } else if (Array.isArray(el.members)) {
+              // relation — sloučit geometrii všech členů (main_stream/side_stream/way)
+              geometry = el.members.flatMap((m: any) =>
+                Array.isArray(m.geometry)
+                  ? m.geometry
+                      .map((p: any) => ({ lat: p.lat, lon: p.lon }))
+                      .filter((p: { lat: number; lon: number }) => p.lat != null && p.lon != null)
+                  : []
+              );
+              if (geometry && geometry.length === 0) geometry = undefined;
+            }
 
             return { ...base, type: 'river', waterwayKind: tags.waterway, geometry };
           }
