@@ -498,13 +498,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // Skryj POI dál než poiVisibilityKm od aktuální pozice na trase (0 = vypnuto, ukaž vše)
   // V závěrečném 3D orbitu POI postupně fade-in podle úhlu kamery (sekvenční odhalování).
   useEffect(() => {
-    if (flythrough.showSummary) {
-      // Postupné odhalování během orbitu — řešeno v samostatném useEffectu níže.
-      return;
-    }
-    if (outroMode) {
+    if (flythrough.showSummary || outroMode) {
+      // V závěru schovej všechny POI markery
       poiMarkersRef.current.forEach(({ marker }) => {
-        marker.getElement().style.display = 'none';
+        const el = marker.getElement();
+        el.style.transition = '';
+        el.style.opacity = '';
+        el.style.transform = '';
+        el.style.display = 'none';
       });
       return;
     }
@@ -534,7 +535,33 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     });
   }, [currentPosition, flythrough.flyingIndex, flythrough.showSummary, gpxData, poiVisibilityKm, poiVersion, outroMode]);
 
-  // Závěr: den→noc fade overlay (žádná manipulace s POI)
+  // Závěr: den→noc fade overlay + světýlka u měst/vesnic
+  useEffect(() => {
+    if (!flythrough.showSummary || !map.current) return;
+    const lightMarkers: Marker[] = [];
+    const places = poiMarkersRef.current.filter(
+      (m) => m.type === 'place' || m.type === 'pub'
+    );
+    places.forEach(({ lat, lon }, i) => {
+      const el = document.createElement('div');
+      const size = 4 + Math.random() * 4;
+      el.style.width = `${size}px`;
+      el.style.height = `${size}px`;
+      el.style.borderRadius = '50%';
+      el.style.background = '#ffd27a';
+      el.style.boxShadow = '0 0 8px 2px rgba(255,210,122,0.9), 0 0 16px 4px rgba(255,180,80,0.5)';
+      el.style.opacity = '0';
+      el.style.transition = 'opacity 1200ms ease-in';
+      el.style.pointerEvents = 'none';
+      const m = new Marker({ element: el }).setLngLat([lon, lat]).addTo(map.current!);
+      lightMarkers.push(m);
+      setTimeout(() => { el.style.opacity = '1'; }, 1500 + i * 40);
+    });
+    return () => {
+      lightMarkers.forEach((m) => m.remove());
+    };
+  }, [flythrough.showSummary]);
+
 
   // POI markers — render helper using current limits per category
   const renderPoiMarkers = React.useCallback((pois: import('@/utils/overpassApi').POIPoint[]) => {
