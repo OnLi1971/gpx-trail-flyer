@@ -39,7 +39,7 @@ export async function fetchPeaksAndPlaces(bounds: {
 
   const bbox = `${south},${west},${north},${east}`;
 
-  // Single union query — peaks, places, viewpoints (vč. rozhleden), hrady/zříceniny, sedla, hospody/restaurace
+  // Single union query — peaks, places, viewpoints (vč. rozhleden), hrady/zříceniny, sedla, hospody/restaurace, řeky/potoky
   const query = `[out:json][timeout:30];
 (
   node["natural"="peak"]["name"](${bbox});
@@ -50,8 +50,9 @@ export async function fetchPeaksAndPlaces(bounds: {
   node["natural"~"^(saddle|mountain_pass)$"]["name"](${bbox});
   node["mountain_pass"="yes"]["name"](${bbox});
   node["amenity"~"^(pub|bar|restaurant|cafe|biergarten)$"]["name"](${bbox});
+  way["waterway"~"^(river|stream|canal)$"]["name"](${bbox});
 );
-out body 800;`;
+out tags center 1200;`;
 
   let lastError: unknown = null;
   // 2 pokusy přes všechny servery (s krátkou prodlevou mezi koly) — Overpass občas vrací 502/504 pod zátěží
