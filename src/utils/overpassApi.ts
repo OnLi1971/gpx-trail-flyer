@@ -53,8 +53,10 @@ export async function fetchPeaksAndPlaces(bounds: {
   node["mountain_pass"="yes"]["name"](${bbox});
   node["amenity"~"^(pub|bar|restaurant|cafe|biergarten)$"]["name"](${bbox});
   way["waterway"~"^(river|stream|canal)$"]["name"](${bbox});
+  relation["waterway"~"^(river|canal)$"]["name"](${bbox});
+  relation["type"="waterway"]["name"](${bbox});
 );
-out tags center geom 1200;`;
+out tags center geom 2000;`;
 
   let lastError: unknown = null;
   // 2 pokusy přes všechny servery (s krátkou prodlevou mezi koly) — Overpass občas vrací 502/504 pod zátěží
@@ -139,13 +141,24 @@ out tags center geom 1200;`;
             return { ...base, type: 'pub', pubKind: tags.amenity };
           }
 
-          // Řeka / potok / kanál
+          // Řeka / potok / kanál (way nebo relation)
           if (tags.waterway && /^(river|stream|canal)$/.test(tags.waterway)) {
-            const geometry = Array.isArray(el.geometry)
-              ? el.geometry
-                  .map((point: any) => ({ lat: point.lat, lon: point.lon }))
-                  .filter((point: { lat: number; lon: number }) => point.lat != null && point.lon != null)
-              : undefined;
+            let geometry: { lat: number; lon: number }[] | undefined;
+            if (Array.isArray(el.geometry)) {
+              geometry = el.geometry
+                .map((point: any) => ({ lat: point.lat, lon: point.lon }))
+                .filter((p: { lat: number; lon: number }) => p.lat != null && p.lon != null);
+            } else if (Array.isArray(el.members)) {
+              // relation — sloučit geometrii všech členů (main_stream/side_stream/way)
+              geometry = el.members.flatMap((m: any) =>
+                Array.isArray(m.geometry)
+                  ? m.geometry
+                      .map((p: any) => ({ lat: p.lat, lon: p.lon }))
+                      .filter((p: { lat: number; lon: number }) => p.lat != null && p.lon != null)
+                  : []
+              );
+              if (geometry && geometry.length === 0) geometry = undefined;
+            }
 
             return { ...base, type: 'river', waterwayKind: tags.waterway, geometry };
           }
@@ -154,7 +167,21 @@ out tags center geom 1200;`;
         })
         .filter((p: POIPoint | null): p is POIPoint => p !== null);
 
-      return result;
+      // Deduplikace řek podle názvu — Vltava může přijít jako relace + mnoho ways.
+      // Necháme variantu s nejdelší geometrií (typicky relace).
+      const riverByName = new Map<string, POIPoint>();
+      const deduped: POIPoint[] = [];
+      for (const p of result) {
+        if (p.type !== 'river') { deduped.push(p); continue; }
+        const key = p.name.toLowerCase();
+        const existing = riverByName.get(key);
+        if (!existing || (p.geometry?.length ?? 0) > (existing.geometry?.length ?? 0)) {
+          riverByName.set(key, p);
+        }
+      }
+      deduped.push(...riverByName.values());
+
+      return deduped;
     } catch (err) {
       lastError = err;
     }
