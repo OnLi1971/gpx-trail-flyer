@@ -788,7 +788,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       poiMarkersRef.current.push({ marker, lat: poi.lat, lon: poi.lon, type: poi.type });
     });
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, riverLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys]);
 
   // POI fetch — extrahováno, aby šlo zavolat i ručně přes tlačítko reload
   const poiCancelRef = useRef<{ cancelled: boolean } | null>(null);
