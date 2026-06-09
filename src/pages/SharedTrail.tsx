@@ -129,6 +129,7 @@ export default function SharedTrail() {
     currentPoi.castleLimit !== savedPoi.castleLimit ||
     currentPoi.saddleLimit !== savedPoi.saddleLimit ||
     currentPoi.pubLimit !== savedPoi.pubLimit ||
+    currentPoi.riverLimit !== savedPoi.riverLimit ||
     currentPoi.peakSelectionMode !== savedPoi.peakSelectionMode ||
     currentPoi.selectedPeakKeys.length !== savedPoi.selectedPeakKeys.length ||
     currentPoi.selectedPeakKeys.some((k) => !savedPoi.selectedPeakKeys.includes(k)) ||
