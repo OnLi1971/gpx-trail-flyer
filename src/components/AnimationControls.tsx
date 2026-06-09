@@ -2,7 +2,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
-import { Play, Pause, RotateCcw, MapPin } from 'lucide-react';
+import { Play, Pause, RotateCcw } from 'lucide-react';
 import { GPXData, AnimationSettings } from '@/types/gpx';
 
 interface AnimationControlsProps {
