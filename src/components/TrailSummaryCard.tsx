@@ -127,7 +127,12 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
   }
 
   const dateStr = formatDate(first?.time);
-  const topSurfaces = (surface ?? []).slice(0, 4);
+  const knownSurfaces = (surface ?? []).filter((b) => b.key !== 'unknown');
+  const knownTotal = knownSurfaces.reduce((acc, b) => acc + b.percent, 0);
+  const redistributed = knownTotal > 0
+    ? knownSurfaces.map((b) => ({ ...b, percent: Math.round((b.percent / knownTotal) * 1000) / 10 }))
+    : knownSurfaces;
+  const topSurfaces = redistributed.slice(0, 4);
 
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center p-4 pointer-events-none animate-in fade-in duration-500">
