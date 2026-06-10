@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { X, Route, ArrowUp, ArrowDown, Mountain, Clock, Calendar, Bike, PersonStanding, Car, TrendingDown, Layers, Loader2 } from 'lucide-react';
+import { X, Route, ArrowUp, ArrowDown, Mountain, Clock, Calendar, Bike, PersonStanding, Car, TrendingDown, Layers, Loader2, Sun, Cloud, CloudRain, CloudSnow, CloudFog, Zap, Wind, Droplets, Thermometer } from 'lucide-react';
 import { GPXData } from '@/types/gpx';
 import { fetchSurfaceStats, StatBucket } from '@/utils/trailStats';
+import { fetchTrailWeather, TrailWeather, windDirLabel, weatherCodeInfo } from '@/utils/weatherApi';
 
 type Activity = 'bike' | 'walk' | 'car';
 
@@ -64,6 +65,8 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
   const track = gpxData.tracks[0];
   const [surface, setSurface] = useState<StatBucket[] | null>(null);
   const [surfaceLoading, setSurfaceLoading] = useState(false);
+  const [weather, setWeather] = useState<TrailWeather | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
 
   useEffect(() => {
     if (!track) return;
@@ -74,6 +77,21 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
       .then((data) => { if (!cancelled) setSurface(data); })
       .catch(() => { if (!cancelled) setSurface([]); })
       .finally(() => { if (!cancelled) setSurfaceLoading(false); });
+    return () => { cancelled = true; };
+  }, [track]);
+
+  useEffect(() => {
+    if (!track) return;
+    const first = track.points[0];
+    const last = track.points[track.points.length - 1];
+    if (!first?.time) { setWeather(null); return; }
+    const mid = track.points[Math.floor(track.points.length / 2)] || first;
+    let cancelled = false;
+    setWeatherLoading(true);
+    fetchTrailWeather(mid.lat, mid.lon, first.time, last?.time)
+      .then((w) => { if (!cancelled) setWeather(w); })
+      .catch(() => { if (!cancelled) setWeather(null); })
+      .finally(() => { if (!cancelled) setWeatherLoading(false); });
     return () => { cancelled = true; };
   }, [track]);
 
@@ -151,6 +169,8 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
           )}
         </div>
 
+        <WeatherSection weather={weather} loading={weatherLoading} hasTime={!!first?.time} />
+
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Layers className="w-3.5 h-3.5" />
@@ -193,3 +213,72 @@ const Stat: React.FC<{ icon: React.ReactNode; label: string; value: string }> = 
     </div>
   </div>
 );
+
+const WeatherIcon: React.FC<{ kind: ReturnType<typeof weatherCodeInfo>['kind'] }> = ({ kind }) => {
+  const cls = 'w-5 h-5';
+  switch (kind) {
+    case 'sun': return <Sun className={`${cls} text-amber-500`} />;
+    case 'cloud': return <Cloud className={`${cls} text-slate-400`} />;
+    case 'rain': return <CloudRain className={`${cls} text-sky-500`} />;
+    case 'snow': return <CloudSnow className={`${cls} text-sky-300`} />;
+    case 'fog': return <CloudFog className={`${cls} text-slate-400`} />;
+    case 'storm': return <Zap className={`${cls} text-violet-500`} />;
+    default: return <Cloud className={`${cls} text-muted-foreground`} />;
+  }
+};
+
+const WeatherSection: React.FC<{ weather: TrailWeather | null; loading: boolean; hasTime: boolean }> = ({ weather, loading, hasTime }) => {
+  if (!hasTime) {
+    return (
+      <div className="mb-4 text-xs text-muted-foreground italic">
+        GPX neobsahuje datum, počasí nelze dohledat.
+      </div>
+    );
+  }
+  if (loading) {
+    return (
+      <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Načítám počasí…
+      </div>
+    );
+  }
+  if (!weather) {
+    return (
+      <div className="mb-4 text-xs text-muted-foreground">
+        Počasí pro tento den není dostupné.
+      </div>
+    );
+  }
+  const info = weatherCodeInfo(weather.weatherCode);
+  const fmt = (n: number | null, unit: string, digits = 0) =>
+    n == null ? '–' : `${n.toFixed(digits)} ${unit}`;
+  return (
+    <div className="mb-4 p-3 rounded-md bg-muted/60 space-y-2">
+      <div className="flex items-center gap-2">
+        <WeatherIcon kind={info.kind} />
+        <span className="text-sm font-medium">{info.label}</span>
+        {weather.tempMean != null && (
+          <span className="ml-auto text-base font-semibold tabular-nums">
+            {Math.round(weather.tempMean)} °C
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div className="flex items-center gap-1.5">
+          <Thermometer className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="tabular-nums">
+            {weather.tempMin != null ? Math.round(weather.tempMin) : '–'}° / {weather.tempMax != null ? Math.round(weather.tempMax) : '–'}°
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Wind className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="tabular-nums">{fmt(weather.windMax, 'km/h')} {windDirLabel(weather.windDir)}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Droplets className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="tabular-nums">{fmt(weather.precipitation, 'mm', 1)}</span>
+        </div>
+      </div>
+    </div>
+  );
+};

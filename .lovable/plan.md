@@ -1,30 +1,34 @@
-## Postupné odhalování POI během závěrečného orbitu
+## Co přidám
 
-### Cíl
-V závěrečné orbit fázi se POI neukážou všechny najednou, ale postupně — jak kamera kolem nich prolétá. Výsledek: čistší, dynamičtější, filmovější.
+Do finální karty `TrailSummaryCard` přibude sekce **Počasí v den túry** s:
+- průměrná / min / max teplota (°C)
+- průměrný a maximální vítr (km/h) + převažující směr
+- celkové srážky (mm)
+- ikonka převažujícího stavu (slunce / mraky / déšť / sníh) podle weathercode
 
-### Jak to bude fungovat
-- Orbit trvá ~6 s (jedna otáčka 360°).
-- Každý POI dostane „čas odhalení" podle své úhlové pozice vůči středu trasy.
-- Když aktuální bearing kamery projde úhlem POI (mínus malý offset, aby se objevil těsně před tím, než ho kamera „mine"), POI se fade-in (opacity 0 → 1, scale 0.8 → 1, ~300 ms).
-- Jakmile se POI objeví, zůstane viditelný do konce orbitu.
-- Druhá otáčka už je má všechny zobrazené.
+## Jak to získám
 
-### Technické detaily
+**Open-Meteo Archive API** — zdarma, bez API klíče, bez registrace.
 
-**`src/hooks/useFlythrough.ts`**
-- V `stopFlythrough('finished')` spočítat střed trasy (`bounds.getCenter()`).
-- Exponovat nový state `orbitBearing: number | null` (aktuální bearing v orbitu) — aktualizovat v `tick()` smyčce přes `setOrbitBearing`.
-- Při startu nového průletu / `dismissSummary` → `setOrbitBearing(null)`.
+- Endpoint: `https://archive-api.open-meteo.com/v1/archive`
+- Vstup: `latitude`, `longitude` (střed trasy nebo první bod), `start_date` = `end_date` (z `gpxData.tracks[0].points[0].time`), proměnné: `temperature_2m_max/min/mean`, `windspeed_10m_max`, `winddirection_10m_dominant`, `precipitation_sum`, `weathercode`.
+- Data jsou dostupná s ~2denním zpožděním. Pro novější dny použiju forecast endpoint `https://api.open-meteo.com/v1/forecast` s `past_days`.
 
-**`src/components/TrailMap.tsx`**
-- V `useEffect` pro orbit (`flythrough.showSummary`) místo „ukaž všechny" implementovat logiku:
-  1. Spočítat pro každý POI marker jeho úhel vůči středu trasy (`atan2`).
-  2. Při změně `orbitBearing` porovnat: pokud `angularDistance(bearing, poiAngle) < threshold` (např. 30°) NEBO POI už byl jednou odhalen, nastavit `opacity:1`, jinak `opacity:0`.
-  3. Použít CSS transition `opacity 300ms, transform 300ms` na element markeru.
-  4. Sadu odhalených POI držet v `useRef<Set<string>>`, resetovat při startu nového orbitu.
+## Kde to bude
 
-### Mimo rozsah
-- Žádné změny v POI fetch logice, kategoriích, ani v hlavním průletu.
-- Karta shrnutí už je odstraněná — neměníme.
-- Nahrávání videa: orbit i fade běží přes DOM/CSS, captureStream je zachytí.
+1. Nový util `src/utils/weatherApi.ts` — funkce `fetchTrailWeather(lat, lon, date)` vrací typovaný objekt nebo `null`.
+2. `TrailSummaryCard.tsx` — nová sekce pod statistikami, vedle povrchu. Loading spinner, fallback "Počasí pro tento den není dostupné" když:
+   - GPX nemá timestamps
+   - datum je mimo dosah API
+   - API selže
+
+## Cache
+
+Výsledek zacacheuju do `trails.cached_pois` jako nové pole `cached_weather` (jsonb) + `weather_cached_at` na úrovni trasy — migrace přidá dva sloupce, ať se to nestahuje při každém otevření.
+
+## Edge cases
+
+- GPX bez `time` → sekce se nezobrazí, místo toho jen jemný hint "GPX neobsahuje datum, počasí nelze dohledat".
+- Pokud je trasa delší než 1 den (vícedenní), vezmu rozsah `start_date`..`end_date` a zprůměruju.
+
+Žádné secrety, žádný backend kód — vše z frontendu.
