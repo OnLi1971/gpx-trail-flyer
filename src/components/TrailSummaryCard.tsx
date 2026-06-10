@@ -65,6 +65,8 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
   const track = gpxData.tracks[0];
   const [surface, setSurface] = useState<StatBucket[] | null>(null);
   const [surfaceLoading, setSurfaceLoading] = useState(false);
+  const [weather, setWeather] = useState<TrailWeather | null>(null);
+  const [weatherLoading, setWeatherLoading] = useState(false);
 
   useEffect(() => {
     if (!track) return;
@@ -75,6 +77,21 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
       .then((data) => { if (!cancelled) setSurface(data); })
       .catch(() => { if (!cancelled) setSurface([]); })
       .finally(() => { if (!cancelled) setSurfaceLoading(false); });
+    return () => { cancelled = true; };
+  }, [track]);
+
+  useEffect(() => {
+    if (!track) return;
+    const first = track.points[0];
+    const last = track.points[track.points.length - 1];
+    if (!first?.time) { setWeather(null); return; }
+    const mid = track.points[Math.floor(track.points.length / 2)] || first;
+    let cancelled = false;
+    setWeatherLoading(true);
+    fetchTrailWeather(mid.lat, mid.lon, first.time, last?.time)
+      .then((w) => { if (!cancelled) setWeather(w); })
+      .catch(() => { if (!cancelled) setWeather(null); })
+      .finally(() => { if (!cancelled) setWeatherLoading(false); });
     return () => { cancelled = true; };
   }, [track]);
 
