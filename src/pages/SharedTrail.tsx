@@ -250,16 +250,6 @@ export default function SharedTrail() {
           )}
         </div>
 
-        <AnimationControls
-          gpxData={gpxData}
-          isPlaying={isPlaying}
-          currentPosition={currentPosition}
-          onPlayPause={handlePlayPause}
-          onReset={handleReset}
-          onPositionChange={handlePositionChange}
-          animationSettings={isOwner ? animationSettings : undefined}
-          onAnimationSettingsChange={isOwner ? setAnimationSettings : undefined}
-        />
         <TrailMap
           gpxData={gpxData}
           currentPosition={currentPosition}
