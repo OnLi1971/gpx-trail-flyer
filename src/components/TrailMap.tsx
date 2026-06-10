@@ -341,7 +341,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     map.current.addControl(
       new NavigationControl({ visualizePitch: true }),
-      'top-right',
+      'bottom-right',
     );
 
     return () => {
