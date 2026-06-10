@@ -311,8 +311,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             ],
             tileSize: 256,
             maxzoom: 20,
+          'darkmatter-tiles': {
+            type: 'raster',
+            tiles: [
+              'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+              'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+              'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+              'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            ],
+            tileSize: 256,
+            maxzoom: 20,
             attribution:
-              '© OpenStreetMap contributors, © CyclOSM',
+              '© OpenStreetMap contributors, © CARTO',
           },
           'terrain-dem': {
             type: 'raster-dem',
