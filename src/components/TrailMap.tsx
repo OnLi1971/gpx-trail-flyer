@@ -374,9 +374,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     const m = map.current;
     if (!m) return;
     const apply = () => {
-      if (!m.getLayer('terrain-layer') || !m.getLayer('satellite-layer')) return;
+      if (!m.getLayer('terrain-layer') || !m.getLayer('satellite-layer') || !m.getLayer('cyclosm-layer')) return;
       m.setLayoutProperty('terrain-layer', 'visibility', basemap === 'terrain' ? 'visible' : 'none');
       m.setLayoutProperty('satellite-layer', 'visibility', basemap === 'satellite' ? 'visible' : 'none');
+      m.setLayoutProperty('cyclosm-layer', 'visibility', basemap === 'cyclosm' ? 'visible' : 'none');
     };
     if (m.isStyleLoaded()) apply();
     else m.once('load', apply);
