@@ -1,8 +1,7 @@
-import React from 'react';
-import { X, Route, ArrowUp, ArrowDown, Mountain, Clock, Calendar, Bike, PersonStanding, Car, TrendingDown } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { X, Route, ArrowUp, ArrowDown, Mountain, Clock, Calendar, Bike, PersonStanding, Car, TrendingDown, Layers, Loader2 } from 'lucide-react';
 import { GPXData } from '@/types/gpx';
-import { ElevationChart } from './ElevationChart';
-import { useElevationData } from '@/hooks/useElevationData';
+import { fetchSurfaceStats, StatBucket } from '@/utils/trailStats';
 
 type Activity = 'bike' | 'walk' | 'car';
 
@@ -13,6 +12,16 @@ interface TrailSummaryCardProps {
   trailWidth: number;
   activity?: Activity;
   onClose: () => void;
+}
+
+function formatDuration(ms: number) {
+  if (!isFinite(ms) || ms <= 0) return '–';
+  const totalMin = Math.round(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h} h`;
+  return `${h} h ${m} min`;
 }
 
 function formatHourRange(hours: number) {
@@ -49,16 +58,27 @@ function estimateHours(activity: Activity, distanceKm: number, gain: number) {
 
 export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
   gpxData,
-  trailColor,
-  trailStyle,
-  trailWidth,
   activity = 'bike',
   onClose,
 }) => {
   const track = gpxData.tracks[0];
+  const [surface, setSurface] = useState<StatBucket[] | null>(null);
+  const [surfaceLoading, setSurfaceLoading] = useState(false);
+
+  useEffect(() => {
+    if (!track) return;
+    let cancelled = false;
+    setSurfaceLoading(true);
+    const pts = track.points.map((p) => ({ lat: p.lat, lon: p.lon }));
+    fetchSurfaceStats(pts)
+      .then((data) => { if (!cancelled) setSurface(data); })
+      .catch(() => { if (!cancelled) setSurface([]); })
+      .finally(() => { if (!cancelled) setSurfaceLoading(false); });
+    return () => { cancelled = true; };
+  }, [track]);
+
   if (!track) return null;
 
-  const elevationData = useElevationData(gpxData, 0, null, 1);
   const eles = track.points.map((p) => p.ele).filter((e): e is number => e !== undefined);
   const maxEle = eles.length ? Math.round(Math.max(...eles)) : null;
   const minEle = eles.length ? Math.round(Math.min(...eles)) : null;
@@ -68,9 +88,28 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
   const loss = Math.round(track.elevationLoss);
 
   const first = track.points[0];
+  const last = track.points[track.points.length - 1];
   const meta = ACTIVITY_META[activity];
-  const timeRange = formatHourRange(estimateHours(activity, distanceKm, gain));
+
+  // Real time from GPX if both endpoints have timestamps; else fallback to estimate range.
+  let timeDisplay: string;
+  let timeLabel: string;
+  if (first?.time && last?.time) {
+    const ms = new Date(last.time).getTime() - new Date(first.time).getTime();
+    if (isFinite(ms) && ms > 0) {
+      timeDisplay = formatDuration(ms);
+      timeLabel = `${meta.label} – reálný čas`;
+    } else {
+      timeDisplay = formatHourRange(estimateHours(activity, distanceKm, gain));
+      timeLabel = `${meta.label} – odhadovaný čas`;
+    }
+  } else {
+    timeDisplay = formatHourRange(estimateHours(activity, distanceKm, gain));
+    timeLabel = `${meta.label} – odhadovaný čas`;
+  }
+
   const dateStr = formatDate(first?.time);
+  const topSurfaces = (surface ?? []).slice(0, 4);
 
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center p-4 pointer-events-none animate-in fade-in duration-500">
@@ -94,8 +133,8 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
         <div className="flex items-center gap-3 mb-4 px-3 py-2.5 rounded-md bg-muted/60">
           <div className="flex-shrink-0 text-foreground">{meta.icon}</div>
           <div className="min-w-0 flex-1">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">{meta.label} – odhadovaný čas</div>
-            <div className="text-base font-semibold leading-tight tabular-nums truncate">{timeRange}</div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground leading-tight">{timeLabel}</div>
+            <div className="text-base font-semibold leading-tight tabular-nums truncate">{timeDisplay}</div>
           </div>
           <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
         </div>
@@ -112,15 +151,33 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
           )}
         </div>
 
-        <div className="h-24 -mx-1">
-          <ElevationChart
-            chartData={elevationData.chartData}
-            currentChartPoint={null}
-            variant="overlay"
-            trailColor={trailColor}
-            trailStyle={trailStyle}
-            trailWidth={trailWidth}
-          />
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <Layers className="w-3.5 h-3.5" />
+            <span>Povrch</span>
+            {surfaceLoading && <Loader2 className="w-3 h-3 animate-spin" />}
+          </div>
+          {!surfaceLoading && topSurfaces.length === 0 && (
+            <p className="text-xs text-muted-foreground">Data o povrchu nejsou dostupná.</p>
+          )}
+          {topSurfaces.length > 0 && (
+            <div className="space-y-1.5">
+              <div className="flex h-2 w-full rounded-full overflow-hidden bg-muted">
+                {topSurfaces.map((b) => (
+                  <div key={b.key} style={{ width: `${b.percent}%`, backgroundColor: b.color }} />
+                ))}
+              </div>
+              <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+                {topSurfaces.map((b) => (
+                  <div key={b.key} className="flex items-center gap-1.5">
+                    <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: b.color }} />
+                    <span className="text-foreground">{b.label}</span>
+                    <span className="tabular-nums text-muted-foreground">{b.percent}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
