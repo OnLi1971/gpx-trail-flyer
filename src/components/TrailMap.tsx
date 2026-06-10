@@ -68,7 +68,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const poiMarkersRef = useRef<Array<{ marker: Marker; lat: number; lon: number; type: string }>>([]);
 
   // Basemap toggle: 3D terrain (OpenTopoMap, default) vs satellite (Esri)
-  const [basemap, setBasemap] = useState<'terrain' | 'satellite' | 'cyclosm'>('terrain');
+  const [basemap, setBasemap] = useState<'terrain' | 'satellite' | 'cyclosm' | 'darkmatter'>('terrain');
 
   // POI debug state (visible on mobile)
   const [poiStatus, setPoiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -314,6 +314,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             attribution:
               '© OpenStreetMap contributors, © CyclOSM',
           },
+          'darkmatter-tiles': {
+            type: 'raster',
+            tiles: [
+              'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+              'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+              'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+              'https://d.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+            ],
+            tileSize: 256,
+            maxzoom: 20,
+            attribution:
+              '© OpenStreetMap contributors, © CARTO',
+          },
           'terrain-dem': {
             type: 'raster-dem',
             tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
@@ -342,6 +355,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             id: 'cyclosm-layer',
             type: 'raster',
             source: 'cyclosm-tiles',
+            minzoom: 0,
+            maxzoom: 20,
+            layout: { visibility: 'none' },
+          },
+          {
+            id: 'darkmatter-layer',
+            type: 'raster',
+            source: 'darkmatter-tiles',
             minzoom: 0,
             maxzoom: 20,
             layout: { visibility: 'none' },
@@ -378,6 +399,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       m.setLayoutProperty('terrain-layer', 'visibility', basemap === 'terrain' ? 'visible' : 'none');
       m.setLayoutProperty('satellite-layer', 'visibility', basemap === 'satellite' ? 'visible' : 'none');
       m.setLayoutProperty('cyclosm-layer', 'visibility', basemap === 'cyclosm' ? 'visible' : 'none');
+      m.setLayoutProperty('darkmatter-layer', 'visibility', basemap === 'darkmatter' ? 'visible' : 'none');
     };
     if (m.isStyleLoaded()) apply();
     else m.once('load', apply);
@@ -574,8 +596,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     const m = map.current;
 
     // Crossfade basemap: druhá vrstva se postupně objeví přes aktuální
-    const fromLayer = basemap === 'terrain' ? 'terrain-layer' : 'satellite-layer';
-    const toLayer = basemap === 'terrain' ? 'satellite-layer' : 'terrain-layer';
+    const fromLayer = `${basemap}-layer`;
+    const toLayer = basemap === 'satellite' ? 'terrain-layer' : 'satellite-layer';
     let rafId: number | null = null;
     if (m.getLayer(toLayer) && m.getLayer(fromLayer)) {
       try {
@@ -601,14 +623,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       if (rafId) cancelAnimationFrame(rafId);
       // Obnov původní stav basemap vrstev
       try {
-        if (m.getLayer(toLayer)) {
-          m.setPaintProperty(toLayer, 'raster-opacity', 1);
-          m.setLayoutProperty(toLayer, 'visibility', 'none');
-        }
-        if (m.getLayer(fromLayer)) {
-          m.setPaintProperty(fromLayer, 'raster-opacity', 1);
-          m.setLayoutProperty(fromLayer, 'visibility', 'visible');
-        }
+        ['terrain-layer', 'satellite-layer', 'cyclosm-layer', 'darkmatter-layer'].forEach((id) => {
+          if (!m.getLayer(id)) return;
+          m.setPaintProperty(id, 'raster-opacity', 1);
+          m.setLayoutProperty(id, 'visibility', basemap === id.replace('-layer', '') ? 'visible' : 'none');
+        });
       } catch {}
     };
   }, [flythrough.showSummary, basemap]);
@@ -1128,6 +1147,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   title="Cykloturistická mapa s trasami a vrstevnicemi"
                 >
                   Cyklo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBasemap('darkmatter')}
+                  className={`px-2.5 py-1 text-xs font-medium transition-colors border-l ${
+                    basemap === 'darkmatter'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-muted'
+                  }`}
+                  title="Tmavý mapový podklad"
+                >
+                  Dark
                 </button>
               </div>
               <Button
