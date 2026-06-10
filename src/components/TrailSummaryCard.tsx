@@ -169,6 +169,8 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
           )}
         </div>
 
+        <WeatherSection weather={weather} loading={weatherLoading} hasTime={!!first?.time} />
+
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Layers className="w-3.5 h-3.5" />
