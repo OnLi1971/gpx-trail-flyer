@@ -68,7 +68,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const poiMarkersRef = useRef<Array<{ marker: Marker; lat: number; lon: number; type: string }>>([]);
 
   // Basemap toggle: 3D terrain (OpenTopoMap, default) vs satellite (Esri)
-  const [basemap, setBasemap] = useState<'terrain' | 'satellite'>('terrain');
+  const [basemap, setBasemap] = useState<'terrain' | 'satellite' | 'cyclosm'>('terrain');
 
   // POI debug state (visible on mobile)
   const [poiStatus, setPoiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
