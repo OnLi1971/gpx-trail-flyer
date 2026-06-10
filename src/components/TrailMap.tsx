@@ -826,11 +826,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     // Pokud máme cache z DB a nejde o vynucené obnovení, použij ji a vůbec nevolat Overpass.
     // ALE: pokud cache neobsahuje žádnou z novějších kategorií, je zastaralá → automaticky přetáhnout.
     const cached = cachedPoisRef.current;
+    // Cache je platná, pokud obsahuje aspoň jednu z novějších kategorií (rozhledny, hrady, sedla, hospody).
+    // Absenci řek NEbereme jako důvod k invalidaci — trasa řeky mít prostě nemusí.
     const cacheHasNewCategories = cached?.some(
       p => p.type === 'viewpoint' || p.type === 'castle' || p.type === 'saddle' || p.type === 'pub'
     ) ?? false;
-    const cacheHasRivers = cached?.some(p => p.type === 'river') ?? false;
-    const cacheIsStale = cached && cached.length > 0 && (!cacheHasNewCategories || !cacheHasRivers);
+    const cacheIsStale = cached && cached.length > 0 && !cacheHasNewCategories;
     if (!forceRefresh && cached && cached.length > 0 && !cacheIsStale) {
       const nearbyPois = cached;
       allNearbyPoisRef.current = nearbyPois;
