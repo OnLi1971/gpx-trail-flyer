@@ -1117,6 +1117,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 >
                   Satelit
                 </button>
+                <button
+                  type="button"
+                  onClick={() => setBasemap('cyclosm')}
+                  className={`px-2.5 py-1 text-xs font-medium transition-colors border-l ${
+                    basemap === 'cyclosm'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-muted'
+                  }`}
+                  title="Cykloturistická mapa s trasami a vrstevnicemi"
+                >
+                  Cyklo
+                </button>
               </div>
               <Button
                 size="sm"
