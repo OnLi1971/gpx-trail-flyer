@@ -283,22 +283,28 @@ function distanceToSegmentSquared(
   a: { lat: number; lon: number },
   b: { lat: number; lon: number }
 ) {
-  const x = point.lon;
+  // Korekce délky stupně longitude podle zeměpisné šířky (cos(lat)).
+  const cosLat = Math.cos((point.lat * Math.PI) / 180);
+  const x = point.lon * cosLat;
   const y = point.lat;
-  const x1 = a.lon;
+  const x1 = a.lon * cosLat;
   const y1 = a.lat;
-  const x2 = b.lon;
+  const x2 = b.lon * cosLat;
   const y2 = b.lat;
   const dx = x2 - x1;
   const dy = y2 - y1;
   const lenSq = dx * dx + dy * dy;
   const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / lenSq));
-  const lon = x1 + t * dx;
-  const lat = y1 + t * dy;
-  const dLon = x - lon;
-  const dLat = y - lat;
+  const projX = x1 + t * dx;
+  const projY = y1 + t * dy;
+  const dXc = x - projX;
+  const dYc = y - projY;
 
-  return { distanceSq: dLat * dLat + dLon * dLon, closest: { lat, lon } };
+  // Pro vrácenou souřadnici převedeme zpátky lon = projX / cosLat (lineární interp.).
+  const closestLon = cosLat === 0 ? a.lon : projX / cosLat;
+  const closestLat = projY;
+
+  return { distanceSq: dYc * dYc + dXc * dXc, closest: { lat: closestLat, lon: closestLon } };
 }
 
 function findClosestPointOnLineToTrack(
@@ -323,7 +329,7 @@ export function filterPOIsNearTrack(
   trackPoints: { lat: number; lon: number }[],
   maxDistKm = 2
 ): POIPoint[] {
-  const threshold = maxDistKm / 111; // rough degree threshold
+  const threshold = maxDistKm / 111; // hrubý práh ve stupních (po cos-korekci konzistentní)
   const thresholdSq = threshold * threshold;
 
   return pois.reduce<POIPoint[]>((nearby, poi) => {
@@ -336,8 +342,9 @@ export function filterPOIsNearTrack(
     }
 
     const isNearby = trackPoints.some(tp => {
+      const cosLat = Math.cos((tp.lat * Math.PI) / 180);
       const dLat = poi.lat - tp.lat;
-      const dLon = poi.lon - tp.lon;
+      const dLon = (poi.lon - tp.lon) * cosLat;
       return dLat * dLat + dLon * dLon < thresholdSq;
     });
 
