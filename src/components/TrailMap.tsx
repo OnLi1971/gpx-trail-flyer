@@ -311,6 +311,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             ],
             tileSize: 256,
             maxzoom: 20,
+            attribution:
+              '© OpenStreetMap contributors, © CyclOSM',
+          },
           'darkmatter-tiles': {
             type: 'raster',
             tiles: [
