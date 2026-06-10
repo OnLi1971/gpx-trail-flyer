@@ -225,59 +225,57 @@ out tags center 2000;`;
 
 export async function fetchWaterwaysAlongTrack(
   trackPoints: TrackPoint[],
-  radiusKm = 1
+  radiusKm = 0.3
 ): Promise<POIPoint[]> {
-  const sampled = sampleTrackPoints(trackPoints, Math.max(0.5, radiusKm * 1.5), 90);
-  const radiusMeters = Math.max(80, Math.round(radiusKm * 1000));
-  const clauses = sampled.flatMap(p => {
-    const around = `(around:${radiusMeters},${p.lat},${p.lon})`;
-    return [
-      `way["waterway"~"^(river|stream|canal)$"]["name"]${around};`,
-      `relation["waterway"~"^(river|canal)$"]["name"]${around};`,
-      `relation["type"="waterway"]["name"]${around};`,
-      `way["natural"="water"]["water"="river"]["name"]${around};`,
-      `relation["natural"="water"]["water"="river"]["name"]${around};`,
-    ];
-  }).join('\n  ');
+  // Polyline around: Overpass umí radius kolem celé navzorkované linie v jediném klauzuli.
+  // Vzorkujeme hustě (~300 m), počet bodů ořežeme kvůli délce URL.
+  const sampled = sampleTrackPoints(trackPoints, 0.3, 250);
+  if (sampled.length < 2) return [];
+  const radiusMeters = Math.max(120, Math.round(radiusKm * 1000));
+  const coords = sampled.map(p => `${p.lat},${p.lon}`).join(',');
+  const around = `(around:${radiusMeters},${coords})`;
+
   const query = `[out:json][timeout:30];
 (
-  ${clauses}
+  way["waterway"~"^(river|stream|canal)$"]["name"]${around};
+  way["natural"="water"]["water"="river"]["name"]${around};
 );
-out tags center geom;`;
+out tags geom;`;
 
   const data = await fetchOverpassJson(query);
-  const byName = new Map<string, POIPoint>();
+  const byName = new Map<string, { poi: POIPoint; distSq: number }>();
 
   for (const el of data.elements || []) {
     const tags = el.tags || {};
     const name = tags.name;
-    const lat = el.lat ?? el.center?.lat;
-    const lon = el.lon ?? el.center?.lon;
-    if (!name || lat == null || lon == null) continue;
+    if (!name) continue;
 
-    const geometry = Array.isArray(el.geometry)
+    const geometry: TrackPoint[] | undefined = Array.isArray(el.geometry)
       ? el.geometry.map((p: any) => ({ lat: p.lat, lon: p.lon })).filter((p: TrackPoint) => p.lat != null && p.lon != null)
-      : Array.isArray(el.members)
-        ? el.members.flatMap((m: any) => Array.isArray(m.geometry)
-          ? m.geometry.map((p: any) => ({ lat: p.lat, lon: p.lon })).filter((p: TrackPoint) => p.lat != null && p.lon != null)
-          : [])
-        : undefined;
+      : undefined;
+    if (!geometry || geometry.length === 0) continue;
+
+    const closest = findClosestPointOnLineToTrack(geometry, trackPoints);
+    if (!closest) continue;
 
     const poi: POIPoint = {
       name,
-      lat,
-      lon,
+      lat: closest.closest.lat,
+      lon: closest.closest.lon,
       type: 'river',
       waterwayKind: tags.waterway || tags.water || 'river',
-      geometry: geometry && geometry.length > 0 ? geometry : undefined,
+      geometry,
     };
 
     const key = name.toLowerCase();
     const existing = byName.get(key);
-    if (!existing || (poi.geometry?.length ?? 0) > (existing.geometry?.length ?? 0)) byName.set(key, poi);
+    // Dedup podle blízkosti k trase, ne podle délky geometrie.
+    if (!existing || closest.distanceSq < existing.distSq) {
+      byName.set(key, { poi, distSq: closest.distanceSq });
+    }
   }
 
-  return [...byName.values()];
+  return [...byName.values()].map(v => v.poi);
 }
 
 function distanceToSegmentSquared(
@@ -285,22 +283,28 @@ function distanceToSegmentSquared(
   a: { lat: number; lon: number },
   b: { lat: number; lon: number }
 ) {
-  const x = point.lon;
+  // Korekce délky stupně longitude podle zeměpisné šířky (cos(lat)).
+  const cosLat = Math.cos((point.lat * Math.PI) / 180);
+  const x = point.lon * cosLat;
   const y = point.lat;
-  const x1 = a.lon;
+  const x1 = a.lon * cosLat;
   const y1 = a.lat;
-  const x2 = b.lon;
+  const x2 = b.lon * cosLat;
   const y2 = b.lat;
   const dx = x2 - x1;
   const dy = y2 - y1;
   const lenSq = dx * dx + dy * dy;
   const t = lenSq === 0 ? 0 : Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / lenSq));
-  const lon = x1 + t * dx;
-  const lat = y1 + t * dy;
-  const dLon = x - lon;
-  const dLat = y - lat;
+  const projX = x1 + t * dx;
+  const projY = y1 + t * dy;
+  const dXc = x - projX;
+  const dYc = y - projY;
 
-  return { distanceSq: dLat * dLat + dLon * dLon, closest: { lat, lon } };
+  // Pro vrácenou souřadnici převedeme zpátky lon = projX / cosLat (lineární interp.).
+  const closestLon = cosLat === 0 ? a.lon : projX / cosLat;
+  const closestLat = projY;
+
+  return { distanceSq: dYc * dYc + dXc * dXc, closest: { lat: closestLat, lon: closestLon } };
 }
 
 function findClosestPointOnLineToTrack(
@@ -325,7 +329,7 @@ export function filterPOIsNearTrack(
   trackPoints: { lat: number; lon: number }[],
   maxDistKm = 2
 ): POIPoint[] {
-  const threshold = maxDistKm / 111; // rough degree threshold
+  const threshold = maxDistKm / 111; // hrubý práh ve stupních (po cos-korekci konzistentní)
   const thresholdSq = threshold * threshold;
 
   return pois.reduce<POIPoint[]>((nearby, poi) => {
@@ -338,8 +342,9 @@ export function filterPOIsNearTrack(
     }
 
     const isNearby = trackPoints.some(tp => {
+      const cosLat = Math.cos((tp.lat * Math.PI) / 180);
       const dLat = poi.lat - tp.lat;
-      const dLon = poi.lon - tp.lon;
+      const dLon = (poi.lon - tp.lon) * cosLat;
       return dLat * dLat + dLon * dLon < thresholdSq;
     });
 
