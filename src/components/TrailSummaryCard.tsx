@@ -213,3 +213,72 @@ const Stat: React.FC<{ icon: React.ReactNode; label: string; value: string }> = 
     </div>
   </div>
 );
+
+const WeatherIcon: React.FC<{ kind: ReturnType<typeof weatherCodeInfo>['kind'] }> = ({ kind }) => {
+  const cls = 'w-5 h-5';
+  switch (kind) {
+    case 'sun': return <Sun className={`${cls} text-amber-500`} />;
+    case 'cloud': return <Cloud className={`${cls} text-slate-400`} />;
+    case 'rain': return <CloudRain className={`${cls} text-sky-500`} />;
+    case 'snow': return <CloudSnow className={`${cls} text-sky-300`} />;
+    case 'fog': return <CloudFog className={`${cls} text-slate-400`} />;
+    case 'storm': return <Zap className={`${cls} text-violet-500`} />;
+    default: return <Cloud className={`${cls} text-muted-foreground`} />;
+  }
+};
+
+const WeatherSection: React.FC<{ weather: TrailWeather | null; loading: boolean; hasTime: boolean }> = ({ weather, loading, hasTime }) => {
+  if (!hasTime) {
+    return (
+      <div className="mb-4 text-xs text-muted-foreground italic">
+        GPX neobsahuje datum, počasí nelze dohledat.
+      </div>
+    );
+  }
+  if (loading) {
+    return (
+      <div className="mb-4 flex items-center gap-2 text-xs text-muted-foreground">
+        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Načítám počasí…
+      </div>
+    );
+  }
+  if (!weather) {
+    return (
+      <div className="mb-4 text-xs text-muted-foreground">
+        Počasí pro tento den není dostupné.
+      </div>
+    );
+  }
+  const info = weatherCodeInfo(weather.weatherCode);
+  const fmt = (n: number | null, unit: string, digits = 0) =>
+    n == null ? '–' : `${n.toFixed(digits)} ${unit}`;
+  return (
+    <div className="mb-4 p-3 rounded-md bg-muted/60 space-y-2">
+      <div className="flex items-center gap-2">
+        <WeatherIcon kind={info.kind} />
+        <span className="text-sm font-medium">{info.label}</span>
+        {weather.tempMean != null && (
+          <span className="ml-auto text-base font-semibold tabular-nums">
+            {Math.round(weather.tempMean)} °C
+          </span>
+        )}
+      </div>
+      <div className="grid grid-cols-3 gap-2 text-xs">
+        <div className="flex items-center gap-1.5">
+          <Thermometer className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="tabular-nums">
+            {weather.tempMin != null ? Math.round(weather.tempMin) : '–'}° / {weather.tempMax != null ? Math.round(weather.tempMax) : '–'}°
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Wind className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="tabular-nums">{fmt(weather.windMax, 'km/h')} {windDirLabel(weather.windDir)}</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <Droplets className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="tabular-nums">{fmt(weather.precipitation, 'mm', 1)}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
