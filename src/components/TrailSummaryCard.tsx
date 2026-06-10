@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { X, Route, ArrowUp, ArrowDown, Mountain, Clock, Calendar, Bike, PersonStanding, Car, TrendingDown, Layers, Loader2 } from 'lucide-react';
+import { X, Route, ArrowUp, ArrowDown, Mountain, Clock, Calendar, Bike, PersonStanding, Car, TrendingDown, Layers, Loader2, Sun, Cloud, CloudRain, CloudSnow, CloudFog, Zap, Wind, Droplets, Thermometer } from 'lucide-react';
 import { GPXData } from '@/types/gpx';
 import { fetchSurfaceStats, StatBucket } from '@/utils/trailStats';
+import { fetchTrailWeather, TrailWeather, windDirLabel, weatherCodeInfo } from '@/utils/weatherApi';
 
 type Activity = 'bike' | 'walk' | 'car';
 
