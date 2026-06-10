@@ -302,6 +302,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             attribution:
               'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
           },
+          'cyclosm-tiles': {
+            type: 'raster',
+            tiles: [
+              'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+              'https://b.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+              'https://c.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+            ],
+            tileSize: 256,
+            maxzoom: 20,
+            attribution:
+              '© OpenStreetMap contributors, © CyclOSM',
+          },
           'terrain-dem': {
             type: 'raster-dem',
             tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
@@ -324,6 +336,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             source: 'satellite-tiles',
             minzoom: 0,
             maxzoom: 19,
+            layout: { visibility: 'none' },
+          },
+          {
+            id: 'cyclosm-layer',
+            type: 'raster',
+            source: 'cyclosm-tiles',
+            minzoom: 0,
+            maxzoom: 20,
             layout: { visibility: 'none' },
           },
         ],
