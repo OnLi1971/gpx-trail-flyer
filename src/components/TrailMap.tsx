@@ -68,7 +68,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const poiMarkersRef = useRef<Array<{ marker: Marker; lat: number; lon: number; type: string }>>([]);
 
   // Basemap toggle: 3D terrain (OpenTopoMap, default) vs satellite (Esri)
-  const [basemap, setBasemap] = useState<'terrain' | 'satellite'>('terrain');
+  const [basemap, setBasemap] = useState<'terrain' | 'satellite' | 'cyclosm'>('terrain');
 
   // POI debug state (visible on mobile)
   const [poiStatus, setPoiStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -302,6 +302,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             attribution:
               'Tiles © Esri — Source: Esri, Maxar, Earthstar Geographics, and the GIS User Community',
           },
+          'cyclosm-tiles': {
+            type: 'raster',
+            tiles: [
+              'https://a.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+              'https://b.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+              'https://c.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png',
+            ],
+            tileSize: 256,
+            maxzoom: 20,
+            attribution:
+              '© OpenStreetMap contributors, © CyclOSM',
+          },
           'terrain-dem': {
             type: 'raster-dem',
             tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
@@ -324,6 +336,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             source: 'satellite-tiles',
             minzoom: 0,
             maxzoom: 19,
+            layout: { visibility: 'none' },
+          },
+          {
+            id: 'cyclosm-layer',
+            type: 'raster',
+            source: 'cyclosm-tiles',
+            minzoom: 0,
+            maxzoom: 20,
             layout: { visibility: 'none' },
           },
         ],
@@ -354,9 +374,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     const m = map.current;
     if (!m) return;
     const apply = () => {
-      if (!m.getLayer('terrain-layer') || !m.getLayer('satellite-layer')) return;
+      if (!m.getLayer('terrain-layer') || !m.getLayer('satellite-layer') || !m.getLayer('cyclosm-layer')) return;
       m.setLayoutProperty('terrain-layer', 'visibility', basemap === 'terrain' ? 'visible' : 'none');
       m.setLayoutProperty('satellite-layer', 'visibility', basemap === 'satellite' ? 'visible' : 'none');
+      m.setLayoutProperty('cyclosm-layer', 'visibility', basemap === 'cyclosm' ? 'visible' : 'none');
     };
     if (m.isStyleLoaded()) apply();
     else m.once('load', apply);
@@ -1095,6 +1116,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   title="Satelitní snímky"
                 >
                   Satelit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBasemap('cyclosm')}
+                  className={`px-2.5 py-1 text-xs font-medium transition-colors border-l ${
+                    basemap === 'cyclosm'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-foreground hover:bg-muted'
+                  }`}
+                  title="Cykloturistická mapa s trasami a vrstevnicemi"
+                >
+                  Cyklo
                 </button>
               </div>
               <Button
