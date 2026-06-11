@@ -1183,33 +1183,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           <div ref={mapContainer} className="absolute inset-0" />
 
 
-          {/* Elevation chart overlay */}
-          {gpxData && (() => {
-            // During the 4s outro trail redraw, also progressively reveal the elevation profile.
-            const inOutroDraw = flythrough.showSummary && outroDrawIndex != null;
-            let outroChartPoint = elevationData.currentChartPoint;
-            if (inOutroDraw && elevationData.chartData.length > 0) {
-              const track = gpxData.tracks[0];
-              const totalPts = Math.max(1, track.points.length - 1);
-              const ratio = Math.min(1, Math.max(0, (outroDrawIndex ?? 0) / totalPts));
-              const idx = Math.min(elevationData.chartData.length - 1, Math.floor(ratio * (elevationData.chartData.length - 1)));
-              outroChartPoint = elevationData.chartData[idx];
-            }
-            return (
-              <div className={`absolute z-10 pointer-events-none ${presentationMode ? 'bottom-4 left-4 right-4' : 'bottom-2 left-2 right-2'}`}>
-                <div className="pointer-events-auto">
-                  <ElevationChart
-                    chartData={elevationData.chartData}
-                    currentChartPoint={outroChartPoint}
-                    variant="overlay"
-                    trailColor={trailColor}
-                    trailStyle={trailStyle}
-                    trailWidth={trailWidth}
-                  />
-                </div>
-              </div>
-            );
-          })()}
 
 
           {/* Závěrečná karta shrnutí — pouze na vyžádání */}
