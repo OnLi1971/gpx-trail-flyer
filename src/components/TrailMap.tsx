@@ -699,6 +699,42 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
   }, [flythrough.showSummary, basemap]);
 
+  // Závěr: po dokončení crossfade překresli trasu od začátku do konce za 4 s
+  useEffect(() => {
+    if (!flythrough.showSummary || !gpxData || gpxData.tracks.length === 0) {
+      setOutroDrawIndex(null);
+      return;
+    }
+    const track = gpxData.tracks[0];
+    const total = track.points.length;
+    if (total < 2) return;
+
+    // Začni "schovanou" trasou hned, kresli až po crossfade
+    setOutroDrawIndex(0);
+    const delayMs = 5200; // doběhne crossfade basemapy
+    const durationMs = 4000;
+    let raf: number | null = null;
+    let startTime = 0;
+    const tick = (now: number) => {
+      if (!startTime) startTime = now + delayMs;
+      if (now < startTime) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      const t = Math.min(1, (now - startTime) / durationMs);
+      const eased = t * t * (3 - 2 * t);
+      const idx = Math.max(1, Math.floor(eased * (total - 1)) + 1);
+      setOutroDrawIndex(idx);
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else setOutroDrawIndex(null); // ponech plnou trasu (návrat k běžné logice)
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      setOutroDrawIndex(null);
+    };
+  }, [flythrough.showSummary, gpxData]);
+
 
   // POI markers — render helper using current limits per category
   const renderPoiMarkers = React.useCallback((pois: import('@/utils/overpassApi').POIPoint[]) => {
