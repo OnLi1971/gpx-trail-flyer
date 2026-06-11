@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { X, Route, ArrowUp, ArrowDown, Mountain, Clock, Calendar, Bike, PersonStanding, Car, TrendingDown, Layers, Loader2, Wind, Droplets, Thermometer } from 'lucide-react';
+import { X, Route, ArrowUp, ArrowDown, Mountain, Clock, Calendar, Bike, PersonStanding, Car, TrendingDown, Layers, Loader2, Wind, Thermometer } from 'lucide-react';
 import { GPXData } from '@/types/gpx';
 import { fetchSurfaceStats, StatBucket } from '@/utils/trailStats';
 import { fetchTrailWeather, TrailWeather, windDirLabel, weatherCodeInfo } from '@/utils/weatherApi';
