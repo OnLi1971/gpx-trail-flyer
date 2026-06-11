@@ -570,9 +570,13 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       const showBehind =
         trailBehindOnly && flythrough.isFlying && !outroMode && flythrough.flyingIndex != null;
 
-      const endIdx = showBehind
-        ? Math.max(1, Math.min(track.points.length, (flythrough.flyingIndex ?? 0) + 1))
-        : track.points.length;
+      const inOutroDraw = flythrough.showSummary && outroDrawIndex != null;
+
+      const endIdx = inOutroDraw
+        ? Math.max(0, Math.min(track.points.length, outroDrawIndex!))
+        : showBehind
+          ? Math.max(1, Math.min(track.points.length, (flythrough.flyingIndex ?? 0) + 1))
+          : track.points.length;
 
       const coords = track.points.slice(0, endIdx).map((p) => [p.lon, p.lat]);
       src.setData({
@@ -589,7 +593,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     if (m.isStyleLoaded()) apply();
     else m.once('idle', apply);
-  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, outroMode, gpxData]);
+  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, flythrough.showSummary, outroMode, outroDrawIndex, gpxData]);
 
   // Slider position marker
   useEffect(() => {
