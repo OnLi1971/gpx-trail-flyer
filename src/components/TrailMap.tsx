@@ -1157,7 +1157,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
-          {/* Závěrečná karta shrnutí — zobrazí se po dokončení crossfade */}
+          {/* Tlačítko pro vyvolání závěrečné karty (po pull-back zoomu) */}
+          {endpointsVisible && !showSummaryCard && gpxData && (
+            <button
+              type="button"
+              onClick={() => setShowSummaryCard(true)}
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-full text-xs font-semibold bg-background/90 backdrop-blur-md border border-border shadow-lg hover:bg-background transition-colors animate-in fade-in slide-in-from-bottom-2 duration-500"
+            >
+              Zobrazit shrnutí trasy
+            </button>
+          )}
+
+          {/* Závěrečná karta shrnutí — pouze na vyžádání */}
           {showSummaryCard && gpxData && (
             <TrailSummaryCard
               gpxData={gpxData}
@@ -1165,7 +1176,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               trailStyle={trailStyle}
               trailWidth={trailWidth}
               activity={flythrough.markerIcon}
-              onClose={() => flythrough.dismissSummary()}
+              onClose={() => setShowSummaryCard(false)}
             />
           )}
 
