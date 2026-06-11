@@ -1179,7 +1179,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         ? "fixed inset-0 z-[100] bg-background overflow-hidden"
         : "relative w-full rounded-lg overflow-hidden shadow-lg"}>
         {/* Main map container */}
-        <div className={`relative w-full ${presentationMode ? 'h-screen' : 'h-[500px]'}`}>
+        <div className={`relative w-full ${presentationMode ? 'h-screen' : 'h-[500px]'} ${(flythrough.isFlying || flythrough.showSummary) ? '[&_.maplibregl-ctrl-top-right]:hidden [&_.maplibregl-ctrl-bottom-right]:hidden' : ''}`}>
           <div ref={mapContainer} className="absolute inset-0" />
 
 
