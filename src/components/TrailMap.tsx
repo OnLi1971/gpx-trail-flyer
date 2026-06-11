@@ -214,12 +214,73 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (flythrough.isFlying && outroMode) setOutroMode(false);
   }, [flythrough.isFlying, outroMode]);
 
-  // Karta shrnutí se objeví až po dokončení crossfade (~5s)
+  // Po dokončení crossfade (~5s) ukaž štítky start/cíl a tlačítko pro otevření karty
+  const [endpointsVisible, setEndpointsVisible] = useState(false);
   useEffect(() => {
-    if (!flythrough.showSummary) { setShowSummaryCard(false); return; }
-    const t = setTimeout(() => setShowSummaryCard(true), 5200);
+    if (!flythrough.showSummary) {
+      setShowSummaryCard(false);
+      setEndpointsVisible(false);
+      return;
+    }
+    const t = setTimeout(() => setEndpointsVisible(true), 5200);
     return () => clearTimeout(t);
   }, [flythrough.showSummary]);
+
+  // Parser názvu trasy na start/cíl
+  const endpointNames = useMemo(() => {
+    const name = gpxData?.tracks[0]?.name?.trim();
+    if (!name) return null;
+    const seps = [' → ', ' -> ', ' — ', ' – ', ' - ', ' to '];
+    for (const sep of seps) {
+      const idx = name.indexOf(sep);
+      if (idx > 0) {
+        return { start: name.slice(0, idx).trim(), end: name.slice(idx + sep.length).trim() };
+      }
+    }
+    return null;
+  }, [gpxData]);
+
+  // Vykresli štítky start/cíl pomocí maplibre Markers (sledují pozici)
+  const startLabelMarkerRef = useRef<import('maplibre-gl').Marker | null>(null);
+  const endLabelMarkerRef = useRef<import('maplibre-gl').Marker | null>(null);
+  useEffect(() => {
+    const cleanup = () => {
+      startLabelMarkerRef.current?.remove();
+      endLabelMarkerRef.current?.remove();
+      startLabelMarkerRef.current = null;
+      endLabelMarkerRef.current = null;
+    };
+    if (!endpointsVisible || !endpointNames || !map.current || !gpxData) {
+      cleanup();
+      return;
+    }
+    const track = gpxData.tracks[0];
+    const startPt = track.points[0];
+    const endPt = track.points[track.points.length - 1];
+    const makeEl = (label: string, kind: 'start' | 'end') => {
+      const el = document.createElement('div');
+      el.className = 'endpoint-label';
+      el.innerHTML = `
+        <div style="display:flex;align-items:center;gap:6px;background:rgba(15,15,20,0.78);backdrop-filter:blur(6px);color:#fff;padding:4px 10px;border-radius:9999px;font-size:12px;font-weight:600;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.15);">
+          <span style="width:8px;height:8px;border-radius:50%;background:${kind === 'start' ? '#10b981' : '#ef4444'};box-shadow:0 0 0 3px ${kind === 'start' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'};"></span>
+          <span>${label}</span>
+        </div>`;
+      el.style.opacity = '0';
+      el.style.transition = 'opacity 600ms ease';
+      requestAnimationFrame(() => { el.style.opacity = '1'; });
+      return el;
+    };
+    import('maplibre-gl').then(({ Marker }) => {
+      if (!map.current) return;
+      startLabelMarkerRef.current = new Marker({ element: makeEl(endpointNames.start, 'start'), offset: [0, -14] })
+        .setLngLat([startPt.lon, startPt.lat])
+        .addTo(map.current);
+      endLabelMarkerRef.current = new Marker({ element: makeEl(endpointNames.end, 'end'), offset: [0, -14] })
+        .setLngLat([endPt.lon, endPt.lat])
+        .addTo(map.current);
+    });
+    return cleanup;
+  }, [endpointsVisible, endpointNames, gpxData]);
 
 
   const handleStartRecording = useCallback(() => {
