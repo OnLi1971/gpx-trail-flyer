@@ -1184,31 +1184,33 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
 
           {/* Elevation chart overlay */}
-          {gpxData && (
-            <div className={`absolute z-10 pointer-events-none ${presentationMode ? 'bottom-4 left-4 right-4' : 'bottom-2 left-2 right-2'}`}>
-              <div className="pointer-events-auto">
-                <ElevationChart
-                  chartData={elevationData.chartData}
-                  currentChartPoint={elevationData.currentChartPoint}
-                  variant="overlay"
-                  trailColor={trailColor}
-                  trailStyle={trailStyle}
-                  trailWidth={trailWidth}
-                />
+          {gpxData && (() => {
+            // During the 4s outro trail redraw, also progressively reveal the elevation profile.
+            const inOutroDraw = flythrough.showSummary && outroDrawIndex != null;
+            let outroChartPoint = elevationData.currentChartPoint;
+            if (inOutroDraw && elevationData.chartData.length > 0) {
+              const track = gpxData.tracks[0];
+              const totalPts = Math.max(1, track.points.length - 1);
+              const ratio = Math.min(1, Math.max(0, (outroDrawIndex ?? 0) / totalPts));
+              const idx = Math.min(elevationData.chartData.length - 1, Math.floor(ratio * (elevationData.chartData.length - 1)));
+              outroChartPoint = elevationData.chartData[idx];
+            }
+            return (
+              <div className={`absolute z-10 pointer-events-none ${presentationMode ? 'bottom-4 left-4 right-4' : 'bottom-2 left-2 right-2'}`}>
+                <div className="pointer-events-auto">
+                  <ElevationChart
+                    chartData={elevationData.chartData}
+                    currentChartPoint={outroChartPoint}
+                    variant="overlay"
+                    trailColor={trailColor}
+                    trailStyle={trailStyle}
+                    trailWidth={trailWidth}
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
-          {/* Tlačítko pro vyvolání závěrečné karty (po pull-back zoomu) */}
-          {endpointsVisible && !showSummaryCard && gpxData && (
-            <button
-              type="button"
-              onClick={() => setShowSummaryCard(true)}
-              className="absolute bottom-4 left-1/2 -translate-x-1/2 z-30 px-4 py-2 rounded-full text-xs font-semibold bg-background/90 backdrop-blur-md border border-border shadow-lg hover:bg-background transition-colors animate-in fade-in slide-in-from-bottom-2 duration-500"
-            >
-              Zobrazit shrnutí trasy
-            </button>
-          )}
 
           {/* Závěrečná karta shrnutí — pouze na vyžádání */}
           {showSummaryCard && gpxData && (
