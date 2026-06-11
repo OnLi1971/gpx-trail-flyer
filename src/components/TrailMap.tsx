@@ -198,6 +198,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   }, [presentationMode]);
 
   const [outroMode, setOutroMode] = useState(false);
+  // Progres "překreslení" trasy v závěrečném pohledu (počet bodů k zobrazení; null = plná trasa)
+  const [outroDrawIndex, setOutroDrawIndex] = useState<number | null>(null);
 
   const flythrough = useFlythrough(map, gpxData, (reason) => {
     // Po dokončení průletu NEzapínáme outroMode — POI zůstanou viditelné během orbit pohledu
@@ -568,9 +570,13 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       const showBehind =
         trailBehindOnly && flythrough.isFlying && !outroMode && flythrough.flyingIndex != null;
 
-      const endIdx = showBehind
-        ? Math.max(1, Math.min(track.points.length, (flythrough.flyingIndex ?? 0) + 1))
-        : track.points.length;
+      const inOutroDraw = flythrough.showSummary && outroDrawIndex != null;
+
+      const endIdx = inOutroDraw
+        ? Math.max(0, Math.min(track.points.length, outroDrawIndex!))
+        : showBehind
+          ? Math.max(1, Math.min(track.points.length, (flythrough.flyingIndex ?? 0) + 1))
+          : track.points.length;
 
       const coords = track.points.slice(0, endIdx).map((p) => [p.lon, p.lat]);
       src.setData({
@@ -587,7 +593,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     if (m.isStyleLoaded()) apply();
     else m.once('idle', apply);
-  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, outroMode, gpxData]);
+  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, flythrough.showSummary, outroMode, outroDrawIndex, gpxData]);
 
   // Slider position marker
   useEffect(() => {
@@ -692,6 +698,42 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       } catch {}
     };
   }, [flythrough.showSummary, basemap]);
+
+  // Závěr: po dokončení crossfade překresli trasu od začátku do konce za 4 s
+  useEffect(() => {
+    if (!flythrough.showSummary || !gpxData || gpxData.tracks.length === 0) {
+      setOutroDrawIndex(null);
+      return;
+    }
+    const track = gpxData.tracks[0];
+    const total = track.points.length;
+    if (total < 2) return;
+
+    // Začni "schovanou" trasou hned, kresli až po crossfade
+    setOutroDrawIndex(0);
+    const delayMs = 5200; // doběhne crossfade basemapy
+    const durationMs = 4000;
+    let raf: number | null = null;
+    let startTime = 0;
+    const tick = (now: number) => {
+      if (!startTime) startTime = now + delayMs;
+      if (now < startTime) {
+        raf = requestAnimationFrame(tick);
+        return;
+      }
+      const t = Math.min(1, (now - startTime) / durationMs);
+      const eased = t * t * (3 - 2 * t);
+      const idx = Math.max(1, Math.floor(eased * (total - 1)) + 1);
+      setOutroDrawIndex(idx);
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else setOutroDrawIndex(null); // ponech plnou trasu (návrat k běžné logice)
+    };
+    raf = requestAnimationFrame(tick);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      setOutroDrawIndex(null);
+    };
+  }, [flythrough.showSummary, gpxData]);
 
 
   // POI markers — render helper using current limits per category
