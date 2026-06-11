@@ -287,7 +287,7 @@ const WeatherSection: React.FC<{ weather: TrailWeather | null; loading: boolean;
           </span>
         )}
       </div>
-      <div className="grid grid-cols-3 gap-2 text-xs">
+      <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="flex items-center gap-1.5">
           <Thermometer className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="tabular-nums">
@@ -297,10 +297,6 @@ const WeatherSection: React.FC<{ weather: TrailWeather | null; loading: boolean;
         <div className="flex items-center gap-1.5">
           <Wind className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="tabular-nums">{fmt(weather.windMax, 'km/h')} {windDirLabel(weather.windDir)}</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Droplets className="w-3.5 h-3.5 text-muted-foreground" />
-          <span className="tabular-nums">{fmt(weather.precipitation, 'mm', 1)}</span>
         </div>
       </div>
     </div>
