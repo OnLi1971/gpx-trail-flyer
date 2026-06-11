@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { X, Route, ArrowUp, ArrowDown, Mountain, Clock, Calendar, Bike, PersonStanding, Car, TrendingDown, Layers, Loader2, Sun, Cloud, CloudRain, CloudSnow, CloudFog, Zap, Wind, Droplets, Thermometer } from 'lucide-react';
 import { GPXData } from '@/types/gpx';
 import { fetchSurfaceStats, StatBucket } from '@/utils/trailStats';
 import { fetchTrailWeather, TrailWeather, windDirLabel, weatherCodeInfo } from '@/utils/weatherApi';
+import { ElevationChart } from './ElevationChart';
 
 type Activity = 'bike' | 'walk' | 'car';
 
@@ -59,6 +60,9 @@ function estimateHours(activity: Activity, distanceKm: number, gain: number) {
 
 export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
   gpxData,
+  trailColor,
+  trailStyle,
+  trailWidth,
   activity = 'bike',
   onClose,
 }) => {
@@ -134,6 +138,17 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
     : knownSurfaces;
   const topSurfaces = redistributed.slice(0, 4);
 
+  const chartData = useMemo(() => {
+    const pts = track.points.filter((p) => p.ele !== undefined);
+    if (pts.length === 0) return [];
+    return pts.map((p, i) => ({
+      distance: (i / (pts.length - 1)) * (track.totalDistance / 1000),
+      elevation: p.ele!,
+      originalElevation: p.ele!,
+      originalIndex: i,
+    }));
+  }, [track]);
+
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center p-4 pointer-events-none animate-in fade-in duration-500">
       <div className="pointer-events-auto bg-background/90 backdrop-blur-md rounded-xl shadow-2xl border border-border max-w-md w-full p-5 relative">
@@ -175,6 +190,23 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
         </div>
 
         <WeatherSection weather={weather} loading={weatherLoading} hasTime={!!first?.time} />
+
+        {chartData.length > 0 && (
+          <div className="mb-4 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Mountain className="w-3.5 h-3.5" />
+              <span>Výškový profil</span>
+            </div>
+            <ElevationChart
+              chartData={chartData}
+              currentChartPoint={null}
+              variant="overlay"
+              trailColor={trailColor}
+              trailStyle={trailStyle}
+              trailWidth={trailWidth}
+            />
+          </div>
+        )}
 
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
