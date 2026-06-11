@@ -198,6 +198,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   }, [presentationMode]);
 
   const [outroMode, setOutroMode] = useState(false);
+  // Progres "překreslení" trasy v závěrečném pohledu (počet bodů k zobrazení; null = plná trasa)
+  const [outroDrawIndex, setOutroDrawIndex] = useState<number | null>(null);
 
   const flythrough = useFlythrough(map, gpxData, (reason) => {
     // Po dokončení průletu NEzapínáme outroMode — POI zůstanou viditelné během orbit pohledu
