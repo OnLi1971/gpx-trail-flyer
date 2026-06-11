@@ -191,6 +191,23 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
 
         <WeatherSection weather={weather} loading={weatherLoading} hasTime={!!first?.time} />
 
+        {chartData.length > 0 && (
+          <div className="mb-4 space-y-1.5">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+              <Mountain className="w-3.5 h-3.5" />
+              <span>Výškový profil</span>
+            </div>
+            <ElevationChart
+              chartData={chartData}
+              currentChartPoint={null}
+              variant="overlay"
+              trailColor={trailColor}
+              trailStyle={trailStyle}
+              trailWidth={trailWidth}
+            />
+          </div>
+        )}
+
         <div className="space-y-2">
           <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
             <Layers className="w-3.5 h-3.5" />
