@@ -138,6 +138,17 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
     : knownSurfaces;
   const topSurfaces = redistributed.slice(0, 4);
 
+  const chartData = useMemo(() => {
+    const pts = track.points.filter((p) => p.ele !== undefined);
+    if (pts.length === 0) return [];
+    return pts.map((p, i) => ({
+      distance: (i / (pts.length - 1)) * (track.totalDistance / 1000),
+      elevation: p.ele!,
+      originalElevation: p.ele!,
+      originalIndex: i,
+    }));
+  }, [track]);
+
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center p-4 pointer-events-none animate-in fade-in duration-500">
       <div className="pointer-events-auto bg-background/90 backdrop-blur-md rounded-xl shadow-2xl border border-border max-w-md w-full p-5 relative">
