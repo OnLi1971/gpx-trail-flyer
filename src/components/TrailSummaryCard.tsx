@@ -60,6 +60,9 @@ function estimateHours(activity: Activity, distanceKm: number, gain: number) {
 
 export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
   gpxData,
+  trailColor,
+  trailStyle,
+  trailWidth,
   activity = 'bike',
   onClose,
 }) => {
