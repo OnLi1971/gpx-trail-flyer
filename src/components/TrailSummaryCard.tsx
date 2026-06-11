@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { X, Route, ArrowUp, ArrowDown, Mountain, Clock, Calendar, Bike, PersonStanding, Car, TrendingDown, Layers, Loader2, Sun, Cloud, CloudRain, CloudSnow, CloudFog, Zap, Wind, Droplets, Thermometer } from 'lucide-react';
+import { X, Route, ArrowUp, ArrowDown, Mountain, Clock, Calendar, Bike, PersonStanding, Car, TrendingDown, Layers, Loader2, Wind, Droplets, Thermometer } from 'lucide-react';
 import { GPXData } from '@/types/gpx';
 import { fetchSurfaceStats, StatBucket } from '@/utils/trailStats';
 import { fetchTrailWeather, TrailWeather, windDirLabel, weatherCodeInfo } from '@/utils/weatherApi';
@@ -251,18 +251,6 @@ const Stat: React.FC<{ icon: React.ReactNode; label: string; value: string }> = 
   </div>
 );
 
-const WeatherIcon: React.FC<{ kind: ReturnType<typeof weatherCodeInfo>['kind'] }> = ({ kind }) => {
-  const cls = 'w-5 h-5';
-  switch (kind) {
-    case 'sun': return <Sun className={`${cls} text-amber-500`} />;
-    case 'cloud': return <Cloud className={`${cls} text-slate-400`} />;
-    case 'rain': return <CloudRain className={`${cls} text-sky-500`} />;
-    case 'snow': return <CloudSnow className={`${cls} text-sky-300`} />;
-    case 'fog': return <CloudFog className={`${cls} text-slate-400`} />;
-    case 'storm': return <Zap className={`${cls} text-violet-500`} />;
-    default: return <Cloud className={`${cls} text-muted-foreground`} />;
-  }
-};
 
 const WeatherSection: React.FC<{ weather: TrailWeather | null; loading: boolean; hasTime: boolean }> = ({ weather, loading, hasTime }) => {
   if (!hasTime) {
@@ -291,11 +279,10 @@ const WeatherSection: React.FC<{ weather: TrailWeather | null; loading: boolean;
     n == null ? '–' : `${n.toFixed(digits)} ${unit}`;
   return (
     <div className="mb-4 p-3 rounded-md bg-muted/60 space-y-2">
-      <div className="flex items-center gap-2">
-        <WeatherIcon kind={info.kind} />
+      <div className="flex items-center justify-between">
         <span className="text-sm font-medium">{info.label}</span>
         {weather.tempMean != null && (
-          <span className="ml-auto text-base font-semibold tabular-nums">
+          <span className="text-base font-semibold tabular-nums">
             {Math.round(weather.tempMean)} °C
           </span>
         )}
