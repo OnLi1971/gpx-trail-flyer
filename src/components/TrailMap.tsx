@@ -1216,18 +1216,6 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             />
           )}
 
-          {/* Diskrétní ikonka pro zobrazení karty se shrnutím (top-left, aby nepřekážela při záznamu) */}
-          {endpointsVisible && !showSummaryCard && gpxData && (
-            <button
-              type="button"
-              onClick={() => setShowSummaryCard(true)}
-              title="Zobrazit údaje o trase"
-              aria-label="Zobrazit údaje o trase"
-              className="absolute top-2 left-2 z-20 p-1.5 rounded-md bg-background/70 backdrop-blur-sm border border-border/60 shadow-sm hover:bg-background transition-colors opacity-60 hover:opacity-100"
-            >
-              <Info className="w-3.5 h-3.5" />
-            </button>
-          )}
 
 
           {/* Basemap toggle + Fullscreen / Presentation toggle */}
@@ -1293,6 +1281,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 {presentationMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 {presentationMode ? 'Ukončit' : 'Prezentace'}
               </Button>
+              {gpxData && !showSummaryCard && !flythrough.isFlying && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="gap-2 shadow-md"
+                  onClick={() => setShowSummaryCard(true)}
+                  title="Zobrazit údaje o trase"
+                >
+                  <Info className="w-4 h-4" />
+                  Info
+                </Button>
+              )}
             </div>
           )}
 
