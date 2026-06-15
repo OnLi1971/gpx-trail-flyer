@@ -286,7 +286,7 @@ const WeatherSection: React.FC<{ weather: TrailWeather | null; loading: boolean;
   return (
     <div className="mb-4 p-3 rounded-md bg-muted/60 space-y-2">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium">{info.label}</span>
+        <span className="text-sm font-medium">Počasí na trase</span>
         {weather.tempMean != null && (
           <span className="text-base font-semibold tabular-nums">
             {Math.round(weather.tempMean)} °C
