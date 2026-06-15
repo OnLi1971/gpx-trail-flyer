@@ -75,13 +75,19 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
   useEffect(() => {
     if (!track) return;
     let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout>;
     setSurfaceLoading(true);
     const pts = track.points.map((p) => ({ lat: p.lat, lon: p.lon }));
-    fetchSurfaceStats(pts)
-      .then((data) => { if (!cancelled) setSurface(data); })
-      .catch(() => { if (!cancelled) setSurface([]); })
-      .finally(() => { if (!cancelled) setSurfaceLoading(false); });
-    return () => { cancelled = true; };
+
+    const timeout = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('Timeout')), 12000);
+    });
+
+    Promise.race([fetchSurfaceStats(pts), timeout])
+      .then((data) => { if (!cancelled) { setSurface(data); setSurfaceLoading(false); } })
+      .catch(() => { if (!cancelled) { setSurface([]); setSurfaceLoading(false); } });
+
+    return () => { cancelled = true; clearTimeout(timeoutId); };
   }, [track]);
 
   useEffect(() => {
