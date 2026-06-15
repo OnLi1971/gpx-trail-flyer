@@ -224,8 +224,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       setEndpointsVisible(false);
       return;
     }
-    const t = setTimeout(() => setEndpointsVisible(true), 5200);
-    return () => clearTimeout(t);
+    const t1 = setTimeout(() => setShowSummaryCard(true), 5200);
+    const t2 = setTimeout(() => setEndpointsVisible(true), 5200);
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, [flythrough.showSummary]);
 
   // Parser názvu trasy na start/cíl
