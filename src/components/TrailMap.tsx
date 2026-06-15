@@ -1281,6 +1281,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 {presentationMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 {presentationMode ? 'Ukončit' : 'Prezentace'}
               </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                className="gap-2 shadow-md"
+                onClick={() => setShowSummaryCard(true)}
+                title="Zobrazit údaje o trase"
+              >
+                <Info className="w-4 h-4" />
+                Info
+              </Button>
             </div>
           )}
 
