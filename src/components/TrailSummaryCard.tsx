@@ -80,7 +80,7 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
     const pts = track.points.map((p) => ({ lat: p.lat, lon: p.lon }));
 
     const timeout = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(() => reject(new Error('Timeout')), 12000);
+      timeoutId = setTimeout(() => reject(new Error('Timeout')), 30000);
     });
 
     Promise.race([fetchSurfaceStats(pts), timeout])
