@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, AnimationSettings } from '@/types/gpx';
 
 import { ElevationChart } from './ElevationChart';
-import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot, Maximize2, Minimize2, Bike, PersonStanding, Car, Info } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot, Maximize2, Minimize2, Bike, PersonStanding, Car, Info, Loader2 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { fetchPeaksAndPlaces, fetchWaterwaysAlongTrack, filterPOIsNearTrack } from '@/utils/overpassApi';
+import { fetchSurfaceStats, StatBucket } from '@/utils/trailStats';
 import { useFlythrough } from '@/hooks/useFlythrough';
 import { useElevationData } from '@/hooks/useElevationData';
 import { useFlythroughRecorder } from '@/hooks/useFlythroughRecorder';
@@ -129,6 +130,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [trailWidth, setTrailWidth] = useState<number>(4);
   const [trailBehindOnly, setTrailBehindOnly] = useState<boolean>(true);
   const [showSummaryCard, setShowSummaryCard] = useState(false);
+  const [surfaceData, setSurfaceData] = useState<StatBucket[] | null>(null);
+  const [surfaceLoading, setSurfaceLoading] = useState(false);
+
+  // Reset cached surface data when a new track is loaded
+  useEffect(() => {
+    setSurfaceData(null);
+    setSurfaceLoading(false);
+  }, [gpxData]);
 
   // Pokud initialPoiSettings dorazí asynchronně (po mountu), aplikuj je jednou
   const initialAppliedRef = useRef<boolean>(!!initialPoiSettings);
@@ -318,6 +327,28 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       setTimeout(() => setVideoDialogOpen(true), 300);
     }
   }, [flythrough, recorder]);
+
+  const handleInfoClick = useCallback(async () => {
+    if (!gpxData) return;
+    if (surfaceData !== null) {
+      setShowSummaryCard(true);
+      return;
+    }
+    setSurfaceLoading(true);
+    try {
+      const track = gpxData.tracks[0];
+      const pts = track.points.map((p) => ({ lat: p.lat, lon: p.lon }));
+      const data = await fetchSurfaceStats(pts);
+      setSurfaceData(data);
+      setShowSummaryCard(true);
+    } catch (err) {
+      setSurfaceData([]);
+      toast.error('Data o povrchu se nepodařilo načíst.');
+      setShowSummaryCard(true);
+    } finally {
+      setSurfaceLoading(false);
+    }
+  }, [gpxData, surfaceData]);
 
   // Notify parent o stavu průletu (pro PhotoTimeEditor)
   useEffect(() => {
@@ -1208,6 +1239,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               trailStyle={trailStyle}
               trailWidth={trailWidth}
               activity={flythrough.markerIcon}
+              surfaceData={surfaceData}
               onClose={() => setShowSummaryCard(false)}
             />
           )}
@@ -1282,11 +1314,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   size="sm"
                   variant="secondary"
                   className="gap-2 shadow-md"
-                  onClick={() => setShowSummaryCard(true)}
+                  onClick={handleInfoClick}
+                  disabled={surfaceLoading}
                   title="Zobrazit údaje o trase"
                 >
-                  <Info className="w-4 h-4" />
-                  Info
+                  {surfaceLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Info className="w-4 h-4" />
+                  )}
+                  {surfaceLoading ? 'Načítám…' : 'Info'}
                 </Button>
               )}
             </div>
