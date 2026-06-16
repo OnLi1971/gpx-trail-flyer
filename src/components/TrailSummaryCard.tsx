@@ -13,6 +13,7 @@ interface TrailSummaryCardProps {
   trailStyle: 'solid' | 'dashed' | 'dotted';
   trailWidth: number;
   activity?: Activity;
+  surfaceData?: StatBucket[] | null;
   onClose: () => void;
 }
 
