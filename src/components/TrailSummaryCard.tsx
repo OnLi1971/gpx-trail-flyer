@@ -69,8 +69,13 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
   onClose,
 }) => {
   const track = gpxData.tracks[0];
-  const [surface, setSurface] = useState<StatBucket[] | null>(null);
+  const [surface, setSurface] = useState<StatBucket[] | null>(surfaceData ?? null);
   const [surfaceLoading, setSurfaceLoading] = useState(false);
+
+  useEffect(() => {
+    if (surfaceData !== undefined) setSurface(surfaceData);
+  }, [surfaceData]);
+
   const [weather, setWeather] = useState<TrailWeather | null>(null);
   const [weatherLoading, setWeatherLoading] = useState(false);
 
