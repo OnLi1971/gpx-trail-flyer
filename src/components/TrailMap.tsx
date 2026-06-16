@@ -130,6 +130,14 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [trailWidth, setTrailWidth] = useState<number>(4);
   const [trailBehindOnly, setTrailBehindOnly] = useState<boolean>(true);
   const [showSummaryCard, setShowSummaryCard] = useState(false);
+  const [surfaceData, setSurfaceData] = useState<StatBucket[] | null>(null);
+  const [surfaceLoading, setSurfaceLoading] = useState(false);
+
+  // Reset cached surface data when a new track is loaded
+  useEffect(() => {
+    setSurfaceData(null);
+    setSurfaceLoading(false);
+  }, [gpxData]);
 
   // Pokud initialPoiSettings dorazí asynchronně (po mountu), aplikuj je jednou
   const initialAppliedRef = useRef<boolean>(!!initialPoiSettings);
