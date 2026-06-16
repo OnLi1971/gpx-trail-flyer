@@ -328,6 +328,28 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
   }, [flythrough, recorder]);
 
+  const handleInfoClick = useCallback(async () => {
+    if (!gpxData) return;
+    if (surfaceData !== null) {
+      setShowSummaryCard(true);
+      return;
+    }
+    setSurfaceLoading(true);
+    try {
+      const track = gpxData.tracks[0];
+      const pts = track.points.map((p) => ({ lat: p.lat, lon: p.lon }));
+      const data = await fetchSurfaceStats(pts);
+      setSurfaceData(data);
+      setShowSummaryCard(true);
+    } catch (err) {
+      setSurfaceData([]);
+      toast.error('Data o povrchu se nepodařilo načíst.');
+      setShowSummaryCard(true);
+    } finally {
+      setSurfaceLoading(false);
+    }
+  }, [gpxData, surfaceData]);
+
   // Notify parent o stavu průletu (pro PhotoTimeEditor)
   useEffect(() => {
     if (!onFlyStateChange) return;
