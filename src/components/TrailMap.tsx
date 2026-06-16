@@ -216,7 +216,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (flythrough.isFlying && outroMode) setOutroMode(false);
   }, [flythrough.isFlying, outroMode]);
 
-  // Po dokončení crossfade (~5s) ukaž štítky start/cíl a tlačítko pro otevření karty
+  // Po dokončení crossfade (~5s) ukaž štítky start/cíl; kartu zobrazí uživatel tlačítkem Info
   const [endpointsVisible, setEndpointsVisible] = useState(false);
   useEffect(() => {
     if (!flythrough.showSummary) {
@@ -224,12 +224,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       setEndpointsVisible(false);
       return;
     }
-    const t1 = setTimeout(() => setShowSummaryCard(true), 5200);
-    const t2 = setTimeout(() => setEndpointsVisible(true), 5200);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
+    const t = setTimeout(() => setEndpointsVisible(true), 5200);
+    return () => clearTimeout(t);
   }, [flythrough.showSummary]);
 
   // Parser názvu trasy na start/cíl
