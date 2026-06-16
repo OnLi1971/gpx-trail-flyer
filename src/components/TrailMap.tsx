@@ -1239,6 +1239,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               trailStyle={trailStyle}
               trailWidth={trailWidth}
               activity={flythrough.markerIcon}
+              surfaceData={surfaceData}
               onClose={() => setShowSummaryCard(false)}
             />
           )}
