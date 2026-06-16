@@ -81,6 +81,7 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
 
   useEffect(() => {
     if (!track) return;
+    if (surfaceData !== undefined) return;
     let cancelled = false;
     setSurfaceLoading(true);
     const pts = track.points.map((p) => ({ lat: p.lat, lon: p.lon }));
@@ -91,7 +92,7 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
       .finally(() => { if (!cancelled) { setSurfaceLoading(false); } });
 
     return () => { cancelled = true; };
-  }, [track]);
+  }, [track, surfaceData]);
 
   useEffect(() => {
     if (!track) return;
