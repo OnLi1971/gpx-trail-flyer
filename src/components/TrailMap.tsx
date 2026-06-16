@@ -14,6 +14,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { fetchPeaksAndPlaces, fetchWaterwaysAlongTrack, filterPOIsNearTrack } from '@/utils/overpassApi';
+import { fetchSurfaceStats, StatBucket } from '@/utils/trailStats';
 import { useFlythrough } from '@/hooks/useFlythrough';
 import { useElevationData } from '@/hooks/useElevationData';
 import { useFlythroughRecorder } from '@/hooks/useFlythroughRecorder';
