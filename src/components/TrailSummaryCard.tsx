@@ -65,6 +65,7 @@ export const TrailSummaryCard: React.FC<TrailSummaryCardProps> = ({
   trailStyle,
   trailWidth,
   activity = 'bike',
+  surfaceData,
   onClose,
 }) => {
   const track = gpxData.tracks[0];
