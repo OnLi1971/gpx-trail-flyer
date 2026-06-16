@@ -1314,11 +1314,16 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   size="sm"
                   variant="secondary"
                   className="gap-2 shadow-md"
-                  onClick={() => setShowSummaryCard(true)}
+                  onClick={handleInfoClick}
+                  disabled={surfaceLoading}
                   title="Zobrazit údaje o trase"
                 >
-                  <Info className="w-4 h-4" />
-                  Info
+                  {surfaceLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Info className="w-4 h-4" />
+                  )}
+                  {surfaceLoading ? 'Načítám…' : 'Info'}
                 </Button>
               )}
             </div>
