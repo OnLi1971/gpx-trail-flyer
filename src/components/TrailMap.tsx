@@ -1199,13 +1199,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     photos.forEach((ph) => {
       const el = document.createElement('div');
-      el.style.display = 'flex';
-      el.style.flexDirection = 'column';
-      el.style.alignItems = 'center';
-      el.style.pointerEvents = 'auto';
+      // NOTE: MapLibre řídí `transform` kořenového elementu markeru (translate),
+      // takže scale aplikujeme na vnitřní wrapper.
+      const inner = document.createElement('div');
+      inner.style.display = 'flex';
+      inner.style.flexDirection = 'column';
+      inner.style.alignItems = 'center';
+      inner.style.pointerEvents = 'auto';
+      inner.style.transformOrigin = 'bottom center';
+      inner.style.transition = 'transform 350ms cubic-bezier(.2,.8,.2,1)';
+      inner.dataset.photoInner = '1';
+      el.appendChild(inner);
       el.style.zIndex = '6';
-      el.style.transformOrigin = 'bottom center';
-      el.style.transition = 'transform 350ms cubic-bezier(.2,.8,.2,1)';
 
       const card = document.createElement('div');
       card.style.cssText = `
@@ -1225,7 +1230,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         cap.style.cssText = "margin-top:2px;font-size:9px;line-height:1.1;color:#333;font-family:'Caveat',cursive;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:66px;";
         card.appendChild(cap);
       }
-      el.appendChild(card);
+      inner.appendChild(card);
 
       // Klik = otevřít velký overlay
       card.addEventListener('click', (ev) => {
@@ -1243,10 +1248,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       const pin = document.createElement('div');
       pin.style.cssText = 'width:2px;height:14px;background:rgba(0,0,0,0.35);margin:0 auto;';
-      el.appendChild(pin);
+      inner.appendChild(pin);
       const arrow = document.createElement('div');
       arrow.style.cssText = 'width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid rgba(0,0,0,0.45);margin:0 auto;';
-      el.appendChild(arrow);
+      inner.appendChild(arrow);
 
       const marker = new Marker({ element: el, anchor: 'bottom', offset: [0, -10] })
         .setLngLat([ph.lon, ph.lat])
@@ -1282,6 +1287,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     photoMarkersRef.current.forEach(({ marker }) => {
       const el = marker.getElement();
       el.style.display = '';
+      const inner = el.querySelector<HTMLElement>('[data-photo-inner="1"]');
+      if (!inner) return;
       const lngLat = marker.getLngLat();
       const dLat = (lngLat.lat - cur.lat) * 111;
       const dLon = (lngLat.lng - cur.lon) * 111 * cosLat;
@@ -1291,7 +1298,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       if (flythrough.isFlying && distKm < 0.5) {
         scale = 1 + (1 - distKm / 0.5) * 1.4;
       }
-      el.style.transform = `scale(${scale.toFixed(2)})`;
+      inner.style.transform = `scale(${scale.toFixed(2)})`;
       el.style.zIndex = scale > 1.05 ? '20' : '6';
     });
   }, [currentPosition, flythrough.flyingIndex, flythrough.isFlying, flythrough.showSummary, outroMode, gpxData, photos]);
