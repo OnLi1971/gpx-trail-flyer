@@ -39,8 +39,11 @@ export function useTrailPhotos(trailId: string | null | undefined, canEdit: bool
   ) => {
     if (!trailId || !canEdit) return;
     try {
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData.user) throw new Error('Musíš být přihlášený pro nahrání fotky');
+      const uid = userData.user.id;
       const ext = file.name.split('.').pop() || 'jpg';
-      const path = `${trailId}/${crypto.randomUUID()}.${ext}`;
+      const path = `${uid}/${trailId}/${crypto.randomUUID()}.${ext}`;
       const up = await supabase.storage.from('trail-photos').upload(path, file, {
         contentType: file.type || 'image/jpeg',
         upsert: false,
