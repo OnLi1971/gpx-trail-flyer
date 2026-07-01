@@ -1488,8 +1488,31 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   {photoMode ? 'Klikni do mapy…' : 'Foto'}
                 </Button>
               )}
+              {photos.length > 0 && !flythrough.isFlying && (
+                <div className="flex flex-col gap-1 bg-background/90 backdrop-blur px-3 py-2 rounded-md shadow-md border text-xs w-56">
+                  <label className="flex items-center justify-between gap-2">
+                    <span>Fotka: dosah</span>
+                    <span className="tabular-nums text-muted-foreground">{photoRadiusKm.toFixed(2)} km</span>
+                  </label>
+                  <input
+                    type="range" min={0.1} max={2} step={0.05}
+                    value={photoRadiusKm}
+                    onChange={(e) => setPhotoRadiusKm(parseFloat(e.target.value))}
+                  />
+                  <label className="flex items-center justify-between gap-2 mt-1">
+                    <span>Fotka: zvětšení</span>
+                    <span className="tabular-nums text-muted-foreground">{photoMaxScale.toFixed(1)}×</span>
+                  </label>
+                  <input
+                    type="range" min={1} max={5} step={0.1}
+                    value={photoMaxScale}
+                    onChange={(e) => setPhotoMaxScale(parseFloat(e.target.value))}
+                  />
+                </div>
+              )}
             </div>
           )}
+
 
           {/* Floating photo card during flythrough */}
           <PhotoOverlay photo={activePhoto} />
