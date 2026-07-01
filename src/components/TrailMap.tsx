@@ -73,7 +73,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const map = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
   const poiMarkersRef = useRef<Array<{ marker: Marker; lat: number; lon: number; type: string }>>([]);
-  const photoMarkersRef = useRef<Map<string, Marker> extends never ? never : Array<{ id: string; marker: Marker }>>([]);
+  const photoMarkersRef = useRef<Array<{ id: string; marker: Marker }>>([]);
 
   // Photo feature state
   const canEditPhotos = !!trailId && !readOnly;
