@@ -1284,7 +1284,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       el.style.display = '';
       const lngLat = marker.getLngLat();
       const dLat = (lngLat.lat - cur.lat) * 111;
-      const dLon = (lngLat.lng - cur.lng) * 111 * cosLat;
+      const dLon = (lngLat.lng - cur.lon) * 111 * cosLat;
       const distKm = Math.sqrt(dLat * dLat + dLon * dLon);
       // ~0.5 km → začíná růst; ~0.05 km → max ~2.4×
       let scale = 1;
