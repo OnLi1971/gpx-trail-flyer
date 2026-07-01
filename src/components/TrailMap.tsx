@@ -1295,10 +1295,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       const dLat = (lngLat.lat - cur.lat) * 111;
       const dLon = (lngLat.lng - cur.lon) * 111 * cosLat;
       const distKm = Math.sqrt(dLat * dLat + dLon * dLon);
-      // ~0.5 km → začíná růst; ~0.05 km → max ~2.4×
+      // photoRadiusKm → od jaké vzdálenosti začíná růst; photoMaxScale → maximum
       let scale = 1;
-      if (flythrough.isFlying && distKm < 0.5) {
-        scale = 1 + (1 - distKm / 0.5) * 1.4;
+      if (flythrough.isFlying && distKm < photoRadiusKm) {
+        scale = 1 + (1 - distKm / photoRadiusKm) * (photoMaxScale - 1);
       }
       inner.style.transform = `scale(${scale.toFixed(2)})`;
       el.style.zIndex = scale > 1.05 ? '20' : '6';
