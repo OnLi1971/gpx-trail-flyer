@@ -81,6 +81,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [photoMode, setPhotoMode] = useState(false);
   const [pendingPhoto, setPendingPhoto] = useState<{ lat: number; lon: number } | null>(null);
   const [activePhoto, setActivePhoto] = useState<TrailPhoto | null>(null);
+  const [photoRadiusKm, setPhotoRadiusKm] = useState(0.5);
+  const [photoMaxScale, setPhotoMaxScale] = useState(2.4);
 
   // Basemap toggle: 3D terrain (OpenTopoMap, default) vs satellite (Esri)
   const [basemap, setBasemap] = useState<'terrain' | 'satellite' | 'cyclosm' | 'darkmatter'>('terrain');
@@ -1293,15 +1295,15 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       const dLat = (lngLat.lat - cur.lat) * 111;
       const dLon = (lngLat.lng - cur.lon) * 111 * cosLat;
       const distKm = Math.sqrt(dLat * dLat + dLon * dLon);
-      // ~0.5 km → začíná růst; ~0.05 km → max ~2.4×
+      // photoRadiusKm → od jaké vzdálenosti začíná růst; photoMaxScale → maximum
       let scale = 1;
-      if (flythrough.isFlying && distKm < 0.5) {
-        scale = 1 + (1 - distKm / 0.5) * 1.4;
+      if (flythrough.isFlying && distKm < photoRadiusKm) {
+        scale = 1 + (1 - distKm / photoRadiusKm) * (photoMaxScale - 1);
       }
       inner.style.transform = `scale(${scale.toFixed(2)})`;
       el.style.zIndex = scale > 1.05 ? '20' : '6';
     });
-  }, [currentPosition, flythrough.flyingIndex, flythrough.isFlying, flythrough.showSummary, outroMode, gpxData, photos]);
+  }, [currentPosition, flythrough.flyingIndex, flythrough.isFlying, flythrough.showSummary, outroMode, gpxData, photos, photoRadiusKm, photoMaxScale]);
 
 
 
@@ -1486,8 +1488,31 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   {photoMode ? 'Klikni do mapy…' : 'Foto'}
                 </Button>
               )}
+              {photos.length > 0 && !flythrough.isFlying && (
+                <div className="flex flex-col gap-1 bg-background/90 backdrop-blur px-3 py-2 rounded-md shadow-md border text-xs w-56">
+                  <label className="flex items-center justify-between gap-2">
+                    <span>Fotka: dosah</span>
+                    <span className="tabular-nums text-muted-foreground">{photoRadiusKm.toFixed(2)} km</span>
+                  </label>
+                  <input
+                    type="range" min={0.1} max={2} step={0.05}
+                    value={photoRadiusKm}
+                    onChange={(e) => setPhotoRadiusKm(parseFloat(e.target.value))}
+                  />
+                  <label className="flex items-center justify-between gap-2 mt-1">
+                    <span>Fotka: zvětšení</span>
+                    <span className="tabular-nums text-muted-foreground">{photoMaxScale.toFixed(1)}×</span>
+                  </label>
+                  <input
+                    type="range" min={1} max={5} step={0.1}
+                    value={photoMaxScale}
+                    onChange={(e) => setPhotoMaxScale(parseFloat(e.target.value))}
+                  />
+                </div>
+              )}
             </div>
           )}
+
 
           {/* Floating photo card during flythrough */}
           <PhotoOverlay photo={activePhoto} />
