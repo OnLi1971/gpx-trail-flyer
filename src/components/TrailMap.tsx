@@ -1171,6 +1171,107 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
   }, [pickingPeakOnMap]);
 
+  // --- PHOTO FEATURE ---------------------------------------------------
+
+  // Click-to-add photo (photoMode)
+  useEffect(() => {
+    if (!map.current || !photoMode || !canEditPhotos) return;
+    const m = map.current;
+    const canvas = m.getCanvas();
+    canvas.style.cursor = 'crosshair';
+    const handle = (e: MapMouseEvent) => {
+      setPendingPhoto({ lat: e.lngLat.lat, lon: e.lngLat.lng });
+      setPhotoMode(false);
+    };
+    m.on('click', handle);
+    return () => { m.off('click', handle); canvas.style.cursor = ''; };
+  }, [photoMode, canEditPhotos]);
+
+  // Render persistent photo markers on the map (small camera pin)
+  useEffect(() => {
+    if (!map.current) return;
+    // Cleanup previous
+    photoMarkersRef.current.forEach(({ marker }) => marker.remove());
+    photoMarkersRef.current = [];
+
+    // Hide during flythrough for cleaner presentation
+    if (flythrough.isFlying) return;
+
+    photos.forEach((ph) => {
+      const el = document.createElement('div');
+      el.className = 'photo-pin';
+      el.style.cssText = `
+        width: 34px; height: 34px; border-radius: 999px;
+        background: white; border: 2px solid hsl(var(--primary));
+        box-shadow: 0 2px 6px rgba(0,0,0,.35);
+        background-image: url('${ph.photo_url}');
+        background-size: cover; background-position: center;
+        cursor: pointer;
+      `;
+      el.title = ph.description || 'Fotka';
+      if (canEditPhotos) {
+        el.addEventListener('contextmenu', (ev) => {
+          ev.preventDefault();
+          if (confirm(`Smazat fotku${ph.description ? ` „${ph.description}“` : ''}?`)) {
+            deletePhoto(ph);
+          }
+        });
+      }
+      el.addEventListener('click', () => setActivePhoto((cur) => cur?.id === ph.id ? null : ph));
+      const marker = new Marker({ element: el, anchor: 'center' })
+        .setLngLat([ph.lon, ph.lat])
+        .addTo(map.current!);
+      photoMarkersRef.current.push({ id: ph.id, marker });
+    });
+
+    return () => {
+      photoMarkersRef.current.forEach(({ marker }) => marker.remove());
+      photoMarkersRef.current = [];
+    };
+  }, [photos, canEditPhotos, deletePhoto, flythrough.isFlying]);
+
+  // Precompute nearest track-point index for each photo
+  const photoTriggers = useMemo(() => {
+    if (!gpxData || gpxData.tracks.length === 0) return [] as Array<{ photo: TrailPhoto; idx: number }>;
+    const pts = gpxData.tracks[0].points;
+    return photos.map((ph) => {
+      let best = 0; let bestD = Infinity;
+      const cosLat = Math.cos((ph.lat * Math.PI) / 180);
+      for (let i = 0; i < pts.length; i++) {
+        const dLat = (pts[i].lat - ph.lat) * 111;
+        const dLon = (pts[i].lon - ph.lon) * 111 * cosLat;
+        const d = dLat * dLat + dLon * dLon;
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      return { photo: ph, idx: best };
+    }).sort((a, b) => a.idx - b.idx);
+  }, [photos, gpxData]);
+
+  // Trigger photo overlay during flythrough
+  const shownPhotoIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!flythrough.isFlying) {
+      shownPhotoIdsRef.current.clear();
+      setActivePhoto(null);
+      return;
+    }
+    const idx = flythrough.flyingIndex ?? 0;
+    // Find a photo whose trigger index we've just passed (within 15 points window)
+    const hit = photoTriggers.find((t) =>
+      !shownPhotoIdsRef.current.has(t.photo.id) && idx >= t.idx && idx - t.idx < 15
+    );
+    if (hit) {
+      shownPhotoIdsRef.current.add(hit.photo.id);
+      setActivePhoto(hit.photo);
+      const timer = setTimeout(() => {
+        setActivePhoto((cur) => (cur?.id === hit.photo.id ? null : cur));
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [flythrough.flyingIndex, flythrough.isFlying, photoTriggers]);
+
+
+
   const addCustomPeak = useCallback(() => {
     setCustomPeakError(null);
     const name = customPeakName.trim();
