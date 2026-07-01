@@ -1440,9 +1440,33 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   )}
                   {surfaceLoading ? 'Načítám…' : 'Info'}
                 </Button>
+              {canEditPhotos && !flythrough.isFlying && (
+                <Button
+                  size="sm"
+                  variant={photoMode ? 'default' : 'secondary'}
+                  className="gap-2 shadow-md"
+                  onClick={() => setPhotoMode((v) => !v)}
+                  title={photoMode ? 'Zruš přidávání fotky' : 'Přidat fotku – klikni pak do mapy'}
+                >
+                  <Camera className="w-4 h-4" />
+                  {photoMode ? 'Klikni do mapy…' : 'Foto'}
+                </Button>
               )}
             </div>
           )}
+
+          {/* Floating photo card during flythrough */}
+          <PhotoOverlay photo={activePhoto} />
+
+          {/* Photo upload dialog */}
+          <PhotoUploadDialog
+            open={!!pendingPhoto}
+            lat={pendingPhoto?.lat ?? null}
+            lon={pendingPhoto?.lon ?? null}
+            onClose={() => setPendingPhoto(null)}
+            onUpload={uploadPhoto}
+          />
+
 
           {/* Presentation-mode controls: start flythrough + record */}
           {presentationMode && gpxData && (
