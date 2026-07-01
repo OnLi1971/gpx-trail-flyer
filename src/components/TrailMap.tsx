@@ -1187,38 +1187,68 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     return () => { m.off('click', handle); canvas.style.cursor = ''; };
   }, [photoMode, canEditPhotos]);
 
-  // Render persistent photo markers on the map (small camera pin)
+  // Render persistent photo markers on the map — polaroid card on top of a pole (like POIs)
   useEffect(() => {
     if (!map.current) return;
     // Cleanup previous
     photoMarkersRef.current.forEach(({ marker }) => marker.remove());
     photoMarkersRef.current = [];
 
-    // Hide during flythrough for cleaner presentation
-    if (flythrough.isFlying) return;
+    // V závěru (summary/outro) je necháme skryté – řídí to POI-visibility efekt níž
+    if (flythrough.showSummary || outroMode) return;
 
     photos.forEach((ph) => {
       const el = document.createElement('div');
-      el.className = 'photo-pin';
-      el.style.cssText = `
-        width: 34px; height: 34px; border-radius: 999px;
-        background: white; border: 2px solid hsl(var(--primary));
-        box-shadow: 0 2px 6px rgba(0,0,0,.35);
-        background-image: url('${ph.photo_url}');
-        background-size: cover; background-position: center;
-        cursor: pointer;
+      el.style.display = 'flex';
+      el.style.flexDirection = 'column';
+      el.style.alignItems = 'center';
+      el.style.pointerEvents = 'auto';
+      el.style.zIndex = '6';
+      el.style.transformOrigin = 'bottom center';
+      el.style.transition = 'transform 350ms cubic-bezier(.2,.8,.2,1)';
+
+      const card = document.createElement('div');
+      card.style.cssText = `
+        background: white; padding: 3px 3px 5px; border-radius: 4px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.35); border: 1px solid rgba(0,0,0,.15);
+        max-width: 72px; text-align: center; cursor: pointer;
       `;
-      el.title = ph.description || 'Fotka';
+      const img = document.createElement('img');
+      img.src = ph.photo_url;
+      img.alt = ph.description || 'Fotka';
+      img.style.cssText = 'width:64px;height:48px;object-fit:cover;border-radius:2px;display:block;';
+      img.loading = 'lazy';
+      card.appendChild(img);
+      if (ph.description) {
+        const cap = document.createElement('div');
+        cap.textContent = ph.description;
+        cap.style.cssText = "margin-top:2px;font-size:9px;line-height:1.1;color:#333;font-family:'Caveat',cursive;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:66px;";
+        card.appendChild(cap);
+      }
+      el.appendChild(card);
+
+      // Klik = otevřít velký overlay
+      card.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        setActivePhoto((cur) => cur?.id === ph.id ? null : ph);
+      });
       if (canEditPhotos) {
-        el.addEventListener('contextmenu', (ev) => {
+        card.addEventListener('contextmenu', (ev) => {
           ev.preventDefault();
           if (confirm(`Smazat fotku${ph.description ? ` „${ph.description}“` : ''}?`)) {
             deletePhoto(ph);
           }
         });
       }
-      el.addEventListener('click', () => setActivePhoto((cur) => cur?.id === ph.id ? null : ph));
-      const marker = new Marker({ element: el, anchor: 'center' })
+
+      const pin = document.createElement('div');
+      pin.style.cssText = 'width:2px;height:14px;background:rgba(0,0,0,0.35);margin:0 auto;';
+      el.appendChild(pin);
+      const arrow = document.createElement('div');
+      arrow.style.cssText = 'width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid rgba(0,0,0,0.45);margin:0 auto;';
+      el.appendChild(arrow);
+
+      const marker = new Marker({ element: el, anchor: 'bottom', offset: [0, -10] })
         .setLngLat([ph.lon, ph.lat])
         .addTo(map.current!);
       photoMarkersRef.current.push({ id: ph.id, marker });
@@ -1228,47 +1258,43 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       photoMarkersRef.current.forEach(({ marker }) => marker.remove());
       photoMarkersRef.current = [];
     };
-  }, [photos, canEditPhotos, deletePhoto, flythrough.isFlying]);
+  }, [photos, canEditPhotos, deletePhoto, flythrough.showSummary, outroMode]);
 
-  // Precompute nearest track-point index for each photo
-  const photoTriggers = useMemo(() => {
-    if (!gpxData || gpxData.tracks.length === 0) return [] as Array<{ photo: TrailPhoto; idx: number }>;
-    const pts = gpxData.tracks[0].points;
-    return photos.map((ph) => {
-      let best = 0; let bestD = Infinity;
-      const cosLat = Math.cos((ph.lat * Math.PI) / 180);
-      for (let i = 0; i < pts.length; i++) {
-        const dLat = (pts[i].lat - ph.lat) * 111;
-        const dLon = (pts[i].lon - ph.lon) * 111 * cosLat;
-        const d = dLat * dLat + dLon * dLon;
-        if (d < bestD) { bestD = d; best = i; }
-      }
-      return { photo: ph, idx: best };
-    }).sort((a, b) => a.idx - b.idx);
-  }, [photos, gpxData]);
-
-  // Trigger photo overlay during flythrough
-  const shownPhotoIdsRef = useRef<Set<string>>(new Set());
+  // Proximity-based enlargement during flythrough (a schování v závěru)
   useEffect(() => {
-    if (!flythrough.isFlying) {
-      shownPhotoIdsRef.current.clear();
-      setActivePhoto(null);
+    if (!gpxData || gpxData.tracks.length === 0) return;
+    const track = gpxData.tracks[0];
+
+    if (flythrough.showSummary || outroMode) {
+      photoMarkersRef.current.forEach(({ marker }) => {
+        marker.getElement().style.display = 'none';
+      });
       return;
     }
-    const idx = flythrough.flyingIndex ?? 0;
-    // Find a photo whose trigger index we've just passed (within 15 points window)
-    const hit = photoTriggers.find((t) =>
-      !shownPhotoIdsRef.current.has(t.photo.id) && idx >= t.idx && idx - t.idx < 15
-    );
-    if (hit) {
-      shownPhotoIdsRef.current.add(hit.photo.id);
-      setActivePhoto(hit.photo);
-      const timer = setTimeout(() => {
-        setActivePhoto((cur) => (cur?.id === hit.photo.id ? null : cur));
-      }, 4500);
-      return () => clearTimeout(timer);
-    }
-  }, [flythrough.flyingIndex, flythrough.isFlying, photoTriggers]);
+
+    const pointIndex = flythrough.flyingIndex != null
+      ? flythrough.flyingIndex
+      : Math.floor((currentPosition / 100) * (track.points.length - 1));
+    const cur = track.points[pointIndex];
+    if (!cur) return;
+    const cosLat = Math.cos((cur.lat * Math.PI) / 180);
+
+    photoMarkersRef.current.forEach(({ marker }) => {
+      const el = marker.getElement();
+      el.style.display = '';
+      const lngLat = marker.getLngLat();
+      const dLat = (lngLat.lat - cur.lat) * 111;
+      const dLon = (lngLat.lng - cur.lng) * 111 * cosLat;
+      const distKm = Math.sqrt(dLat * dLat + dLon * dLon);
+      // ~0.5 km → začíná růst; ~0.05 km → max ~2.4×
+      let scale = 1;
+      if (flythrough.isFlying && distKm < 0.5) {
+        scale = 1 + (1 - distKm / 0.5) * 1.4;
+      }
+      el.style.transform = `scale(${scale.toFixed(2)})`;
+      el.style.zIndex = scale > 1.05 ? '20' : '6';
+    });
+  }, [currentPosition, flythrough.flyingIndex, flythrough.isFlying, flythrough.showSummary, outroMode, gpxData, photos]);
 
 
 
