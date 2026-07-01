@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, AnimationSettings } from '@/types/gpx';
 
 import { ElevationChart } from './ElevationChart';
-import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot, Maximize2, Minimize2, Bike, PersonStanding, Car, Info, Loader2 } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot, Maximize2, Minimize2, Bike, PersonStanding, Car, Info, Loader2, Camera, Trash2 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,9 @@ import { useElevationData } from '@/hooks/useElevationData';
 import { useFlythroughRecorder } from '@/hooks/useFlythroughRecorder';
 import { VideoPreviewDialog } from './VideoPreviewDialog';
 import { TrailSummaryCard } from './TrailSummaryCard';
+import { PhotoOverlay } from './PhotoOverlay';
+import { PhotoUploadDialog } from './PhotoUploadDialog';
+import { useTrailPhotos, type TrailPhoto } from '@/hooks/useTrailPhotos';
 import { toast } from 'sonner';
 
 export interface PoiSettings {
@@ -50,6 +53,8 @@ interface TrailMapProps {
   onPoisFetched?: (pois: import('@/utils/overpassApi').POIPoint[]) => void;
   /** Notifikace o stavu průletu — pro nadřazenou komponentu */
   onFlyStateChange?: (state: { isFlying: boolean; flyDurationSec: number; flyStartTimestamp: number | null }) => void;
+  /** ID uložené trasy (Supabase) — pokud je, povolí funkci fotek */
+  trailId?: string | null;
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({
@@ -62,11 +67,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   cachedPois = null,
   onPoisFetched,
   onFlyStateChange,
+  trailId = null,
 }) => {
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
   const poiMarkersRef = useRef<Array<{ marker: Marker; lat: number; lon: number; type: string }>>([]);
+  const photoMarkersRef = useRef<Array<{ id: string; marker: Marker }>>([]);
+
+  // Photo feature state
+  const canEditPhotos = !!trailId && !readOnly;
+  const { photos, uploadPhoto, deletePhoto } = useTrailPhotos(trailId, canEditPhotos);
+  const [photoMode, setPhotoMode] = useState(false);
+  const [pendingPhoto, setPendingPhoto] = useState<{ lat: number; lon: number } | null>(null);
+  const [activePhoto, setActivePhoto] = useState<TrailPhoto | null>(null);
 
   // Basemap toggle: 3D terrain (OpenTopoMap, default) vs satellite (Esri)
   const [basemap, setBasemap] = useState<'terrain' | 'satellite' | 'cyclosm' | 'darkmatter'>('terrain');
@@ -1157,6 +1171,107 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
   }, [pickingPeakOnMap]);
 
+  // --- PHOTO FEATURE ---------------------------------------------------
+
+  // Click-to-add photo (photoMode)
+  useEffect(() => {
+    if (!map.current || !photoMode || !canEditPhotos) return;
+    const m = map.current;
+    const canvas = m.getCanvas();
+    canvas.style.cursor = 'crosshair';
+    const handle = (e: MapMouseEvent) => {
+      setPendingPhoto({ lat: e.lngLat.lat, lon: e.lngLat.lng });
+      setPhotoMode(false);
+    };
+    m.on('click', handle);
+    return () => { m.off('click', handle); canvas.style.cursor = ''; };
+  }, [photoMode, canEditPhotos]);
+
+  // Render persistent photo markers on the map (small camera pin)
+  useEffect(() => {
+    if (!map.current) return;
+    // Cleanup previous
+    photoMarkersRef.current.forEach(({ marker }) => marker.remove());
+    photoMarkersRef.current = [];
+
+    // Hide during flythrough for cleaner presentation
+    if (flythrough.isFlying) return;
+
+    photos.forEach((ph) => {
+      const el = document.createElement('div');
+      el.className = 'photo-pin';
+      el.style.cssText = `
+        width: 34px; height: 34px; border-radius: 999px;
+        background: white; border: 2px solid hsl(var(--primary));
+        box-shadow: 0 2px 6px rgba(0,0,0,.35);
+        background-image: url('${ph.photo_url}');
+        background-size: cover; background-position: center;
+        cursor: pointer;
+      `;
+      el.title = ph.description || 'Fotka';
+      if (canEditPhotos) {
+        el.addEventListener('contextmenu', (ev) => {
+          ev.preventDefault();
+          if (confirm(`Smazat fotku${ph.description ? ` „${ph.description}“` : ''}?`)) {
+            deletePhoto(ph);
+          }
+        });
+      }
+      el.addEventListener('click', () => setActivePhoto((cur) => cur?.id === ph.id ? null : ph));
+      const marker = new Marker({ element: el, anchor: 'center' })
+        .setLngLat([ph.lon, ph.lat])
+        .addTo(map.current!);
+      photoMarkersRef.current.push({ id: ph.id, marker });
+    });
+
+    return () => {
+      photoMarkersRef.current.forEach(({ marker }) => marker.remove());
+      photoMarkersRef.current = [];
+    };
+  }, [photos, canEditPhotos, deletePhoto, flythrough.isFlying]);
+
+  // Precompute nearest track-point index for each photo
+  const photoTriggers = useMemo(() => {
+    if (!gpxData || gpxData.tracks.length === 0) return [] as Array<{ photo: TrailPhoto; idx: number }>;
+    const pts = gpxData.tracks[0].points;
+    return photos.map((ph) => {
+      let best = 0; let bestD = Infinity;
+      const cosLat = Math.cos((ph.lat * Math.PI) / 180);
+      for (let i = 0; i < pts.length; i++) {
+        const dLat = (pts[i].lat - ph.lat) * 111;
+        const dLon = (pts[i].lon - ph.lon) * 111 * cosLat;
+        const d = dLat * dLat + dLon * dLon;
+        if (d < bestD) { bestD = d; best = i; }
+      }
+      return { photo: ph, idx: best };
+    }).sort((a, b) => a.idx - b.idx);
+  }, [photos, gpxData]);
+
+  // Trigger photo overlay during flythrough
+  const shownPhotoIdsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!flythrough.isFlying) {
+      shownPhotoIdsRef.current.clear();
+      setActivePhoto(null);
+      return;
+    }
+    const idx = flythrough.flyingIndex ?? 0;
+    // Find a photo whose trigger index we've just passed (within 15 points window)
+    const hit = photoTriggers.find((t) =>
+      !shownPhotoIdsRef.current.has(t.photo.id) && idx >= t.idx && idx - t.idx < 15
+    );
+    if (hit) {
+      shownPhotoIdsRef.current.add(hit.photo.id);
+      setActivePhoto(hit.photo);
+      const timer = setTimeout(() => {
+        setActivePhoto((cur) => (cur?.id === hit.photo.id ? null : cur));
+      }, 4500);
+      return () => clearTimeout(timer);
+    }
+  }, [flythrough.flyingIndex, flythrough.isFlying, photoTriggers]);
+
+
+
   const addCustomPeak = useCallback(() => {
     setCustomPeakError(null);
     const name = customPeakName.trim();
@@ -1326,8 +1441,33 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   {surfaceLoading ? 'Načítám…' : 'Info'}
                 </Button>
               )}
+              {canEditPhotos && !flythrough.isFlying && (
+                <Button
+                  size="sm"
+                  variant={photoMode ? 'default' : 'secondary'}
+                  className="gap-2 shadow-md"
+                  onClick={() => setPhotoMode((v) => !v)}
+                  title={photoMode ? 'Zruš přidávání fotky' : 'Přidat fotku – klikni pak do mapy'}
+                >
+                  <Camera className="w-4 h-4" />
+                  {photoMode ? 'Klikni do mapy…' : 'Foto'}
+                </Button>
+              )}
             </div>
           )}
+
+          {/* Floating photo card during flythrough */}
+          <PhotoOverlay photo={activePhoto} />
+
+          {/* Photo upload dialog */}
+          <PhotoUploadDialog
+            open={!!pendingPhoto}
+            lat={pendingPhoto?.lat ?? null}
+            lon={pendingPhoto?.lon ?? null}
+            onClose={() => setPendingPhoto(null)}
+            onUpload={uploadPhoto}
+          />
+
 
           {/* Presentation-mode controls: start flythrough + record */}
           {presentationMode && gpxData && (
