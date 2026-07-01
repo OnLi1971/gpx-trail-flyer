@@ -259,6 +259,7 @@ export default function SharedTrail() {
           onPoiSettingsChange={setCurrentPoi}
           cachedPois={cachedPois}
           onPoisFetched={handlePoisFetched}
+          trailId={trailId}
         />
       </div>
     </div>
