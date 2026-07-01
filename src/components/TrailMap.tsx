@@ -1287,6 +1287,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     photoMarkersRef.current.forEach(({ marker }) => {
       const el = marker.getElement();
       el.style.display = '';
+      const inner = el.querySelector<HTMLElement>('[data-photo-inner="1"]');
+      if (!inner) return;
       const lngLat = marker.getLngLat();
       const dLat = (lngLat.lat - cur.lat) * 111;
       const dLon = (lngLat.lng - cur.lon) * 111 * cosLat;
@@ -1296,7 +1298,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       if (flythrough.isFlying && distKm < 0.5) {
         scale = 1 + (1 - distKm / 0.5) * 1.4;
       }
-      el.style.transform = `scale(${scale.toFixed(2)})`;
+      inner.style.transform = `scale(${scale.toFixed(2)})`;
       el.style.zIndex = scale > 1.05 ? '20' : '6';
     });
   }, [currentPosition, flythrough.flyingIndex, flythrough.isFlying, flythrough.showSummary, outroMode, gpxData, photos]);
