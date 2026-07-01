@@ -1440,6 +1440,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   )}
                   {surfaceLoading ? 'Načítám…' : 'Info'}
                 </Button>
+              )}
               {canEditPhotos && !flythrough.isFlying && (
                 <Button
                   size="sm"
