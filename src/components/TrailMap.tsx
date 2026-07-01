@@ -1303,7 +1303,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       inner.style.transform = `scale(${scale.toFixed(2)})`;
       el.style.zIndex = scale > 1.05 ? '20' : '6';
     });
-  }, [currentPosition, flythrough.flyingIndex, flythrough.isFlying, flythrough.showSummary, outroMode, gpxData, photos]);
+  }, [currentPosition, flythrough.flyingIndex, flythrough.isFlying, flythrough.showSummary, outroMode, gpxData, photos, photoRadiusKm, photoMaxScale]);
 
 
 
