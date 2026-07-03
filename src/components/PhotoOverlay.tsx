@@ -39,8 +39,8 @@ export const PhotoOverlay: React.FC<Props> = ({ photo }) => {
         className="w-[88vw] max-w-[520px] transition-transform duration-500 ease-out"
         style={{
           transform: visible
-            ? 'translateY(0) scale(1) rotate(-1.5deg)'
-            : 'translateY(-24px) scale(0.9) rotate(-8deg)',
+            ? 'translateY(0) scale(1) rotate(0deg)'
+            : 'translateY(-24px) scale(0.9) rotate(0deg)',
         }}
       >
         <div className="bg-white rounded-md shadow-2xl p-3 pb-4 border border-white/60 ring-1 ring-black/10">
