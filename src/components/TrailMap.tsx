@@ -82,7 +82,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [pendingPhoto, setPendingPhoto] = useState<{ lat: number; lon: number } | null>(null);
   const [activePhoto, setActivePhoto] = useState<TrailPhoto | null>(null);
   const [photoRadiusKm, setPhotoRadiusKm] = useState(0.5);
-  const [photoMaxScale, setPhotoMaxScale] = useState(2.4);
+  const [photoDurationSec, setPhotoDurationSec] = useState(4);
+  const triggeredPhotoIdsRef = useRef<Set<string>>(new Set());
+  const activePhotoTimerRef = useRef<number | null>(null);
+  const activePhotoIdRef = useRef<string | null>(null);
 
   // Basemap toggle: 3D terrain (OpenTopoMap, default) vs satellite (Esri)
   const [basemap, setBasemap] = useState<'terrain' | 'satellite' | 'cyclosm' | 'darkmatter'>('terrain');
