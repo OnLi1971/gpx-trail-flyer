@@ -1542,7 +1542,23 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
 
           {/* Floating photo card during flythrough */}
-          <PhotoOverlay photo={activePhoto} />
+          <PhotoOverlay
+            photo={activePhoto}
+            onDelete={
+              canEditPhotos
+                ? (ph) => {
+                    deletePhoto(ph);
+                    setActivePhoto(null);
+                    if (activePhotoTimerRef.current) {
+                      window.clearTimeout(activePhotoTimerRef.current);
+                      activePhotoTimerRef.current = null;
+                    }
+                    activePhotoIdRef.current = null;
+                    triggeredPhotoIdsRef.current.delete(ph.id);
+                  }
+                : undefined
+            }
+          />
 
           {/* Photo upload dialog */}
           <PhotoUploadDialog
