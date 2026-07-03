@@ -86,7 +86,6 @@ var delete_trail_default = defineTool3({
     slug: z3.string().trim().min(1).describe("Slug of the trail to delete.")
   },
   annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
-  needsApproval: true,
   handler: async ({ slug }, ctx) => {
     if (!ctx.isAuthenticated()) {
       return { content: [{ type: "text", text: "Not authenticated" }], isError: true };
