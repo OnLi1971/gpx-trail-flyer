@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,29 +13,39 @@ import { Mountain, Loader2 } from 'lucide-react';
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const rawNext = params.get('next') ?? '';
+  // Only allow same-origin relative paths as return targets.
+  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '';
+  const goNext = () => {
+    if (next) window.location.href = next;
+    else navigate('/');
+  };
   const { user, loading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!authLoading && user) navigate('/');
-  }, [user, authLoading, navigate]);
+    if (!authLoading && user) goNext();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    const emailRedirectTo = `${window.location.origin}${next || '/'}`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/` },
+      options: { emailRedirectTo },
     });
     setLoading(false);
     if (error) {
       toast.error(error.message.includes('already') ? 'Uživatel s tímto emailem už existuje' : error.message);
     } else {
       toast.success('Účet vytvořen! Můžeš začít ukládat trasy.');
-      navigate('/');
+      goNext();
     }
   };
 
@@ -47,14 +57,14 @@ export default function Auth() {
     if (error) {
       toast.error(error.message.includes('Invalid') ? 'Nesprávný email nebo heslo' : error.message);
     } else {
-      navigate('/');
+      goNext();
     }
   };
 
   const handleGoogle = async () => {
     setLoading(true);
     const result = await lovable.auth.signInWithOAuth('google', {
-      redirect_uri: window.location.origin,
+      redirect_uri: `${window.location.origin}${next || '/'}`,
     });
     if (result.error) {
       setLoading(false);
@@ -62,7 +72,7 @@ export default function Auth() {
       return;
     }
     if (result.redirected) return;
-    navigate('/');
+    goNext();
   };
 
   return (
