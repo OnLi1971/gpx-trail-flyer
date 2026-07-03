@@ -225,20 +225,21 @@ out tags center 2000;`;
 
 export async function fetchWaterwaysAlongTrack(
   trackPoints: TrackPoint[],
-  radiusKm = 0.3
+  radiusKm = 0.8
 ): Promise<POIPoint[]> {
   // Polyline around: Overpass umí radius kolem celé navzorkované linie v jediném klauzuli.
-  // Vzorkujeme hustě (~300 m), počet bodů ořežeme kvůli délce URL.
-  const sampled = sampleTrackPoints(trackPoints, 0.3, 250);
+  // Vzorkujeme hustě (~150 m) a bereme až 500 bodů, aby se ani u dlouhých tras nepřeskočila řeka.
+  const sampled = sampleTrackPoints(trackPoints, 0.15, 500);
   if (sampled.length < 2) return [];
-  const radiusMeters = Math.max(120, Math.round(radiusKm * 1000));
+  const radiusMeters = Math.max(300, Math.round(radiusKm * 1000));
   const coords = sampled.map(p => `${p.lat},${p.lon}`).join(',');
   const around = `(around:${radiusMeters},${coords})`;
 
-  const query = `[out:json][timeout:30];
+  const query = `[out:json][timeout:60];
 (
   way["waterway"~"^(river|stream|canal)$"]["name"]${around};
   way["natural"="water"]["water"="river"]["name"]${around};
+  relation["waterway"="river"]["name"]${around};
 );
 out tags geom;`;
 
