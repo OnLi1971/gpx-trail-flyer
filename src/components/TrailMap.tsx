@@ -1289,24 +1289,48 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (!cur) return;
     const cosLat = Math.cos((cur.lat * Math.PI) / 180);
 
-    photoMarkersRef.current.forEach(({ marker }) => {
+    photoMarkersRef.current.forEach(({ id, marker }) => {
       const el = marker.getElement();
       el.style.display = '';
       const inner = el.querySelector<HTMLElement>('[data-photo-inner="1"]');
-      if (!inner) return;
+      if (inner) inner.style.transform = 'scale(1)';
+      el.style.zIndex = '6';
+
+      if (!flythrough.isFlying) return;
       const lngLat = marker.getLngLat();
       const dLat = (lngLat.lat - cur.lat) * 111;
       const dLon = (lngLat.lng - cur.lon) * 111 * cosLat;
       const distKm = Math.sqrt(dLat * dLat + dLon * dLon);
-      // photoRadiusKm → od jaké vzdálenosti začíná růst; photoMaxScale → maximum
-      let scale = 1;
-      if (flythrough.isFlying && distKm < photoRadiusKm) {
-        scale = 1 + (1 - distKm / photoRadiusKm) * (photoMaxScale - 1);
+
+      if (distKm < photoRadiusKm && !triggeredPhotoIdsRef.current.has(id)) {
+        triggeredPhotoIdsRef.current.add(id);
+        const ph = photos.find((p) => p.id === id);
+        if (!ph) return;
+        if (activePhotoTimerRef.current) window.clearTimeout(activePhotoTimerRef.current);
+        activePhotoIdRef.current = id;
+        setActivePhoto(ph);
+        activePhotoTimerRef.current = window.setTimeout(() => {
+          setActivePhoto((cur) => (cur?.id === id ? null : cur));
+          activePhotoTimerRef.current = null;
+        }, photoDurationSec * 1000);
       }
-      inner.style.transform = `scale(${scale.toFixed(2)})`;
-      el.style.zIndex = scale > 1.05 ? '20' : '6';
     });
-  }, [currentPosition, flythrough.flyingIndex, flythrough.isFlying, flythrough.showSummary, outroMode, gpxData, photos, photoRadiusKm, photoMaxScale]);
+  }, [currentPosition, flythrough.flyingIndex, flythrough.isFlying, flythrough.showSummary, outroMode, gpxData, photos, photoRadiusKm, photoDurationSec]);
+
+  // Reset one-shot triggers when a new flythrough starts or position resets to 0
+  useEffect(() => {
+    if (flythrough.isFlying && currentPosition < 1) {
+      triggeredPhotoIdsRef.current.clear();
+    }
+    if (!flythrough.isFlying) {
+      triggeredPhotoIdsRef.current.clear();
+      if (activePhotoTimerRef.current) {
+        window.clearTimeout(activePhotoTimerRef.current);
+        activePhotoTimerRef.current = null;
+      }
+      setActivePhoto(null);
+    }
+  }, [flythrough.isFlying, currentPosition]);
 
 
 
