@@ -142,4 +142,13 @@ All colors MUST be HSL.
   .animate-photo-kenburns {
     animation: photo-kenburns 4s ease-out both;
   }
+
+  @keyframes photo-zoom {
+    from { transform: scale(1); }
+    to { transform: scale(1.18); }
+  }
+
+  .animate-photo-zoom {
+    animation: photo-zoom 8s ease-out both;
+  }
 }
