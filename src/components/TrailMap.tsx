@@ -1527,13 +1527,13 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                     onChange={(e) => setPhotoRadiusKm(parseFloat(e.target.value))}
                   />
                   <label className="flex items-center justify-between gap-2 mt-1">
-                    <span>Fotka: zvětšení</span>
-                    <span className="tabular-nums text-muted-foreground">{photoMaxScale.toFixed(1)}×</span>
+                    <span>Fotka: doba zobrazení</span>
+                    <span className="tabular-nums text-muted-foreground">{photoDurationSec.toFixed(1)} s</span>
                   </label>
                   <input
-                    type="range" min={1} max={5} step={0.1}
-                    value={photoMaxScale}
-                    onChange={(e) => setPhotoMaxScale(parseFloat(e.target.value))}
+                    type="range" min={1} max={10} step={0.5}
+                    value={photoDurationSec}
+                    onChange={(e) => setPhotoDurationSec(parseFloat(e.target.value))}
                   />
                 </div>
               )}
