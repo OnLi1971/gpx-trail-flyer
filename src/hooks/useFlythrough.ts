@@ -272,10 +272,11 @@ export function useFlythrough(
     stopOrbit();
     setShowSummary(false);
     setIsFlying(true);
-    setFlyingIndex(0);
+    const isReverse = flyDirectionRef.current === 'reverse';
+    const startIndex = isReverse ? totalPoints - 1 : 0;
+    setFlyingIndex(startIndex);
     setFlyStartTimestamp(null); // nastaví se až po úvodním 2 s flyTo
-    let currentIndex = 0;
-    const totalPoints = track.points.length;
+    let currentIndex = startIndex;
 
     // Spočítat průměrné dt pro dynamický režim
     let sumDt = 0;
