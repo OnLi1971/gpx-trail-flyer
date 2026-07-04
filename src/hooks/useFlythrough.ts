@@ -113,6 +113,11 @@ export function useFlythrough(
     dynamicIntensityRef.current = value;
   }, []);
 
+  const setFlyDirection = useCallback((value: 'forward' | 'reverse') => {
+    setFlyDirectionState(value);
+    flyDirectionRef.current = value;
+  }, []);
+
   const hasTimeData = !!(gpxData && gpxData.tracks[0]?.points.some((p) => !!p.time));
 
   const setMarkerIcon = useCallback((icon: MarkerIcon) => {
