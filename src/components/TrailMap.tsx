@@ -1797,6 +1797,27 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 </p>
               )}
 
+              {/* Směr průletu */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground flex-1">Směr průletu</span>
+                <ToggleGroup
+                  type="single"
+                  value={flythrough.flyDirection}
+                  onValueChange={(v) => v && flythrough.setFlyDirection(v as 'forward' | 'reverse')}
+                  variant="outline"
+                  size="sm"
+                >
+                  <ToggleGroupItem value="forward" aria-label="Od startu" disabled={flythrough.isFlying}>
+                    <ArrowRight className="w-3 h-3 mr-1" />
+                    <span className="text-xs">Od startu</span>
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="reverse" aria-label="Od cíle" disabled={flythrough.isFlying}>
+                    <ArrowLeft className="w-3 h-3 mr-1" />
+                    <span className="text-xs">Od cíle</span>
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+
               {/* Intenzita dynamiky — jen v dynamickém režimu */}
               {flythrough.dynamicSpeed && flythrough.hasTimeData && (
                 <div className="flex items-center gap-3">
