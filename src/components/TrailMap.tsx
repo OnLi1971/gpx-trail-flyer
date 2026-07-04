@@ -651,7 +651,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     if (m.isStyleLoaded()) apply();
     else m.once('idle', apply);
-  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, flythrough.showSummary, outroMode, outroDrawIndex, gpxData]);
+  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, flythrough.flyDirection, flythrough.showSummary, outroMode, outroDrawIndex, gpxData]);
 
   // Slider position marker
   useEffect(() => {
