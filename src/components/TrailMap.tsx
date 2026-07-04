@@ -622,13 +622,21 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       const inOutroDraw = flythrough.showSummary && outroDrawIndex != null;
 
-      const endIdx = inOutroDraw
-        ? Math.max(0, Math.min(track.points.length, outroDrawIndex!))
-        : showBehind
-          ? Math.max(1, Math.min(track.points.length, (flythrough.flyingIndex ?? 0) + 1))
-          : track.points.length;
+      let coords: number[][];
+      if (inOutroDraw) {
+        const endIdx = Math.max(0, Math.min(track.points.length, outroDrawIndex!));
+        coords = track.points.slice(0, endIdx).map((p) => [p.lon, p.lat]);
+      } else if (showBehind) {
+        const idx = flythrough.flyingIndex ?? 0;
+        if (flythrough.flyDirection === 'reverse') {
+          coords = track.points.slice(idx).map((p) => [p.lon, p.lat]);
+        } else {
+          coords = track.points.slice(0, idx + 1).map((p) => [p.lon, p.lat]);
+        }
+      } else {
+        coords = track.points.map((p) => [p.lon, p.lat]);
+      }
 
-      const coords = track.points.slice(0, endIdx).map((p) => [p.lon, p.lat]);
       src.setData({
         type: 'FeatureCollection',
         features: [
