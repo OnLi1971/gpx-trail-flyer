@@ -296,7 +296,7 @@ export function useFlythrough(
     avgRealDtRef.current = countDt > 0 ? sumDt / countDt : 1000;
 
     const animateStep = () => {
-      if (!map.current || currentIndex >= totalPoints - 1) {
+      if (!map.current || (isReverse ? currentIndex <= 0 : currentIndex >= totalPoints - 1)) {
         stopFlythrough('finished');
         return;
       }
@@ -314,7 +314,9 @@ export function useFlythrough(
         step = Math.max(1, Math.floor(speed / 10));
         const intensity = Math.max(0, Math.min(100, dynamicIntensityRef.current)) / 100;
         const cur = track.points[currentIndex];
-        const nxtIdx = Math.min(currentIndex + step, totalPoints - 1);
+        const nxtIdx = isReverse
+          ? Math.max(0, currentIndex - step)
+          : Math.min(currentIndex + step, totalPoints - 1);
         const nxt = track.points[nxtIdx];
         const t1 = cur.time ? new Date(cur.time).getTime() : NaN;
         const t2 = nxt.time ? new Date(nxt.time).getTime() : NaN;
@@ -337,7 +339,9 @@ export function useFlythrough(
       }
 
       const currentPoint = track.points[currentIndex];
-      const nextIndex = Math.min(currentIndex + step, totalPoints - 1);
+      const nextIndex = isReverse
+        ? Math.max(0, currentIndex - step)
+        : Math.min(currentIndex + step, totalPoints - 1);
       const nextPoint = track.points[nextIndex];
 
       const targetBearing = calculateBearing(currentPoint, nextPoint);
