@@ -100,6 +100,8 @@ export function useFlythrough(
   const dynamicSpeedRef = useRef(false);
   const [dynamicIntensity, setDynamicIntensityState] = useState(70);
   const dynamicIntensityRef = useRef(70);
+  const [flyDirection, setFlyDirectionState] = useState<'forward' | 'reverse'>('forward');
+  const flyDirectionRef = useRef<'forward' | 'reverse'>('forward');
 
   const setDynamicSpeed = useCallback((value: boolean) => {
     setDynamicSpeedState(value);
@@ -109,6 +111,11 @@ export function useFlythrough(
   const setDynamicIntensity = useCallback((value: number) => {
     setDynamicIntensityState(value);
     dynamicIntensityRef.current = value;
+  }, []);
+
+  const setFlyDirection = useCallback((value: 'forward' | 'reverse') => {
+    setFlyDirectionState(value);
+    flyDirectionRef.current = value;
   }, []);
 
   const hasTimeData = !!(gpxData && gpxData.tracks[0]?.points.some((p) => !!p.time));
@@ -262,13 +269,16 @@ export function useFlythrough(
     const track = gpxData.tracks[0];
     if (track.points.length < 2) return;
 
+    const totalPoints = track.points.length;
+
     stopOrbit();
     setShowSummary(false);
     setIsFlying(true);
-    setFlyingIndex(0);
+    const isReverse = flyDirectionRef.current === 'reverse';
+    const startIndex = isReverse ? totalPoints - 1 : 0;
+    setFlyingIndex(startIndex);
     setFlyStartTimestamp(null); // nastaví se až po úvodním 2 s flyTo
-    let currentIndex = 0;
-    const totalPoints = track.points.length;
+    let currentIndex = startIndex;
 
     // Spočítat průměrné dt pro dynamický režim
     let sumDt = 0;
@@ -286,7 +296,7 @@ export function useFlythrough(
     avgRealDtRef.current = countDt > 0 ? sumDt / countDt : 1000;
 
     const animateStep = () => {
-      if (!map.current || currentIndex >= totalPoints - 1) {
+      if (!map.current || (isReverse ? currentIndex <= 0 : currentIndex >= totalPoints - 1)) {
         stopFlythrough('finished');
         return;
       }
@@ -304,7 +314,9 @@ export function useFlythrough(
         step = Math.max(1, Math.floor(speed / 10));
         const intensity = Math.max(0, Math.min(100, dynamicIntensityRef.current)) / 100;
         const cur = track.points[currentIndex];
-        const nxtIdx = Math.min(currentIndex + step, totalPoints - 1);
+        const nxtIdx = isReverse
+          ? Math.max(0, currentIndex - step)
+          : Math.min(currentIndex + step, totalPoints - 1);
         const nxt = track.points[nxtIdx];
         const t1 = cur.time ? new Date(cur.time).getTime() : NaN;
         const t2 = nxt.time ? new Date(nxt.time).getTime() : NaN;
@@ -327,7 +339,9 @@ export function useFlythrough(
       }
 
       const currentPoint = track.points[currentIndex];
-      const nextIndex = Math.min(currentIndex + step, totalPoints - 1);
+      const nextIndex = isReverse
+        ? Math.max(0, currentIndex - step)
+        : Math.min(currentIndex + step, totalPoints - 1);
       const nextPoint = track.points[nextIndex];
 
       const targetBearing = calculateBearing(currentPoint, nextPoint);
@@ -386,9 +400,11 @@ export function useFlythrough(
       }, duration * 0.8);
     };
 
-    const startPoint = track.points[0];
+    const startPoint = track.points[isReverse ? totalPoints - 1 : 0];
     const initialStep = Math.max(1, Math.floor(flySpeedRef.current / 10));
-    const secondPoint = track.points[Math.min(initialStep, totalPoints - 1)];
+    const secondPoint = track.points[isReverse
+      ? Math.max(0, totalPoints - 1 - initialStep)
+      : Math.min(initialStep, totalPoints - 1)];
     const initialBearing = calculateBearing(startPoint, secondPoint);
 
     // Use current pitch (don't force 60)
@@ -419,10 +435,12 @@ export function useFlythrough(
     flySpeed,
     flyRotation,
     flyZoom,
+    flyDirection,
     elevationExaggeration,
     setFlySpeed,
     setFlyRotation,
     setFlyZoom,
+    setFlyDirection,
     setElevationExaggeration,
     setMapPitch,
     startFlythrough,

@@ -4,7 +4,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { GPXData, AnimationSettings } from '@/types/gpx';
 
 import { ElevationChart } from './ElevationChart';
-import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, Minus, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot, Maximize2, Minimize2, Bike, PersonStanding, Car, Info, Loader2, Camera, Trash2 } from 'lucide-react';
+import { Mountain, Play, Square, RotateCcw, ZoomIn, TrendingUp, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Minus, MapPin, X, Bug, ListChecks, Search, RefreshCw, Plus, Crosshair, Video, CircleDot, Maximize2, Minimize2, Bike, PersonStanding, Car, Info, Loader2, Camera, Trash2 } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Slider } from '@/components/ui/slider';
 import { Button } from '@/components/ui/button';
@@ -622,13 +622,21 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       const inOutroDraw = flythrough.showSummary && outroDrawIndex != null;
 
-      const endIdx = inOutroDraw
-        ? Math.max(0, Math.min(track.points.length, outroDrawIndex!))
-        : showBehind
-          ? Math.max(1, Math.min(track.points.length, (flythrough.flyingIndex ?? 0) + 1))
-          : track.points.length;
+      let coords: number[][];
+      if (inOutroDraw) {
+        const endIdx = Math.max(0, Math.min(track.points.length, outroDrawIndex!));
+        coords = track.points.slice(0, endIdx).map((p) => [p.lon, p.lat]);
+      } else if (showBehind) {
+        const idx = flythrough.flyingIndex ?? 0;
+        if (flythrough.flyDirection === 'reverse') {
+          coords = track.points.slice(idx).map((p) => [p.lon, p.lat]);
+        } else {
+          coords = track.points.slice(0, idx + 1).map((p) => [p.lon, p.lat]);
+        }
+      } else {
+        coords = track.points.map((p) => [p.lon, p.lat]);
+      }
 
-      const coords = track.points.slice(0, endIdx).map((p) => [p.lon, p.lat]);
       src.setData({
         type: 'FeatureCollection',
         features: [
@@ -643,7 +651,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     if (m.isStyleLoaded()) apply();
     else m.once('idle', apply);
-  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, flythrough.showSummary, outroMode, outroDrawIndex, gpxData]);
+  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, flythrough.flyDirection, flythrough.showSummary, outroMode, outroDrawIndex, gpxData]);
 
   // Slider position marker
   useEffect(() => {
@@ -1788,6 +1796,27 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   GPX neobsahuje časové značky
                 </p>
               )}
+
+              {/* Směr průletu */}
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground flex-1">Směr průletu</span>
+                <ToggleGroup
+                  type="single"
+                  value={flythrough.flyDirection}
+                  onValueChange={(v) => v && flythrough.setFlyDirection(v as 'forward' | 'reverse')}
+                  variant="outline"
+                  size="sm"
+                >
+                  <ToggleGroupItem value="forward" aria-label="Od startu" disabled={flythrough.isFlying}>
+                    <ArrowRight className="w-3 h-3 mr-1" />
+                    <span className="text-xs">Od startu</span>
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="reverse" aria-label="Od cíle" disabled={flythrough.isFlying}>
+                    <ArrowLeft className="w-3 h-3 mr-1" />
+                    <span className="text-xs">Od cíle</span>
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              </div>
 
               {/* Intenzita dynamiky — jen v dynamickém režimu */}
               {flythrough.dynamicSpeed && flythrough.hasTimeData && (
