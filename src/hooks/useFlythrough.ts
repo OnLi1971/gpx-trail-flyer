@@ -269,6 +269,8 @@ export function useFlythrough(
     const track = gpxData.tracks[0];
     if (track.points.length < 2) return;
 
+    const totalPoints = track.points.length;
+
     stopOrbit();
     setShowSummary(false);
     setIsFlying(true);
