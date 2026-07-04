@@ -400,9 +400,11 @@ export function useFlythrough(
       }, duration * 0.8);
     };
 
-    const startPoint = track.points[0];
+    const startPoint = track.points[isReverse ? totalPoints - 1 : 0];
     const initialStep = Math.max(1, Math.floor(flySpeedRef.current / 10));
-    const secondPoint = track.points[Math.min(initialStep, totalPoints - 1)];
+    const secondPoint = track.points[isReverse
+      ? Math.max(0, totalPoints - 1 - initialStep)
+      : Math.min(initialStep, totalPoints - 1)];
     const initialBearing = calculateBearing(startPoint, secondPoint);
 
     // Use current pitch (don't force 60)
