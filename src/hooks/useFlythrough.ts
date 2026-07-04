@@ -100,6 +100,8 @@ export function useFlythrough(
   const dynamicSpeedRef = useRef(false);
   const [dynamicIntensity, setDynamicIntensityState] = useState(70);
   const dynamicIntensityRef = useRef(70);
+  const [flyDirection, setFlyDirectionState] = useState<'forward' | 'reverse'>('forward');
+  const flyDirectionRef = useRef<'forward' | 'reverse'>('forward');
 
   const setDynamicSpeed = useCallback((value: boolean) => {
     setDynamicSpeedState(value);
