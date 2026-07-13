@@ -1643,7 +1643,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
           {/* POI debug — diskrétní ikona, klik rozbalí detail */}
           {gpxData && poiStatus !== 'idle' && (
-            <div className="absolute bottom-2 left-2 z-10">
+            <div className={cn('absolute bottom-2 left-2 z-10 no-video-capture', recorder.isRecording && 'hidden')}>
               <button
                 type="button"
                 onClick={() => setPoiPanelExpanded((v) => !v)}
