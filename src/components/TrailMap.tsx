@@ -1629,7 +1629,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             <button
               type="button"
               onClick={() => setDeselectedPoiKeys(new Set())}
-              className="absolute top-2 right-2 z-10 bg-background/90 hover:bg-background border shadow-sm rounded-md px-3 py-1.5 text-xs font-medium flex items-center gap-1.5"
+              className={cn(
+                'absolute top-2 right-2 z-10 bg-background/90 hover:bg-background border shadow-sm rounded-md px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 no-video-capture',
+                recorder.isRecording && 'hidden'
+              )}
               title="Obnovit skryté POI"
             >
               <X className="w-3 h-3" />
