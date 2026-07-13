@@ -348,6 +348,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
   }, [flythrough, recorder]);
 
+  useEffect(() => {
+    if (!recorder.isRecording) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleStopRecording();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [recorder.isRecording, handleStopRecording]);
+
   const handleInfoClick = useCallback(async () => {
     if (!gpxData) return;
     if (surfaceData !== null) {
