@@ -1611,7 +1611,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
           {pickingPeakOnMap && !readOnly && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium animate-fade-in">
+            <div className={cn('absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium animate-fade-in no-video-capture', recorder.isRecording && 'hidden')}>
               <Crosshair className="w-4 h-4" />
               Klikni na mapu pro výběr vrcholu
               <button
