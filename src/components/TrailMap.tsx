@@ -1434,7 +1434,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
           {/* Basemap toggle + Fullscreen / Presentation toggle */}
           {gpxData && (
-            <div className="absolute top-2 right-2 z-20 flex gap-2">
+            <div className={cn('absolute top-2 right-2 z-20 flex gap-2 no-video-capture', recorder.isRecording && 'hidden')}>
               <div className="inline-flex rounded-md shadow-md overflow-hidden border bg-background/80 backdrop-blur-sm">
                 <button
                   type="button"
