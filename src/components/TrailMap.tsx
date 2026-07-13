@@ -733,9 +733,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (!flythrough.showSummary || !map.current) return;
     const m = map.current;
 
-    // Crossfade basemap: druhá vrstva se postupně objeví přes aktuální
+    // Crossfade basemap: v závěru vždy přejít na satelit ("skleněná" mapa)
     const fromLayer = `${basemap}-layer`;
-    const toLayer = basemap === 'satellite' ? 'terrain-layer' : 'satellite-layer';
+    const toLayer = 'satellite-layer';
+    if (fromLayer === toLayer) return;
     let rafId: number | null = null;
     if (m.getLayer(toLayer) && m.getLayer(fromLayer)) {
       try {
