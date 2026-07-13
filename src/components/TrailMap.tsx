@@ -24,6 +24,7 @@ import { PhotoOverlay } from './PhotoOverlay';
 import { PhotoUploadDialog } from './PhotoUploadDialog';
 import { useTrailPhotos, type TrailPhoto } from '@/hooks/useTrailPhotos';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export interface PoiSettings {
   peakLimit: number;
@@ -346,6 +347,18 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       setTimeout(() => setVideoDialogOpen(true), 300);
     }
   }, [flythrough, recorder]);
+
+  useEffect(() => {
+    if (!recorder.isRecording) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        handleStopRecording();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [recorder.isRecording, handleStopRecording]);
 
   const handleInfoClick = useCallback(async () => {
     if (!gpxData) return;
@@ -1417,7 +1430,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
 
           {/* Závěrečná karta shrnutí — pouze na vyžádání */}
-          {showSummaryCard && gpxData && (
+          {showSummaryCard && gpxData && !recorder.isRecording && (
             <TrailSummaryCard
               gpxData={gpxData}
               trailColor={trailColor}
@@ -1433,7 +1446,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
           {/* Basemap toggle + Fullscreen / Presentation toggle */}
           {gpxData && (
-            <div className="absolute top-2 right-2 z-20 flex gap-2">
+            <div className={cn('absolute top-2 right-2 z-20 flex gap-2 no-video-capture', recorder.isRecording && 'hidden')}>
               <div className="inline-flex rounded-md shadow-md overflow-hidden border bg-background/80 backdrop-blur-sm">
                 <button
                   type="button"
@@ -1580,7 +1593,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
           {/* Presentation-mode controls: start flythrough + record */}
           {presentationMode && gpxData && (
-            <div className="absolute top-2 left-2 z-20 flex gap-2">
+            <div className={cn('absolute top-2 left-2 z-20 flex gap-2 no-video-capture', recorder.isRecording && 'hidden')}>
               <Button
                 size="sm"
                 variant="secondary"
@@ -1610,7 +1623,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
           {pickingPeakOnMap && !readOnly && (
-            <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium animate-fade-in">
+            <div className={cn('absolute top-2 left-1/2 -translate-x-1/2 z-10 bg-primary text-primary-foreground px-4 py-2 rounded-md shadow-lg flex items-center gap-2 text-sm font-medium animate-fade-in no-video-capture', recorder.isRecording && 'hidden')}>
               <Crosshair className="w-4 h-4" />
               Klikni na mapu pro výběr vrcholu
               <button
@@ -1628,7 +1641,10 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             <button
               type="button"
               onClick={() => setDeselectedPoiKeys(new Set())}
-              className="absolute top-2 right-2 z-10 bg-background/90 hover:bg-background border shadow-sm rounded-md px-3 py-1.5 text-xs font-medium flex items-center gap-1.5"
+              className={cn(
+                'absolute top-2 right-2 z-10 bg-background/90 hover:bg-background border shadow-sm rounded-md px-3 py-1.5 text-xs font-medium flex items-center gap-1.5 no-video-capture',
+                recorder.isRecording && 'hidden'
+              )}
               title="Obnovit skryté POI"
             >
               <X className="w-3 h-3" />
@@ -1639,7 +1655,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
           {/* POI debug — diskrétní ikona, klik rozbalí detail */}
           {gpxData && poiStatus !== 'idle' && (
-            <div className="absolute bottom-2 left-2 z-10">
+            <div className={cn('absolute bottom-2 left-2 z-10 no-video-capture', recorder.isRecording && 'hidden')}>
               <button
                 type="button"
                 onClick={() => setPoiPanelExpanded((v) => !v)}
