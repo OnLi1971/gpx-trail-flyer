@@ -1581,7 +1581,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
           {/* Presentation-mode controls: start flythrough + record */}
           {presentationMode && gpxData && (
-            <div className="absolute top-2 left-2 z-20 flex gap-2">
+            <div className={cn('absolute top-2 left-2 z-20 flex gap-2 no-video-capture', recorder.isRecording && 'hidden')}>
               <Button
                 size="sm"
                 variant="secondary"
