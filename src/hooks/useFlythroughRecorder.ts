@@ -131,6 +131,9 @@ export function useFlythroughRecorder() {
                     // necháme container (obsahuje markery), ale jeho canvas vyfiltruje výše
                     return true;
                   }
+                  // UI prvky označené jako no-video-capture se do videa nedostanou
+                  if (node.classList?.contains('no-video-capture')) return false;
+                  if (node.closest?.('.no-video-capture')) return false;
                 }
                 return true;
               },
