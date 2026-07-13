@@ -1418,7 +1418,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
 
           {/* Závěrečná karta shrnutí — pouze na vyžádání */}
-          {showSummaryCard && gpxData && (
+          {showSummaryCard && gpxData && !recorder.isRecording && (
             <TrailSummaryCard
               gpxData={gpxData}
               trailColor={trailColor}
