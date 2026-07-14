@@ -101,7 +101,7 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
               {currentChartPoint && (
                 <ReferenceDot
                   x={currentChartPoint.distance}
-                  y={currentChartPoint.elevation}
+                  y={currentChartPoint.originalElevation}
                   r={6}
                   fill="#ef4444"
                   stroke="white"
