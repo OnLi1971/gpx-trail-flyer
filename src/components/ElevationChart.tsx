@@ -44,9 +44,9 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
   const displayData = progressive
     ? chartData.map((d) => ({
         ...d,
-        elevationPast: d.distance <= cutoff ? d.elevation : null,
+        elevationPast: d.distance <= cutoff ? d.originalElevation : null,
       }))
-    : chartData.map((d) => ({ ...d, elevationPast: d.elevation }));
+    : chartData.map((d) => ({ ...d, elevationPast: d.originalElevation }));
 
   return (
     <div className={wrapperClass}>
