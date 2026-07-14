@@ -69,7 +69,7 @@ export const PhotoOverlay: React.FC<Props> = ({ photo, onDelete }) => {
           </div>
           {shown.description && (
             <p
-              className="mt-2 text-center text-lg text-neutral-800 font-medium leading-snug break-words whitespace-pre-wrap [font-family:'Caveat',cursive]"
+              className="mt-2 text-center text-lg text-neutral-800 font-bold leading-snug break-words whitespace-pre-wrap [font-family:'Caveat',cursive]"
             >
               {shown.description}
             </p>
