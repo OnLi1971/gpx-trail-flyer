@@ -1545,7 +1545,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           <PhotoOverlay
             photo={activePhoto}
             onDelete={
-              canEditPhotos
+              canEditPhotos && !presentationMode
                 ? (ph) => {
                     deletePhoto(ph);
                     setActivePhoto(null);
