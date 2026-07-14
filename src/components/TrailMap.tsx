@@ -1915,10 +1915,44 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                   </ToggleGroupItem>
                 </ToggleGroup>
               </div>
+
+              {/* Photo settings */}
+              {photos.length > 0 && (
+                <>
+                  <div className="flex items-center gap-3">
+                    <Camera className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs font-medium text-muted-foreground w-20">Foto dosah</span>
+                    <Slider
+                      value={[photoRadiusKm]}
+                      onValueChange={(value) => setPhotoRadiusKm(value[0])}
+                      min={0.1}
+                      max={2}
+                      step={0.05}
+                      className="flex-1"
+                    />
+                    <span className="text-xs text-muted-foreground w-14 text-right">{photoRadiusKm.toFixed(2)} km</span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <Camera className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <span className="text-xs font-medium text-muted-foreground w-20">Foto doba</span>
+                    <Slider
+                      value={[photoDurationSec]}
+                      onValueChange={(value) => setPhotoDurationSec(value[0])}
+                      min={1}
+                      max={10}
+                      step={0.5}
+                      className="flex-1"
+                    />
+                    <span className="text-xs text-muted-foreground w-14 text-right">{photoDurationSec.toFixed(1)} s</span>
+                  </div>
+                </>
+              )}
             </>
           )}
 
           {/* POI search radius */}
+
           {gpxData && (
             <div className="flex items-center gap-3">
               <Search className="w-4 h-4 text-muted-foreground flex-shrink-0" />
