@@ -312,6 +312,14 @@ export function useFlythrough(
         return;
       }
 
+      if (pausedRef.current) {
+        flyStepTimeoutRef.current = setTimeout(() => {
+          flyAnimationRef.current = requestAnimationFrame(animateStep);
+        }, 100);
+        return;
+      }
+
+
       const speed = flySpeedRef.current;
       const useDynamic = dynamicSpeedRef.current;
       const baseDuration = Math.max(16, 800 - (speed * 7.7));
