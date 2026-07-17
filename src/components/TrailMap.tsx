@@ -1353,6 +1353,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         activePhotoTimerRef.current = null;
       }
       setActivePhoto(null);
+      flythrough.resumeFlythrough();
     }
   }, [flythrough.isFlying, currentPosition]);
 
