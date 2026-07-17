@@ -475,5 +475,8 @@ export function useFlythrough(
     setDynamicIntensity,
     showSummary,
     dismissSummary,
+    isPaused,
+    pauseFlythrough,
+    resumeFlythrough,
   };
 }
