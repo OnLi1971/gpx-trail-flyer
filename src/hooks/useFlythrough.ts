@@ -102,6 +102,17 @@ export function useFlythrough(
   const dynamicIntensityRef = useRef(70);
   const [flyDirection, setFlyDirectionState] = useState<'forward' | 'reverse'>('forward');
   const flyDirectionRef = useRef<'forward' | 'reverse'>('forward');
+  const pausedRef = useRef(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const pauseFlythrough = useCallback(() => {
+    pausedRef.current = true;
+    setIsPaused(true);
+  }, []);
+  const resumeFlythrough = useCallback(() => {
+    pausedRef.current = false;
+    setIsPaused(false);
+  }, []);
 
   const setDynamicSpeed = useCallback((value: boolean) => {
     setDynamicSpeedState(value);
@@ -301,6 +312,14 @@ export function useFlythrough(
         return;
       }
 
+      if (pausedRef.current) {
+        flyStepTimeoutRef.current = setTimeout(() => {
+          flyAnimationRef.current = requestAnimationFrame(animateStep);
+        }, 100);
+        return;
+      }
+
+
       const speed = flySpeedRef.current;
       const useDynamic = dynamicSpeedRef.current;
       const baseDuration = Math.max(16, 800 - (speed * 7.7));
@@ -456,5 +475,8 @@ export function useFlythrough(
     setDynamicIntensity,
     showSummary,
     dismissSummary,
+    isPaused,
+    pauseFlythrough,
+    resumeFlythrough,
   };
 }

@@ -1331,9 +1331,11 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         if (activePhotoTimerRef.current) window.clearTimeout(activePhotoTimerRef.current);
         activePhotoIdRef.current = id;
         setActivePhoto(ph);
+        flythrough.pauseFlythrough();
         activePhotoTimerRef.current = window.setTimeout(() => {
           setActivePhoto((cur) => (cur?.id === id ? null : cur));
           activePhotoTimerRef.current = null;
+          flythrough.resumeFlythrough();
         }, photoDurationSec * 1000);
       }
     });
@@ -1351,6 +1353,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         activePhotoTimerRef.current = null;
       }
       setActivePhoto(null);
+      flythrough.resumeFlythrough();
     }
   }, [flythrough.isFlying, currentPosition]);
 
