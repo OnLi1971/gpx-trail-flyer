@@ -102,6 +102,17 @@ export function useFlythrough(
   const dynamicIntensityRef = useRef(70);
   const [flyDirection, setFlyDirectionState] = useState<'forward' | 'reverse'>('forward');
   const flyDirectionRef = useRef<'forward' | 'reverse'>('forward');
+  const pausedRef = useRef(false);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const pauseFlythrough = useCallback(() => {
+    pausedRef.current = true;
+    setIsPaused(true);
+  }, []);
+  const resumeFlythrough = useCallback(() => {
+    pausedRef.current = false;
+    setIsPaused(false);
+  }, []);
 
   const setDynamicSpeed = useCallback((value: boolean) => {
     setDynamicSpeedState(value);
