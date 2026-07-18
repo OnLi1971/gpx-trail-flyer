@@ -251,7 +251,7 @@ export function useFlythrough(
         setShowSummary(true);
         map.current.fitBounds(bounds, {
           padding: 80,
-          pitch: 0,
+          pitch: 60,
           bearing: 0,
           duration: 5000,
           essential: true,
