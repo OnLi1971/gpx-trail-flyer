@@ -214,6 +214,15 @@ const Index = () => {
                   onAnimationSettingsChange={setAnimationSettings}
                 />
 
+                {originalGpxData && (
+                  <TrailTrimControls
+                    gpxData={originalGpxData}
+                    fromKm={trimFrom}
+                    toKm={trimTo}
+                    onChange={(f, t) => { setTrimFrom(f); setTrimTo(t); setCurrentPosition(0); setIsPlaying(false); }}
+                  />
+                )}
+
                 <TrailMap
                   gpxData={gpxData}
                   currentPosition={currentPosition}
