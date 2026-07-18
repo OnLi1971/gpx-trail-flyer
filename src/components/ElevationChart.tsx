@@ -49,6 +49,7 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
     : chartData.map((d) => ({ ...d, elevationPast: d.originalElevation }));
 
   const lineWidth = Math.max(trailWidth, 2.5);
+  const glowWidth = lineWidth + 4;
 
   return (
     <div className={wrapperClass}>
@@ -58,18 +59,19 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
             <LineChart data={displayData} margin={{ top: 6, right: 10, left: 8, bottom: 4 }}>
               <defs>
                 <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={trailColor} stopOpacity={0.75} />
-                  <stop offset="50%" stopColor={trailColor} stopOpacity={0.35} />
-                  <stop offset="100%" stopColor={trailColor} stopOpacity={0.05} />
+                  <stop offset="0%" stopColor={trailColor} stopOpacity={0.85} />
+                  <stop offset="50%" stopColor={trailColor} stopOpacity={0.45} />
+                  <stop offset="100%" stopColor={trailColor} stopOpacity={0.12} />
                 </linearGradient>
                 <pattern id="topoPattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M0 20 Q 10 15 20 20 T 40 20" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.18" />
-                  <path d="M0 10 Q 10 5 20 10 T 40 10" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.10" />
+                  <path d="M0 20 Q 10 15 20 20 T 40 20" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.22" />
+                  <path d="M0 10 Q 10 5 20 10 T 40 10" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.12" />
                 </pattern>
                 <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                  <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
+                  <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0" result="glow" />
                   <feMerge>
-                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="glow" />
                     <feMergeNode in="SourceGraphic" />
                   </feMerge>
                 </filter>
@@ -108,15 +110,16 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
                 dataKey="elevationPast"
                 stroke="none"
                 fill="url(#topoPattern)"
-                fillOpacity={0.7}
+                fillOpacity={0.85}
                 isAnimationActive={false}
                 connectNulls={false}
               />
+              {/* Outer halo line for readability on any background */}
               <Line
                 type="monotone"
                 dataKey="elevationPast"
                 stroke="hsl(var(--background))"
-                strokeWidth={lineWidth + 2.5}
+                strokeWidth={glowWidth}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeDasharray={
@@ -129,6 +132,7 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
                 isAnimationActive={false}
                 connectNulls={false}
               />
+              {/* Main colored line with glow */}
               <Line
                 type="monotone"
                 dataKey="elevationPast"
@@ -167,5 +171,3 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
 });
 
 ElevationChart.displayName = 'ElevationChart';
-
-
