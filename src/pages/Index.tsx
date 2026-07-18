@@ -22,7 +22,7 @@ const ANIMATION_DURATION = 10000;
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [gpxData, setGpxData] = useState<GPXData | null>(null);
+  const [originalGpxData, setOriginalGpxData] = useState<GPXData | null>(null);
   const [gpxFilename, setGpxFilename] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -30,6 +30,15 @@ const Index = () => {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [animationSettings, setAnimationSettings] = useState<AnimationSettings>(defaultAnimationSettings);
+  const [trimFrom, setTrimFrom] = useState(0);
+  const [trimTo, setTrimTo] = useState(0);
+
+  const gpxData = useMemo(() => {
+    if (!originalGpxData) return null;
+    const total = totalDistanceKm(originalGpxData);
+    if (trimFrom <= 0 && trimTo >= total - 0.01) return originalGpxData;
+    return trimGpxByKm(originalGpxData, trimFrom, trimTo);
+  }, [originalGpxData, trimFrom, trimTo]);
 
   const handleFileUpload = useCallback((content: string, filename: string) => {
     setIsLoading(true);
