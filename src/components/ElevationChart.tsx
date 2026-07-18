@@ -132,11 +132,11 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
                 isAnimationActive={false}
                 connectNulls={false}
               />
-              {/* Main colored line with glow */}
+              {/* Main colored line with glow — use lighter trail-active for contrast on dark maps */}
               <Line
                 type="monotone"
                 dataKey="elevationPast"
-                stroke={trailColor}
+                stroke="hsl(var(--trail-active))"
                 strokeWidth={lineWidth}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -151,6 +151,7 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
                 isAnimationActive={false}
                 connectNulls={false}
               />
+
 
               {currentChartPoint && (
                 <ReferenceDot
