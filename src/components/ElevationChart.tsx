@@ -1,5 +1,5 @@
 import React from 'react';
-import { Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
+import { Area, ComposedChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
 
 interface ChartDataPoint {
   distance: number;
