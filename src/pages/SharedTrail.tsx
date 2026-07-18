@@ -38,6 +38,16 @@ export default function SharedTrail() {
 
   const [cachedPois, setCachedPois] = useState<POIPoint[] | null>(null);
 
+  const [fromKm, setFromKm] = useState(0);
+  const [toKm, setToKm] = useState(0);
+
+  const displayGpx = useMemo(() => {
+    if (!gpxData) return null;
+    const total = totalDistanceKm(gpxData);
+    if (fromKm <= 0 && toKm >= total - 0.05) return gpxData;
+    return trimGpxByKm(gpxData, fromKm, toKm);
+  }, [gpxData, fromKm, toKm]);
+
   const isOwner = !!user && !!ownerId && user.id === ownerId;
 
   useEffect(() => {
