@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { AppHeader } from '@/components/AppHeader';
 import { TrailMap, PoiSettings } from '@/components/TrailMap';
+import { TrailTrimControls } from '@/components/TrailTrimControls';
+import { trimGpxByKm, totalDistanceKm } from '@/utils/trimGpx';
 import type { POIPoint } from '@/utils/overpassApi';
 
 import { GPXData, defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
