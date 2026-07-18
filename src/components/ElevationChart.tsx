@@ -64,7 +64,7 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
                 </linearGradient>
                 <pattern id="topoPattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
                   <path d="M0 20 Q 10 15 20 20 T 40 20" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.18" />
-                  <path d="M0 10 Q 10 5 20 10 T 40 10" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity={0.10" />
+                  <path d="M0 10 Q 10 5 20 10 T 40 10" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.10" />
                 </pattern>
                 <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur stdDeviation="2" result="coloredBlur" />
