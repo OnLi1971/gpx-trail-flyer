@@ -1,9 +1,11 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { AppHeader } from '@/components/AppHeader';
 import { TrailMap, PoiSettings } from '@/components/TrailMap';
+import { TrailTrimControls } from '@/components/TrailTrimControls';
+import { trimGpxByKm, totalDistanceKm } from '@/utils/trimGpx';
 import type { POIPoint } from '@/utils/overpassApi';
 
 import { GPXData, defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
@@ -36,6 +38,16 @@ export default function SharedTrail() {
 
   const [cachedPois, setCachedPois] = useState<POIPoint[] | null>(null);
 
+  const [fromKm, setFromKm] = useState(0);
+  const [toKm, setToKm] = useState(0);
+
+  const displayGpx = useMemo(() => {
+    if (!gpxData) return null;
+    const total = totalDistanceKm(gpxData);
+    if (fromKm <= 0 && toKm >= total - 0.05) return gpxData;
+    return trimGpxByKm(gpxData, fromKm, toKm);
+  }, [gpxData, fromKm, toKm]);
+
   const isOwner = !!user && !!ownerId && user.id === ownerId;
 
   useEffect(() => {
@@ -58,6 +70,9 @@ export default function SharedTrail() {
       setOwnerId(trail.user_id);
       setName(trail.name);
       setGpxData(trail.gpx_data as unknown as GPXData);
+      const total = totalDistanceKm(trail.gpx_data as unknown as GPXData);
+      setFromKm(0);
+      setToKm(total);
 
       const poi: PoiSettings = {
         peakLimit: (trail as any).peak_limit ?? 25,
@@ -250,8 +265,15 @@ export default function SharedTrail() {
           )}
         </div>
 
-        <TrailMap
+        <TrailTrimControls
           gpxData={gpxData}
+          fromKm={fromKm}
+          toKm={toKm}
+          onChange={(f, t) => { setFromKm(f); setToKm(t); handleReset(); }}
+        />
+
+        <TrailMap
+          gpxData={displayGpx!}
           currentPosition={currentPosition}
           animationSettings={animationSettings}
           readOnly={!isOwner}
