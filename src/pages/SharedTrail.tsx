@@ -70,6 +70,9 @@ export default function SharedTrail() {
       setOwnerId(trail.user_id);
       setName(trail.name);
       setGpxData(trail.gpx_data as unknown as GPXData);
+      const total = totalDistanceKm(trail.gpx_data as unknown as GPXData);
+      setFromKm(0);
+      setToKm(total);
 
       const poi: PoiSettings = {
         peakLimit: (trail as any).peak_limit ?? 25,
