@@ -1,14 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileUpload } from '@/components/FileUpload';
 import { TrailMap } from '@/components/TrailMap';
 import { TrailStats } from '@/components/TrailStats';
 import { AnimationControls } from '@/components/AnimationControls';
+import { TrailTrimControls } from '@/components/TrailTrimControls';
 import { AppHeader } from '@/components/AppHeader';
 import { SaveTrailDialog } from '@/components/SaveTrailDialog';
 import { defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
 import { GPXParser } from '@/utils/gpxParser';
 import { GPXData } from '@/types/gpx';
+import { totalDistanceKm, trimGpxByKm } from '@/utils/trimGpx';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
