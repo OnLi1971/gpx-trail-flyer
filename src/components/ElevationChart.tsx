@@ -32,7 +32,7 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
 
   const wrapperClass =
     variant === 'overlay'
-      ? 'w-full h-24 bg-background/80 backdrop-blur-md rounded-xl shadow-lg border border-border/50 overflow-hidden'
+      ? 'w-full h-24 bg-background/85 backdrop-blur-md rounded-xl shadow-lg border border-border/50 overflow-hidden'
       : 'w-full h-24 bg-background/95 backdrop-blur-md border-t-2 border-trail-color/30 overflow-hidden';
 
   const innerClass = variant === 'overlay' ? 'h-full px-2 py-1' : 'h-full p-2';
@@ -48,6 +48,8 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
       }))
     : chartData.map((d) => ({ ...d, elevationPast: d.originalElevation }));
 
+  const lineWidth = Math.max(trailWidth, 2.5);
+
   return (
     <div className={wrapperClass}>
       <div className={innerClass}>
@@ -56,14 +58,21 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
             <LineChart data={displayData} margin={{ top: 6, right: 10, left: 8, bottom: 4 }}>
               <defs>
                 <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={trailColor} stopOpacity={0.55} />
-                  <stop offset="60%" stopColor={trailColor} stopOpacity={0.15} />
-                  <stop offset="100%" stopColor={trailColor} stopOpacity={0} />
+                  <stop offset="0%" stopColor={trailColor} stopOpacity={0.75} />
+                  <stop offset="50%" stopColor={trailColor} stopOpacity={0.35} />
+                  <stop offset="100%" stopColor={trailColor} stopOpacity={0.05} />
                 </linearGradient>
                 <pattern id="topoPattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M0 20 Q 10 15 20 20 T 40 20" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.12" />
-                  <path d="M0 10 Q 10 5 20 10 T 40 10" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.06" />
+                  <path d="M0 20 Q 10 15 20 20 T 40 20" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.18" />
+                  <path d="M0 10 Q 10 5 20 10 T 40 10" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity={0.10" />
                 </pattern>
+                <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
+                  <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                  <feMerge>
+                    <feMergeNode in="coloredBlur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
               </defs>
               <CartesianGrid strokeDasharray="1 3" stroke="hsl(var(--muted-foreground))" strokeOpacity={0.25} strokeWidth={0.5} />
               <XAxis
@@ -99,15 +108,15 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
                 dataKey="elevationPast"
                 stroke="none"
                 fill="url(#topoPattern)"
-                fillOpacity={0.5}
+                fillOpacity={0.7}
                 isAnimationActive={false}
                 connectNulls={false}
               />
               <Line
                 type="monotone"
                 dataKey="elevationPast"
-                stroke={trailColor}
-                strokeWidth={Math.max(trailWidth, 2.5)}
+                stroke="hsl(var(--background))"
+                strokeWidth={lineWidth + 2.5}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeDasharray={
@@ -117,6 +126,24 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
                 }
                 dot={false}
                 fill="none"
+                isAnimationActive={false}
+                connectNulls={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="elevationPast"
+                stroke={trailColor}
+                strokeWidth={lineWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeDasharray={
+                  trailStyle === 'dashed' ? '4 3' :
+                  trailStyle === 'dotted' ? '1 2' :
+                  undefined
+                }
+                dot={false}
+                fill="none"
+                filter="url(#lineGlow)"
                 isAnimationActive={false}
                 connectNulls={false}
               />
@@ -140,4 +167,5 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
 });
 
 ElevationChart.displayName = 'ElevationChart';
+
 
