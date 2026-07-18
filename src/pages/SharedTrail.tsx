@@ -265,8 +265,15 @@ export default function SharedTrail() {
           )}
         </div>
 
-        <TrailMap
+        <TrailTrimControls
           gpxData={gpxData}
+          fromKm={fromKm}
+          toKm={toKm}
+          onChange={(f, t) => { setFromKm(f); setToKm(t); handleReset(); }}
+        />
+
+        <TrailMap
+          gpxData={displayGpx!}
           currentPosition={currentPosition}
           animationSettings={animationSettings}
           readOnly={!isOwner}
