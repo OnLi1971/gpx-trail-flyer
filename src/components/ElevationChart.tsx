@@ -56,7 +56,7 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
       <div className={innerClass}>
         <div className={`${chartHeight} relative`}>
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={displayData} margin={{ top: 6, right: 10, left: 8, bottom: 4 }}>
+            <ComposedChart data={displayData} margin={{ top: 6, right: 10, left: 8, bottom: 4 }}>
               <defs>
                 <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="hsl(var(--trail-active))" stopOpacity={0.75} />
@@ -163,7 +163,7 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
                   strokeWidth={2}
                 />
               )}
-            </LineChart>
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       </div>
