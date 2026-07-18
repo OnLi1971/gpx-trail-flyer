@@ -1,5 +1,5 @@
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
+import { Area, LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot, CartesianGrid } from 'recharts';
 
 interface ChartDataPoint {
   distance: number;
@@ -32,8 +32,8 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
 
   const wrapperClass =
     variant === 'overlay'
-      ? 'w-full h-24 bg-white/40 backdrop-blur-sm rounded-lg shadow-md border border-white/30'
-      : 'w-full h-24 bg-white/95 backdrop-blur-sm border-t-2 border-trail-color/30';
+      ? 'w-full h-24 bg-background/80 backdrop-blur-md rounded-xl shadow-lg border border-border/50 overflow-hidden'
+      : 'w-full h-24 bg-background/95 backdrop-blur-md border-t-2 border-trail-color/30 overflow-hidden';
 
   const innerClass = variant === 'overlay' ? 'h-full px-2 py-1' : 'h-full p-2';
   const chartHeight = variant === 'overlay' ? 'h-full' : 'h-20';
@@ -56,11 +56,16 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
             <LineChart data={displayData} margin={{ top: 6, right: 10, left: 8, bottom: 4 }}>
               <defs>
                 <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={trailColor} stopOpacity={0.8} />
-                  <stop offset="100%" stopColor={trailColor} stopOpacity={0.1} />
+                  <stop offset="0%" stopColor={trailColor} stopOpacity={0.55} />
+                  <stop offset="60%" stopColor={trailColor} stopOpacity={0.15} />
+                  <stop offset="100%" stopColor={trailColor} stopOpacity={0} />
                 </linearGradient>
+                <pattern id="topoPattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <path d="M0 20 Q 10 15 20 20 T 40 20" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.12" />
+                  <path d="M0 10 Q 10 5 20 10 T 40 10" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.06" />
+                </pattern>
               </defs>
-              <CartesianGrid strokeDasharray="1 1" stroke="#9ca3af" strokeOpacity={0.4} strokeWidth={0.5} />
+              <CartesianGrid strokeDasharray="1 3" stroke="hsl(var(--muted-foreground))" strokeOpacity={0.25} strokeWidth={0.5} />
               <XAxis
                 dataKey="distance"
                 tickFormatter={(value) => `${Math.round(value)}km`}
@@ -68,7 +73,7 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
                 tickLine={false}
                 interval="preserveStartEnd"
                 tickCount={9}
-                tick={{ fontSize: 10, fill: '#374151' }}
+                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                 type="number"
                 domain={[minKm, maxKm]}
               />
@@ -79,21 +84,39 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
                 tickLine={false}
                 width={32}
                 tickCount={6}
-                tick={{ fontSize: 10, fill: '#374151' }}
+                tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+              />
+              <Area
+                type="monotone"
+                dataKey="elevationPast"
+                stroke="none"
+                fill="url(#elevationGradient)"
+                isAnimationActive={false}
+                connectNulls={false}
+              />
+              <Area
+                type="monotone"
+                dataKey="elevationPast"
+                stroke="none"
+                fill="url(#topoPattern)"
+                fillOpacity={0.5}
+                isAnimationActive={false}
+                connectNulls={false}
               />
               <Line
                 type="monotone"
                 dataKey="elevationPast"
                 stroke={trailColor}
-                strokeWidth={trailWidth}
+                strokeWidth={Math.max(trailWidth, 2.5)}
+                strokeLinecap="round"
+                strokeLinejoin="round"
                 strokeDasharray={
                   trailStyle === 'dashed' ? '4 3' :
                   trailStyle === 'dotted' ? '1 2' :
                   undefined
                 }
                 dot={false}
-                fill="url(#elevationGradient)"
-                fillOpacity={0.3}
+                fill="none"
                 isAnimationActive={false}
                 connectNulls={false}
               />
@@ -102,9 +125,9 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
                 <ReferenceDot
                   x={currentChartPoint.distance}
                   y={currentChartPoint.originalElevation}
-                  r={6}
-                  fill="#ef4444"
-                  stroke="white"
+                  r={5}
+                  fill="hsl(var(--destructive))"
+                  stroke="hsl(var(--background))"
                   strokeWidth={2}
                 />
               )}
@@ -117,3 +140,4 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
 });
 
 ElevationChart.displayName = 'ElevationChart';
+
