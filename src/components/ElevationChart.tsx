@@ -59,13 +59,13 @@ export const ElevationChart = React.memo<ElevationChartProps>(({
             <LineChart data={displayData} margin={{ top: 6, right: 10, left: 8, bottom: 4 }}>
               <defs>
                 <linearGradient id="elevationGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={trailColor} stopOpacity={0.85} />
-                  <stop offset="50%" stopColor={trailColor} stopOpacity={0.45} />
-                  <stop offset="100%" stopColor={trailColor} stopOpacity={0.12} />
+                  <stop offset="0%" stopColor="hsl(var(--trail-active))" stopOpacity={0.75} />
+                  <stop offset="60%" stopColor="hsl(var(--trail-active))" stopOpacity={0.32} />
+                  <stop offset="100%" stopColor="hsl(var(--trail-active))" stopOpacity={0.05} />
                 </linearGradient>
-                <pattern id="topoPattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
-                  <path d="M0 20 Q 10 15 20 20 T 40 20" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.22" />
-                  <path d="M0 10 Q 10 5 20 10 T 40 10" fill="none" stroke="currentColor" strokeWidth="0.5" strokeOpacity="0.12" />
+                <pattern id="topoPattern" x="0" y="0" width="40" height="24" patternUnits="userSpaceOnUse">
+                  <path d="M0 16 Q 10 10 20 16 T 40 16" fill="none" stroke="hsl(var(--trail-active))" strokeWidth="0.6" strokeOpacity="0.4" />
+                  <path d="M0 8 Q 10 3 20 8 T 40 8" fill="none" stroke="hsl(var(--trail-active))" strokeWidth="0.6" strokeOpacity="0.22" />
                 </pattern>
                 <filter id="lineGlow" x="-50%" y="-50%" width="200%" height="200%">
                   <feGaussianBlur in="SourceGraphic" stdDeviation="2.5" result="blur" />
