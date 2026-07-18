@@ -54,7 +54,9 @@ const Index = () => {
           return;
         }
 
-        setGpxData(parsedData);
+        setOriginalGpxData(parsedData);
+        setTrimFrom(0);
+        setTrimTo(totalDistanceKm(parsedData));
         setGpxFilename(filename.replace(/\.gpx$/i, ''));
         setCurrentPosition(0);
         setIsPlaying(false);
