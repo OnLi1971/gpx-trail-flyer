@@ -1848,6 +1848,45 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 </ToggleGroup>
               </div>
 
+              {/* Štítky start / cíl pro závěrečný pohled */}
+              <div className="space-y-2 pt-1 border-t border-border/50">
+                <div className="text-xs font-medium text-muted-foreground pt-2">Popisky start / cíl (závěrečný pohled)</div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
+                  <Input
+                    value={startLabelOverride}
+                    onChange={(e) => setStartLabelOverride(e.target.value)}
+                    placeholder={parsedEndpointNames?.start || 'Start'}
+                    className="h-8 text-xs flex-1"
+                  />
+                  <Input
+                    value={startEleOverride}
+                    onChange={(e) => setStartEleOverride(e.target.value.replace(/[^\d-]/g, ''))}
+                    placeholder={autoEle.start != null ? String(autoEle.start) : 'm n.m.'}
+                    className="h-8 text-xs w-20"
+                    inputMode="numeric"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                  <Input
+                    value={endLabelOverride}
+                    onChange={(e) => setEndLabelOverride(e.target.value)}
+                    placeholder={parsedEndpointNames?.end || 'Cíl'}
+                    className="h-8 text-xs flex-1"
+                  />
+                  <Input
+                    value={endEleOverride}
+                    onChange={(e) => setEndEleOverride(e.target.value.replace(/[^\d-]/g, ''))}
+                    placeholder={autoEle.end != null ? String(autoEle.end) : 'm n.m.'}
+                    className="h-8 text-xs w-20"
+                    inputMode="numeric"
+                  />
+                </div>
+              </div>
+
+
+
               {/* Intenzita dynamiky — jen v dynamickém režimu */}
               {flythrough.dynamicSpeed && flythrough.hasTimeData && (
                 <div className="flex items-center gap-3">
