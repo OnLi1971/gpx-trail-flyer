@@ -258,7 +258,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   }, [flythrough.showSummary]);
 
   // Parser názvu trasy na start/cíl
-  const endpointNames = useMemo(() => {
+  const parsedEndpointNames = useMemo(() => {
     const name = gpxData?.tracks[0]?.name?.trim();
     if (!name) return null;
     const seps = [' → ', ' -> ', ' — ', ' – ', ' - ', ' to '];
@@ -271,6 +271,32 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     return null;
   }, [gpxData]);
 
+  // Auto-elevace ze začátku/konce GPX
+  const autoEle = useMemo(() => {
+    const track = gpxData?.tracks[0];
+    if (!track || track.points.length === 0) return { start: null as number | null, end: null as number | null };
+    const s = track.points[0].ele;
+    const e = track.points[track.points.length - 1].ele;
+    return {
+      start: typeof s === 'number' ? Math.round(s) : null,
+      end: typeof e === 'number' ? Math.round(e) : null,
+    };
+  }, [gpxData]);
+
+  // Uživatelské přepisy pro štítky
+  const [startLabelOverride, setStartLabelOverride] = useState('');
+  const [endLabelOverride, setEndLabelOverride] = useState('');
+  const [startEleOverride, setStartEleOverride] = useState('');
+  const [endEleOverride, setEndEleOverride] = useState('');
+
+  const endpointLabels = useMemo(() => {
+    const startName = startLabelOverride.trim() || parsedEndpointNames?.start || 'Start';
+    const endName = endLabelOverride.trim() || parsedEndpointNames?.end || 'Cíl';
+    const startEleNum = startEleOverride.trim() ? parseInt(startEleOverride, 10) : autoEle.start;
+    const endEleNum = endEleOverride.trim() ? parseInt(endEleOverride, 10) : autoEle.end;
+    return { startName, endName, startEle: startEleNum, endEle: endEleNum };
+  }, [startLabelOverride, endLabelOverride, startEleOverride, endEleOverride, parsedEndpointNames, autoEle]);
+
   // Vykresli štítky start/cíl pomocí maplibre Markers (sledují pozici)
   const startLabelMarkerRef = useRef<import('maplibre-gl').Marker | null>(null);
   const endLabelMarkerRef = useRef<import('maplibre-gl').Marker | null>(null);
@@ -281,20 +307,24 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       startLabelMarkerRef.current = null;
       endLabelMarkerRef.current = null;
     };
-    if (!endpointsVisible || !endpointNames || !map.current || !gpxData) {
+    if (!endpointsVisible || !map.current || !gpxData) {
       cleanup();
       return;
     }
     const track = gpxData.tracks[0];
     const startPt = track.points[0];
     const endPt = track.points[track.points.length - 1];
-    const makeEl = (label: string, kind: 'start' | 'end') => {
+    const makeEl = (label: string, ele: number | null | undefined, kind: 'start' | 'end') => {
       const el = document.createElement('div');
       el.className = 'endpoint-label';
+      const eleHtml = typeof ele === 'number' && !Number.isNaN(ele)
+        ? `<span style="opacity:0.75;font-weight:500;">· ${ele} m n. m.</span>`
+        : '';
       el.innerHTML = `
         <div style="display:flex;align-items:center;gap:6px;background:rgba(15,15,20,0.78);backdrop-filter:blur(6px);color:#fff;padding:4px 10px;border-radius:9999px;font-size:12px;font-weight:600;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.15);">
           <span style="width:8px;height:8px;border-radius:50%;background:${kind === 'start' ? '#10b981' : '#ef4444'};box-shadow:0 0 0 3px ${kind === 'start' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'};"></span>
           <span>${label}</span>
+          ${eleHtml}
         </div>`;
       el.style.opacity = '0';
       el.style.transition = 'opacity 600ms ease';
@@ -303,15 +333,17 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
     import('maplibre-gl').then(({ Marker }) => {
       if (!map.current) return;
-      startLabelMarkerRef.current = new Marker({ element: makeEl(endpointNames.start, 'start'), offset: [0, -14] })
+      startLabelMarkerRef.current = new Marker({ element: makeEl(endpointLabels.startName, endpointLabels.startEle, 'start'), offset: [0, -14] })
         .setLngLat([startPt.lon, startPt.lat])
         .addTo(map.current);
-      endLabelMarkerRef.current = new Marker({ element: makeEl(endpointNames.end, 'end'), offset: [0, -14] })
+      endLabelMarkerRef.current = new Marker({ element: makeEl(endpointLabels.endName, endpointLabels.endEle, 'end'), offset: [0, -14] })
         .setLngLat([endPt.lon, endPt.lat])
         .addTo(map.current);
     });
     return cleanup;
-  }, [endpointsVisible, endpointNames, gpxData]);
+  }, [endpointsVisible, endpointLabels, gpxData]);
+
+
 
 
   const handleStartRecording = useCallback(() => {
