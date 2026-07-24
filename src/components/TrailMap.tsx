@@ -2101,6 +2101,42 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
+          {/* Závěrečný orbit — délka a rotace */}
+          {gpxData && (
+            <div className="flex items-center gap-3">
+              <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Outro délka</span>
+              <Slider
+                value={[flythrough.outroDurationSec]}
+                onValueChange={(value) => flythrough.setOutroDurationSec(value[0])}
+                min={4}
+                max={60}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-12 text-right">
+                {flythrough.outroDurationSec} s
+              </span>
+            </div>
+          )}
+
+          {gpxData && (
+            <div className="flex items-center gap-3">
+              <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Outro rotace</span>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={flythrough.outroRotate}
+                  onChange={(e) => flythrough.setOutroRotate(e.target.checked)}
+                />
+                Pomalu otáčet mapu
+              </label>
+            </div>
+          )}
+
+
+
           {/* POI density — peaks (hory) */}
           {gpxData && poiCounts.peaks > 0 && (
             <div className="space-y-2">
