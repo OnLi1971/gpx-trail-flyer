@@ -516,5 +516,9 @@ export function useFlythrough(
     isPaused,
     pauseFlythrough,
     resumeFlythrough,
+    outroDurationSec,
+    setOutroDurationSec,
+    outroRotate,
+    setOutroRotate,
   };
 }
