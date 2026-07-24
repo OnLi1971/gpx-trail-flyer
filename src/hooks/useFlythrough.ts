@@ -204,6 +204,16 @@ export function useFlythrough(
     }
   }, [map]);
 
+  const setOutroDurationSec = useCallback((value: number) => {
+    setOutroDurationSecState(value);
+    outroDurationSecRef.current = value;
+  }, []);
+
+  const setOutroRotate = useCallback((value: boolean) => {
+    setOutroRotateState(value);
+    outroRotateRef.current = value;
+  }, []);
+
   const stopOrbit = useCallback(() => {
     if (orbitAnimationRef.current) {
       cancelAnimationFrame(orbitAnimationRef.current);
