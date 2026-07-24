@@ -81,6 +81,10 @@ export function useFlythrough(
   const [mapPitch, setMapPitchState] = useState(73);
   const [flyStartTimestamp, setFlyStartTimestamp] = useState<number | null>(null);
   const [showSummary, setShowSummary] = useState(false);
+  const [outroDurationSec, setOutroDurationSecState] = useState(12);
+  const outroDurationSecRef = useRef(12);
+  const [outroRotate, setOutroRotateState] = useState(true);
+  const outroRotateRef = useRef(true);
 
   const flyAnimationRef = useRef<number | null>(null);
   const flyStartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -200,6 +204,16 @@ export function useFlythrough(
     }
   }, [map]);
 
+  const setOutroDurationSec = useCallback((value: number) => {
+    setOutroDurationSecState(value);
+    outroDurationSecRef.current = value;
+  }, []);
+
+  const setOutroRotate = useCallback((value: boolean) => {
+    setOutroRotateState(value);
+    outroRotateRef.current = value;
+  }, []);
+
   const stopOrbit = useCallback(() => {
     if (orbitAnimationRef.current) {
       cancelAnimationFrame(orbitAnimationRef.current);
@@ -249,13 +263,37 @@ export function useFlythrough(
       if (reason === 'finished') {
         // Cinematic pull-back — kamera vyjede nahoru do ptačí perspektivy nad celou trasou
         setShowSummary(true);
+        const pullDuration = Math.max(2000, Math.min(8000, outroDurationSecRef.current * 400));
         map.current.fitBounds(bounds, {
           padding: 80,
           pitch: 60,
           bearing: 0,
-          duration: 5000,
+          duration: pullDuration,
           essential: true,
         });
+
+        // Po dokončení pull-backu spusť pomalou orbit rotaci
+        if (outroRotateRef.current) {
+          const totalMs = outroDurationSecRef.current * 1000;
+          const rotateStart = pullDuration;
+          const startTime = performance.now();
+          const spin = (now: number) => {
+            const elapsed = now - startTime;
+            if (elapsed < rotateStart) {
+              orbitAnimationRef.current = requestAnimationFrame(spin);
+              return;
+            }
+            const t = (elapsed - rotateStart) / Math.max(1, totalMs - rotateStart);
+            if (!map.current) return;
+            const bearing = (t * 360) % 360;
+            map.current.setBearing(bearing);
+            if (t < 1) {
+              orbitAnimationRef.current = requestAnimationFrame(spin);
+            }
+          };
+          orbitAnimationRef.current = requestAnimationFrame(spin);
+        }
+
 
       } else {
         stopOrbit();
@@ -478,5 +516,9 @@ export function useFlythrough(
     isPaused,
     pauseFlythrough,
     resumeFlythrough,
+    outroDurationSec,
+    setOutroDurationSec,
+    outroRotate,
+    setOutroRotate,
   };
 }
