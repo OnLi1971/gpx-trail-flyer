@@ -81,6 +81,10 @@ export function useFlythrough(
   const [mapPitch, setMapPitchState] = useState(73);
   const [flyStartTimestamp, setFlyStartTimestamp] = useState<number | null>(null);
   const [showSummary, setShowSummary] = useState(false);
+  const [outroDurationSec, setOutroDurationSecState] = useState(12);
+  const outroDurationSecRef = useRef(12);
+  const [outroRotate, setOutroRotateState] = useState(true);
+  const outroRotateRef = useRef(true);
 
   const flyAnimationRef = useRef<number | null>(null);
   const flyStartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
