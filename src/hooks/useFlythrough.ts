@@ -272,27 +272,30 @@ export function useFlythrough(
           essential: true,
         });
 
-        // Po dokončení pull-backu spusť pomalou orbit rotaci
+        // Rotace startuje až po pull-backu a po dokreslení trasy (crossfade 5.2 s + kresba 4 s)
         if (outroRotateRef.current) {
-          const totalMs = outroDurationSecRef.current * 1000;
-          const rotateStart = pullDuration;
+          const rotateStart = Math.max(pullDuration, 9400);
+          const rotateDuration = outroDurationSecRef.current * 1000; // celých 360° za nastavenou dobu
           const startTime = performance.now();
+          const startBearing = 0;
           const spin = (now: number) => {
             const elapsed = now - startTime;
             if (elapsed < rotateStart) {
               orbitAnimationRef.current = requestAnimationFrame(spin);
               return;
             }
-            const t = (elapsed - rotateStart) / Math.max(1, totalMs - rotateStart);
+            const t = Math.min(1, (elapsed - rotateStart) / rotateDuration);
             if (!map.current) return;
-            const bearing = (t * 360) % 360;
-            map.current.setBearing(bearing);
+            // plynulý rozjezd/dojezd
+            const eased = t * t * (3 - 2 * t);
+            map.current.setBearing((startBearing + eased * 360) % 360);
             if (t < 1) {
               orbitAnimationRef.current = requestAnimationFrame(spin);
             }
           };
           orbitAnimationRef.current = requestAnimationFrame(spin);
         }
+
 
 
       } else {
