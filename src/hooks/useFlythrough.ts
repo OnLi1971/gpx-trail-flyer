@@ -253,13 +253,37 @@ export function useFlythrough(
       if (reason === 'finished') {
         // Cinematic pull-back — kamera vyjede nahoru do ptačí perspektivy nad celou trasou
         setShowSummary(true);
+        const pullDuration = Math.max(2000, Math.min(8000, outroDurationSecRef.current * 400));
         map.current.fitBounds(bounds, {
           padding: 80,
           pitch: 60,
           bearing: 0,
-          duration: 5000,
+          duration: pullDuration,
           essential: true,
         });
+
+        // Po dokončení pull-backu spusť pomalou orbit rotaci
+        if (outroRotateRef.current) {
+          const totalMs = outroDurationSecRef.current * 1000;
+          const rotateStart = pullDuration;
+          const startTime = performance.now();
+          const spin = (now: number) => {
+            const elapsed = now - startTime;
+            if (elapsed < rotateStart) {
+              orbitAnimationRef.current = requestAnimationFrame(spin);
+              return;
+            }
+            const t = (elapsed - rotateStart) / Math.max(1, totalMs - rotateStart);
+            if (!map.current) return;
+            const bearing = (t * 360) % 360;
+            map.current.setBearing(bearing);
+            if (t < 1) {
+              orbitAnimationRef.current = requestAnimationFrame(spin);
+            }
+          };
+          orbitAnimationRef.current = requestAnimationFrame(spin);
+        }
+
 
       } else {
         stopOrbit();
