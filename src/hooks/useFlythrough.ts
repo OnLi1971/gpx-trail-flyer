@@ -73,12 +73,12 @@ export function useFlythrough(
   onCompleteRef.current = onComplete;
   const [isFlying, setIsFlying] = useState(false);
   const [flySpeed, setFlySpeedState] = useState(93);
-  const [flyRotation, setFlyRotationState] = useState(24);
+  const [flyRotation, setFlyRotationState] = useState(9);
   const [flyZoom, setFlyZoomState] = useState(12);
-  const [elevationExaggeration, setElevationExaggerationState] = useState(2.3);
+  const [elevationExaggeration, setElevationExaggerationState] = useState(3);
   const [flyingIndex, setFlyingIndex] = useState<number | null>(null);
   const [currentGrade, setCurrentGrade] = useState<number | null>(null);
-  const [mapPitch, setMapPitchState] = useState(73);
+  const [mapPitch, setMapPitchState] = useState(52);
   const [flyStartTimestamp, setFlyStartTimestamp] = useState<number | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [outroDurationSec, setOutroDurationSecState] = useState(12);
@@ -90,9 +90,9 @@ export function useFlythrough(
   const flyStartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flyStepTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const flySpeedRef = useRef(93);
-  const flyRotationRef = useRef(24);
+  const flyRotationRef = useRef(9);
   const flyZoomRef = useRef(12);
-  const elevationExaggerationRef = useRef(2.3);
+  const elevationExaggerationRef = useRef(3);
   const lastBearingRef = useRef(0);
   const flyMarkerRef = useRef<Marker | null>(null);
   const avgRealDtRef = useRef<number>(0);

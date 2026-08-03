@@ -145,7 +145,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [poiVersion, setPoiVersion] = useState(0);
 
   // Vzhled trasy
-  const [trailColor, setTrailColor] = useState<string>('#059669');
+  const [trailColor, setTrailColor] = useState<string>('#ff0000');
   const [trailStyle, setTrailStyle] = useState<'solid' | 'dashed' | 'dotted'>('solid');
   const [trailWidth, setTrailWidth] = useState<number>(4);
   const [trailBehindOnly, setTrailBehindOnly] = useState<boolean>(true);
