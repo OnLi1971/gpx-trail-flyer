@@ -289,6 +289,52 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   const [startEleOverride, setStartEleOverride] = useState('');
   const [endEleOverride, setEndEleOverride] = useState('');
 
+  // Detekce okruhu — start a cíl blízko sebe (< 300 m)
+  const isLoopDetected = useMemo(() => {
+    const track = gpxData?.tracks[0];
+    if (!track || track.points.length < 2) return false;
+    const a = track.points[0];
+    const b = track.points[track.points.length - 1];
+    const cosLat = Math.cos((a.lat * Math.PI) / 180);
+    const dLat = (b.lat - a.lat) * 111;
+    const dLon = (b.lon - a.lon) * 111 * cosLat;
+    return Math.sqrt(dLat * dLat + dLon * dLon) < 0.3;
+  }, [gpxData]);
+
+  const [loopModeOverride, setLoopModeOverride] = useState<boolean | null>(null);
+  const loopMode = loopModeOverride ?? isLoopDetected;
+
+  // Vlastní města na mapě
+  const [cityInput, setCityInput] = useState('');
+  const [customCities, setCustomCities] = useState<{ name: string; lat: number; lon: number }[]>([]);
+  const [cityLoading, setCityLoading] = useState(false);
+
+  const addCity = useCallback(async () => {
+    const query = cityInput.trim();
+    if (!query) return;
+    setCityLoading(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`,
+        { headers: { 'Accept-Language': 'cs' } }
+      );
+      const data = await res.json();
+      if (!Array.isArray(data) || data.length === 0) {
+        toast.error(`Město „${query}" se nenašlo`);
+        return;
+      }
+      const hit = data[0];
+      const name = String(hit.display_name || query).split(',')[0].trim();
+      setCustomCities((prev) => [...prev, { name, lat: parseFloat(hit.lat), lon: parseFloat(hit.lon) }]);
+      setCityInput('');
+      toast.success(`Přidáno: ${name}`);
+    } catch {
+      toast.error('Nepodařilo se najít město');
+    } finally {
+      setCityLoading(false);
+    }
+  }, [cityInput]);
+
   const endpointLabels = useMemo(() => {
     const startName = startLabelOverride.trim() || parsedEndpointNames?.start || 'Start';
     const endName = endLabelOverride.trim() || parsedEndpointNames?.end || 'Cíl';
@@ -300,12 +346,15 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // Vykresli štítky start/cíl pomocí maplibre Markers (sledují pozici)
   const startLabelMarkerRef = useRef<import('maplibre-gl').Marker | null>(null);
   const endLabelMarkerRef = useRef<import('maplibre-gl').Marker | null>(null);
+  const cityMarkersRef = useRef<import('maplibre-gl').Marker[]>([]);
   useEffect(() => {
     const cleanup = () => {
       startLabelMarkerRef.current?.remove();
       endLabelMarkerRef.current?.remove();
       startLabelMarkerRef.current = null;
       endLabelMarkerRef.current = null;
+      cityMarkersRef.current.forEach((m) => m.remove());
+      cityMarkersRef.current = [];
     };
     if (!endpointsVisible || !map.current || !gpxData) {
       cleanup();
@@ -314,15 +363,17 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     const track = gpxData.tracks[0];
     const startPt = track.points[0];
     const endPt = track.points[track.points.length - 1];
-    const makeEl = (label: string, ele: number | null | undefined, kind: 'start' | 'end') => {
+    const makeEl = (label: string, ele: number | null | undefined, kind: 'start' | 'end' | 'loop' | 'city') => {
       const el = document.createElement('div');
       el.className = 'endpoint-label';
       const eleHtml = typeof ele === 'number' && !Number.isNaN(ele)
         ? `<span style="opacity:0.75;font-weight:500;">· ${ele} m n. m.</span>`
         : '';
+      const dot = kind === 'end' ? '#ef4444' : kind === 'city' ? '#38bdf8' : '#10b981';
+      const glow = kind === 'end' ? 'rgba(239,68,68,0.25)' : kind === 'city' ? 'rgba(56,189,248,0.25)' : 'rgba(16,185,129,0.25)';
       el.innerHTML = `
         <div style="display:flex;align-items:center;gap:6px;background:rgba(15,15,20,0.78);backdrop-filter:blur(6px);color:#fff;padding:4px 10px;border-radius:9999px;font-size:12px;font-weight:600;white-space:nowrap;box-shadow:0 4px 14px rgba(0,0,0,0.35);border:1px solid rgba(255,255,255,0.15);">
-          <span style="width:8px;height:8px;border-radius:50%;background:${kind === 'start' ? '#10b981' : '#ef4444'};box-shadow:0 0 0 3px ${kind === 'start' ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'};"></span>
+          <span style="width:8px;height:8px;border-radius:50%;background:${dot};box-shadow:0 0 0 3px ${glow};"></span>
           <span>${label}</span>
           ${eleHtml}
         </div>`;
@@ -333,15 +384,28 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
     import('maplibre-gl').then(({ Marker }) => {
       if (!map.current) return;
-      startLabelMarkerRef.current = new Marker({ element: makeEl(endpointLabels.startName, endpointLabels.startEle, 'start'), offset: [0, -14] })
-        .setLngLat([startPt.lon, startPt.lat])
-        .addTo(map.current);
-      endLabelMarkerRef.current = new Marker({ element: makeEl(endpointLabels.endName, endpointLabels.endEle, 'end'), offset: [0, -14] })
-        .setLngLat([endPt.lon, endPt.lat])
-        .addTo(map.current);
+      if (loopMode) {
+        const loopLabel = startLabelOverride.trim() || parsedEndpointNames?.start || endpointLabels.startName;
+        startLabelMarkerRef.current = new Marker({ element: makeEl(`${loopLabel} · okruh`, endpointLabels.startEle, 'loop'), offset: [0, -14] })
+          .setLngLat([startPt.lon, startPt.lat])
+          .addTo(map.current);
+      } else {
+        startLabelMarkerRef.current = new Marker({ element: makeEl(endpointLabels.startName, endpointLabels.startEle, 'start'), offset: [0, -14] })
+          .setLngLat([startPt.lon, startPt.lat])
+          .addTo(map.current);
+        endLabelMarkerRef.current = new Marker({ element: makeEl(endpointLabels.endName, endpointLabels.endEle, 'end'), offset: [0, -14] })
+          .setLngLat([endPt.lon, endPt.lat])
+          .addTo(map.current);
+      }
+      cityMarkersRef.current = customCities.map((c) =>
+        new Marker({ element: makeEl(c.name, null, 'city'), offset: [0, -14] })
+          .setLngLat([c.lon, c.lat])
+          .addTo(map.current!)
+      );
     });
     return cleanup;
-  }, [endpointsVisible, endpointLabels, gpxData]);
+  }, [endpointsVisible, endpointLabels, gpxData, loopMode, customCities, startLabelOverride, parsedEndpointNames]);
+
 
 
 
@@ -1851,12 +1915,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               {/* Štítky start / cíl pro závěrečný pohled */}
               <div className="space-y-2 pt-1 border-t border-border/50">
                 <div className="text-xs font-medium text-muted-foreground pt-2">Popisky start / cíl (závěrečný pohled)</div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Okruh (jeden bod){isLoopDetected ? ' · rozpoznáno' : ''}
+                  </span>
+                  <Switch checked={loopMode} onCheckedChange={(v) => setLoopModeOverride(v)} />
+                </div>
+
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
                   <Input
                     value={startLabelOverride}
                     onChange={(e) => setStartLabelOverride(e.target.value)}
-                    placeholder={parsedEndpointNames?.start || 'Start'}
+                    placeholder={parsedEndpointNames?.start || (loopMode ? 'Start i cíl' : 'Start')}
                     className="h-8 text-xs flex-1"
                   />
                   <Input
@@ -1867,23 +1939,59 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                     inputMode="numeric"
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
-                  <Input
-                    value={endLabelOverride}
-                    onChange={(e) => setEndLabelOverride(e.target.value)}
-                    placeholder={parsedEndpointNames?.end || 'Cíl'}
-                    className="h-8 text-xs flex-1"
-                  />
-                  <Input
-                    value={endEleOverride}
-                    onChange={(e) => setEndEleOverride(e.target.value.replace(/[^\d-]/g, ''))}
-                    placeholder={autoEle.end != null ? String(autoEle.end) : 'm n.m.'}
-                    className="h-8 text-xs w-20"
-                    inputMode="numeric"
-                  />
+                {!loopMode && (
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                    <Input
+                      value={endLabelOverride}
+                      onChange={(e) => setEndLabelOverride(e.target.value)}
+                      placeholder={parsedEndpointNames?.end || 'Cíl'}
+                      className="h-8 text-xs flex-1"
+                    />
+                    <Input
+                      value={endEleOverride}
+                      onChange={(e) => setEndEleOverride(e.target.value.replace(/[^\d-]/g, ''))}
+                      placeholder={autoEle.end != null ? String(autoEle.end) : 'm n.m.'}
+                      className="h-8 text-xs w-20"
+                      inputMode="numeric"
+                    />
+                  </div>
+                )}
+
+                {/* Vlastní města */}
+                <div className="pt-2 space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">Města na mapě</div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={cityInput}
+                      onChange={(e) => setCityInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCity(); } }}
+                      placeholder="např. Hronov"
+                      className="h-8 text-xs flex-1"
+                    />
+                    <Button size="sm" variant="secondary" className="h-8" onClick={addCity} disabled={cityLoading || !cityInput.trim()}>
+                      {cityLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                    </Button>
+                  </div>
+                  {customCities.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {customCities.map((c, i) => (
+                        <span key={`${c.name}-${i}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs">
+                          {c.name}
+                          <button
+                            onClick={() => setCustomCities((prev) => prev.filter((_, idx) => idx !== i))}
+                            className="text-muted-foreground hover:text-foreground"
+                            aria-label={`Odebrat ${c.name}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
+
 
 
 
