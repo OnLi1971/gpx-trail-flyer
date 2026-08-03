@@ -1915,12 +1915,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               {/* Štítky start / cíl pro závěrečný pohled */}
               <div className="space-y-2 pt-1 border-t border-border/50">
                 <div className="text-xs font-medium text-muted-foreground pt-2">Popisky start / cíl (závěrečný pohled)</div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Okruh (jeden bod){isLoopDetected ? ' · rozpoznáno' : ''}
+                  </span>
+                  <Switch checked={loopMode} onCheckedChange={(v) => setLoopModeOverride(v)} />
+                </div>
+
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0" />
                   <Input
                     value={startLabelOverride}
                     onChange={(e) => setStartLabelOverride(e.target.value)}
-                    placeholder={parsedEndpointNames?.start || 'Start'}
+                    placeholder={parsedEndpointNames?.start || (loopMode ? 'Start i cíl' : 'Start')}
                     className="h-8 text-xs flex-1"
                   />
                   <Input
@@ -1931,23 +1939,59 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                     inputMode="numeric"
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
-                  <Input
-                    value={endLabelOverride}
-                    onChange={(e) => setEndLabelOverride(e.target.value)}
-                    placeholder={parsedEndpointNames?.end || 'Cíl'}
-                    className="h-8 text-xs flex-1"
-                  />
-                  <Input
-                    value={endEleOverride}
-                    onChange={(e) => setEndEleOverride(e.target.value.replace(/[^\d-]/g, ''))}
-                    placeholder={autoEle.end != null ? String(autoEle.end) : 'm n.m.'}
-                    className="h-8 text-xs w-20"
-                    inputMode="numeric"
-                  />
+                {!loopMode && (
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                    <Input
+                      value={endLabelOverride}
+                      onChange={(e) => setEndLabelOverride(e.target.value)}
+                      placeholder={parsedEndpointNames?.end || 'Cíl'}
+                      className="h-8 text-xs flex-1"
+                    />
+                    <Input
+                      value={endEleOverride}
+                      onChange={(e) => setEndEleOverride(e.target.value.replace(/[^\d-]/g, ''))}
+                      placeholder={autoEle.end != null ? String(autoEle.end) : 'm n.m.'}
+                      className="h-8 text-xs w-20"
+                      inputMode="numeric"
+                    />
+                  </div>
+                )}
+
+                {/* Vlastní města */}
+                <div className="pt-2 space-y-2">
+                  <div className="text-xs font-medium text-muted-foreground">Města na mapě</div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={cityInput}
+                      onChange={(e) => setCityInput(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addCity(); } }}
+                      placeholder="např. Hronov"
+                      className="h-8 text-xs flex-1"
+                    />
+                    <Button size="sm" variant="secondary" className="h-8" onClick={addCity} disabled={cityLoading || !cityInput.trim()}>
+                      {cityLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                    </Button>
+                  </div>
+                  {customCities.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {customCities.map((c, i) => (
+                        <span key={`${c.name}-${i}`} className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs">
+                          {c.name}
+                          <button
+                            onClick={() => setCustomCities((prev) => prev.filter((_, idx) => idx !== i))}
+                            className="text-muted-foreground hover:text-foreground"
+                            aria-label={`Odebrat ${c.name}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
+
 
 
 
