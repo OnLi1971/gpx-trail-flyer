@@ -725,7 +725,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
 
     map.current.once('load', ensureTrailLayers);
-  }, [gpxData]);
+  }, [gpxData, multiStage, stageSegments]);
 
   // Apply trail appearance (color / width / dash style) when state changes
   useEffect(() => {
@@ -733,9 +733,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (!m) return;
     const apply = () => {
       if (!m.getLayer('trail-line') || !m.getLayer('trail-glow')) return;
-      m.setPaintProperty('trail-glow', 'line-color', trailColor);
+      m.setPaintProperty('trail-glow', 'line-color', lineColorExpr);
       m.setPaintProperty('trail-glow', 'line-width', trailWidth * 2);
-      m.setPaintProperty('trail-line', 'line-color', trailColor);
+      m.setPaintProperty('trail-line', 'line-color', lineColorExpr);
       m.setPaintProperty('trail-line', 'line-width', trailWidth);
       const dash =
         trailStyle === 'dashed' ? [2, 2] :
@@ -746,7 +746,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
     if (m.isStyleLoaded()) apply();
     else m.once('idle', apply);
-  }, [trailColor, trailStyle, trailWidth, gpxData]);
+  }, [trailColor, lineColorExpr, trailStyle, trailWidth, gpxData]);
+
 
   // Pokud je zapnuto „Stopa za jezdcem", zobrazujeme jen body do aktuálního flyingIndex.
   useEffect(() => {
