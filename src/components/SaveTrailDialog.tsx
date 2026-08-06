@@ -15,10 +15,13 @@ interface SaveTrailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   gpxData: GPXData;
+  /** Etapy (více GPX) — uloží se spolu s trasou pro barevné vykreslení */
+  stages?: Stage[];
   defaultName?: string;
 }
 
-export const SaveTrailDialog = ({ open, onOpenChange, gpxData, defaultName }: SaveTrailDialogProps) => {
+export const SaveTrailDialog = ({ open, onOpenChange, gpxData, stages = [], defaultName }: SaveTrailDialogProps) => {
+
   const { user } = useAuth();
   const [name, setName] = useState(defaultName || '');
   const [isPublic, setIsPublic] = useState(false);
