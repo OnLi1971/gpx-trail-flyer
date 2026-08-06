@@ -5,11 +5,13 @@ import { TrailMap } from '@/components/TrailMap';
 import { TrailStats } from '@/components/TrailStats';
 import { AnimationControls } from '@/components/AnimationControls';
 import { TrailTrimControls } from '@/components/TrailTrimControls';
+import { StageList } from '@/components/StageList';
 import { AppHeader } from '@/components/AppHeader';
 import { SaveTrailDialog } from '@/components/SaveTrailDialog';
 import { defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
 import { GPXParser } from '@/utils/gpxParser';
 import { GPXData } from '@/types/gpx';
+import { Stage, mergeStages, stageColorAt } from '@/utils/stages';
 import { totalDistanceKm, trimGpxByKm } from '@/utils/trimGpx';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
@@ -22,7 +24,7 @@ const ANIMATION_DURATION = 10000;
 const Index = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [originalGpxData, setOriginalGpxData] = useState<GPXData | null>(null);
+  const [stages, setStages] = useState<Stage[]>([]);
   const [gpxFilename, setGpxFilename] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -33,12 +35,19 @@ const Index = () => {
   const [trimFrom, setTrimFrom] = useState(0);
   const [trimTo, setTrimTo] = useState(0);
 
-  const gpxData = useMemo(() => {
-    if (!originalGpxData) return null;
-    const total = totalDistanceKm(originalGpxData);
-    if (trimFrom <= 0 && trimTo >= total - 0.01) return originalGpxData;
-    return trimGpxByKm(originalGpxData, trimFrom, trimTo);
-  }, [originalGpxData, trimFrom, trimTo]);
+  const singleStage = stages.length === 1 ? stages[0] : null;
+
+  const effectiveStages = useMemo<Stage[]>(() => {
+    if (!singleStage) return stages;
+    const total = totalDistanceKm(singleStage.gpx);
+    if (trimFrom <= 0 && trimTo >= total - 0.01) return stages;
+    return [{ ...singleStage, gpx: trimGpxByKm(singleStage.gpx, trimFrom, trimTo) }];
+  }, [stages, singleStage, trimFrom, trimTo]);
+
+  const { gpx: gpxData, segments: stageSegments } = useMemo(
+    () => mergeStages(effectiveStages),
+    [effectiveStages]
+  );
 
   const handleFileUpload = useCallback((content: string, filename: string) => {
     setIsLoading(true);
@@ -54,10 +63,24 @@ const Index = () => {
           return;
         }
 
-        setOriginalGpxData(parsedData);
-        setTrimFrom(0);
-        setTrimTo(totalDistanceKm(parsedData));
-        setGpxFilename(filename.replace(/\.gpx$/i, ''));
+        const cleanName = filename.replace(/\.gpx$/i, '');
+        setStages((prev) => {
+          const next = [
+            ...prev,
+            {
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+              gpx: parsedData,
+              name: parsedData.tracks[0].name?.trim() || cleanName,
+              color: stageColorAt(prev.length),
+            },
+          ];
+          if (next.length === 1) {
+            setTrimFrom(0);
+            setTrimTo(totalDistanceKm(parsedData));
+            setGpxFilename(cleanName);
+          }
+          return next;
+        });
         setCurrentPosition(0);
         setIsPlaying(false);
         toast.success(`Nahrán GPX soubor: ${filename}`);
@@ -69,6 +92,17 @@ const Index = () => {
       }
     }, 50);
   }, []);
+
+  const handleStagesChange = useCallback((next: Stage[]) => {
+    setStages(next);
+    setCurrentPosition(0);
+    setIsPlaying(false);
+    if (next.length === 1) {
+      setTrimFrom(0);
+      setTrimTo(totalDistanceKm(next[0].gpx));
+    }
+  }, []);
+
 
 
 
