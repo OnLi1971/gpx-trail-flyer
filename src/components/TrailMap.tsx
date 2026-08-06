@@ -2251,6 +2251,26 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
+          {multiStage && (
+            <div className="flex items-center gap-3">
+              <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Pauza etap</span>
+              <Slider
+                value={[flythrough.stageOrbitSec]}
+                onValueChange={(value) => flythrough.setStageOrbitSec(value[0])}
+                min={0}
+                max={20}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-12 text-right">
+                {flythrough.stageOrbitSec} s
+              </span>
+            </div>
+          )}
+
+
+
           {gpxData && (
             <div className="flex items-center gap-3">
               <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
