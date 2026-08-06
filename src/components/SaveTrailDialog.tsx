@@ -7,6 +7,8 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { GPXData } from '@/types/gpx';
+import { Stage, mergeStages } from '@/utils/stages';
+
 import { generateSlug } from '@/lib/slug';
 import { toast } from 'sonner';
 import { Loader2, Save, Copy, Check } from 'lucide-react';
