@@ -7,6 +7,8 @@ import { Switch } from '@/components/ui/switch';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { GPXData } from '@/types/gpx';
+import { Stage, mergeStages } from '@/utils/stages';
+
 import { generateSlug } from '@/lib/slug';
 import { toast } from 'sonner';
 import { Loader2, Save, Copy, Check } from 'lucide-react';
@@ -15,10 +17,13 @@ interface SaveTrailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   gpxData: GPXData;
+  /** Etapy (více GPX) — uloží se spolu s trasou pro barevné vykreslení */
+  stages?: Stage[];
   defaultName?: string;
 }
 
-export const SaveTrailDialog = ({ open, onOpenChange, gpxData, defaultName }: SaveTrailDialogProps) => {
+export const SaveTrailDialog = ({ open, onOpenChange, gpxData, stages = [], defaultName }: SaveTrailDialogProps) => {
+
   const { user } = useAuth();
   const [name, setName] = useState(defaultName || '');
   const [isPublic, setIsPublic] = useState(false);
@@ -46,7 +51,10 @@ export const SaveTrailDialog = ({ open, onOpenChange, gpxData, defaultName }: Sa
           user_id: user.id,
           name: name.trim(),
           slug,
-          gpx_data: gpxData as any,
+          gpx_data: (stages.length > 1
+            ? { ...gpxData, stageSegments: mergeStages(stages).segments }
+            : gpxData) as any,
+
           is_public: isPublic,
         })
         .select()

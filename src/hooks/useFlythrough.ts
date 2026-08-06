@@ -67,10 +67,21 @@ function calculateGrade(start: { lat: number; lon: number; ele?: number }, end: 
 export function useFlythrough(
   map: MutableRefObject<Map | null>,
   gpxData: GPXData | null,
-  onComplete?: (reason: 'finished' | 'stopped') => void
+  onComplete?: (reason: 'finished' | 'stopped') => void,
+  /** Indexy bodů, kde končí jedna etapa a začíná další (pro orbit pauzu mezi trasami) */
+  stageBoundaries: number[] = []
 ) {
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const stageBoundariesRef = useRef<number[]>(stageBoundaries);
+  stageBoundariesRef.current = stageBoundaries;
+  const [stageOrbitSec, setStageOrbitSecState] = useState(6);
+  const stageOrbitSecRef = useRef(6);
+  const setStageOrbitSec = useCallback((v: number) => {
+    setStageOrbitSecState(v);
+    stageOrbitSecRef.current = v;
+  }, []);
+
   const [isFlying, setIsFlying] = useState(false);
   const [flySpeed, setFlySpeedState] = useState(93);
   const [flyRotation, setFlyRotationState] = useState(9);
@@ -243,7 +254,12 @@ export function useFlythrough(
       clearTimeout(flyStepTimeoutRef.current);
       flyStepTimeoutRef.current = null;
     }
+    if (orbitAnimationRef.current) {
+      cancelAnimationFrame(orbitAnimationRef.current);
+      orbitAnimationRef.current = null;
+    }
     setIsFlying(false);
+
     setFlyingIndex(null);
     setCurrentGrade(null);
     setFlyStartTimestamp(null);
@@ -404,6 +420,40 @@ export function useFlythrough(
         : Math.min(currentIndex + step, totalPoints - 1);
       const nextPoint = track.points[nextIndex];
 
+      // Hranice etap — kamera se zastaví a pomalu se otočí dokola, pak pokračuje další trasou
+      const crossedBoundary = stageBoundariesRef.current.some((b) =>
+        isReverse ? currentIndex >= b && nextIndex < b : currentIndex < b && nextIndex >= b
+      );
+      if (crossedBoundary && stageOrbitSecRef.current > 0 && map.current) {
+        const orbitMs = stageOrbitSecRef.current * 1000;
+        const startBearing = map.current.getBearing();
+        const t0 = performance.now();
+        const spin = (now: number) => {
+          if (!map.current) return;
+          const t = Math.min(1, (now - t0) / orbitMs);
+          const eased = t * t * (3 - 2 * t);
+          map.current.setBearing((startBearing + eased * 360) % 360);
+          if (t < 1) {
+            orbitAnimationRef.current = requestAnimationFrame(spin);
+          } else {
+            orbitAnimationRef.current = null;
+            lastBearingRef.current = startBearing;
+            currentIndex = nextIndex;
+            setFlyingIndex(currentIndex);
+            flyAnimationRef.current = requestAnimationFrame(animateStep);
+          }
+        };
+        map.current.easeTo({
+          center: [currentPoint.lon, currentPoint.lat],
+          pitch: mapPitch,
+          zoom: Math.max(9, flyZoomRef.current - 2),
+          duration: 1200,
+        });
+        orbitAnimationRef.current = requestAnimationFrame(spin);
+        return;
+      }
+
+
       const targetBearing = calculateBearing(currentPoint, nextPoint);
 
       const rotationFactor = flyRotationRef.current / 100;
@@ -523,5 +573,8 @@ export function useFlythrough(
     setOutroDurationSec,
     outroRotate,
     setOutroRotate,
+    stageOrbitSec,
+    setStageOrbitSec,
+
   };
 }

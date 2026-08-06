@@ -56,6 +56,8 @@ interface TrailMapProps {
   onFlyStateChange?: (state: { isFlying: boolean; flyDurationSec: number; flyStartTimestamp: number | null }) => void;
   /** ID uložené trasy (Supabase) — pokud je, povolí funkci fotek */
   trailId?: string | null;
+  /** Rozdělení sloučené trasy na etapy (více GPX za sebou, každá svou barvou) */
+  stageSegments?: import('@/utils/stages').StageSegment[];
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({
@@ -69,7 +71,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   onPoisFetched,
   onFlyStateChange,
   trailId = null,
+  stageSegments = [],
 }) => {
+
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
@@ -230,6 +234,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // Progres "překreslení" trasy v závěrečném pohledu (počet bodů k zobrazení; null = plná trasa)
   const [outroDrawIndex, setOutroDrawIndex] = useState<number | null>(null);
 
+  const multiStage = stageSegments.length > 1;
+  const stageBoundaries = useMemo(
+    () => (multiStage ? stageSegments.slice(0, -1).map((s) => s.endIdx) : []),
+    [multiStage, stageSegments]
+  );
+
   const flythrough = useFlythrough(map, gpxData, (reason) => {
     // Po dokončení průletu NEzapínáme outroMode — POI zůstanou viditelné během orbit pohledu
     // Pokud nahráváme, zastav nahrávání a otevři dialog s náhledem
@@ -238,7 +248,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       recorder.stopRecording();
       setTimeout(() => setVideoDialogOpen(true), 300);
     }
-  });
+  }, stageBoundaries);
+
 
   // Zruš outro při novém startu průletu
   useEffect(() => {
@@ -626,25 +637,46 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (m.isStyleLoaded()) apply();
     else m.once('load', apply);
   }, [basemap]);
+  // Sestaví GeoJSON trasy — při více etapách jedna linie na etapu (vlastní barva)
+  const buildTrailGeoJSON = useCallback(
+    (points: { lat: number; lon: number }[], opts: { start?: number | null; end?: number | null } = {}): GeoJSON.FeatureCollection => {
+      const segs = multiStage
+        ? stageSegments
+        : [{ startIdx: 0, endIdx: points.length, color: trailColor, name: '' }];
+      const features: GeoJSON.Feature[] = [];
+      for (const s of segs) {
+        let a = s.startIdx;
+        let b = Math.min(s.endIdx, points.length);
+        if (opts.end != null) b = Math.min(b, opts.end);
+        if (opts.start != null) a = Math.max(a, opts.start);
+        if (b - a < 2) continue;
+        features.push({
+          type: 'Feature',
+          properties: { color: s.color },
+          geometry: {
+            type: 'LineString',
+            coordinates: points.slice(a, b).map((p) => [p.lon, p.lat]),
+          },
+        });
+      }
+      return { type: 'FeatureCollection', features };
+    },
+    [multiStage, stageSegments, trailColor]
+  );
+
+  const lineColorExpr = useMemo<any>(
+    () => (multiStage ? ['coalesce', ['get', 'color'], trailColor] : trailColor),
+    [multiStage, trailColor]
+  );
+
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
 
     const track = gpxData.tracks[0];
     if (track.points.length === 0) return;
 
-    const geojson: GeoJSON.FeatureCollection = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: track.points.map((point) => [point.lon, point.lat]),
-          },
-        },
-      ],
-    };
+    const geojson = buildTrailGeoJSON(track.points);
+
 
     const ensureTrailLayers = () => {
       if (!map.current) return;
@@ -665,7 +697,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         type: 'line',
         source: 'trail',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': trailColor, 'line-width': trailWidth * 2, 'line-opacity': 0.3, 'line-blur': 2 },
+        paint: { 'line-color': lineColorExpr, 'line-width': trailWidth * 2, 'line-opacity': 0.3, 'line-blur': 2 },
       });
 
       map.current.addLayer({
@@ -674,7 +706,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         source: 'trail',
         layout: { 'line-join': 'round', 'line-cap': trailStyle === 'dotted' ? 'round' : 'round' },
         paint: {
-          'line-color': trailColor,
+          'line-color': lineColorExpr,
+
           'line-width': trailWidth,
           'line-opacity': 0.9,
           ...(dash ? { 'line-dasharray': dash } : {}),
@@ -692,7 +725,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     }
 
     map.current.once('load', ensureTrailLayers);
-  }, [gpxData]);
+  }, [gpxData, multiStage, stageSegments]);
 
   // Apply trail appearance (color / width / dash style) when state changes
   useEffect(() => {
@@ -700,9 +733,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (!m) return;
     const apply = () => {
       if (!m.getLayer('trail-line') || !m.getLayer('trail-glow')) return;
-      m.setPaintProperty('trail-glow', 'line-color', trailColor);
+      m.setPaintProperty('trail-glow', 'line-color', lineColorExpr);
       m.setPaintProperty('trail-glow', 'line-width', trailWidth * 2);
-      m.setPaintProperty('trail-line', 'line-color', trailColor);
+      m.setPaintProperty('trail-line', 'line-color', lineColorExpr);
       m.setPaintProperty('trail-line', 'line-width', trailWidth);
       const dash =
         trailStyle === 'dashed' ? [2, 2] :
@@ -713,7 +746,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     };
     if (m.isStyleLoaded()) apply();
     else m.once('idle', apply);
-  }, [trailColor, trailStyle, trailWidth, gpxData]);
+  }, [trailColor, lineColorExpr, trailStyle, trailWidth, gpxData]);
+
 
   // Pokud je zapnuto „Stopa za jezdcem", zobrazujeme jen body do aktuálního flyingIndex.
   useEffect(() => {
@@ -731,36 +765,25 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       const inOutroDraw = flythrough.showSummary && outroDrawIndex != null;
 
-      let coords: number[][];
+      let data: GeoJSON.FeatureCollection;
       if (inOutroDraw) {
-        const endIdx = Math.max(0, Math.min(track.points.length, outroDrawIndex!));
-        coords = track.points.slice(0, endIdx).map((p) => [p.lon, p.lat]);
+        data = buildTrailGeoJSON(track.points, { end: Math.max(0, Math.min(track.points.length, outroDrawIndex!)) });
       } else if (showBehind) {
         const idx = flythrough.flyingIndex ?? 0;
-        if (flythrough.flyDirection === 'reverse') {
-          coords = track.points.slice(idx).map((p) => [p.lon, p.lat]);
-        } else {
-          coords = track.points.slice(0, idx + 1).map((p) => [p.lon, p.lat]);
-        }
+        data = flythrough.flyDirection === 'reverse'
+          ? buildTrailGeoJSON(track.points, { start: idx })
+          : buildTrailGeoJSON(track.points, { end: idx + 1 });
       } else {
-        coords = track.points.map((p) => [p.lon, p.lat]);
+        data = buildTrailGeoJSON(track.points);
       }
 
-      src.setData({
-        type: 'FeatureCollection',
-        features: [
-          {
-            type: 'Feature',
-            properties: {},
-            geometry: { type: 'LineString', coordinates: coords },
-          },
-        ],
-      });
+      src.setData(data);
     };
 
     if (m.isStyleLoaded()) apply();
     else m.once('idle', apply);
-  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, flythrough.flyDirection, flythrough.showSummary, outroMode, outroDrawIndex, gpxData]);
+  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, flythrough.flyDirection, flythrough.showSummary, outroMode, outroDrawIndex, gpxData, buildTrailGeoJSON]);
+
 
   // Slider position marker
   useEffect(() => {
@@ -2227,6 +2250,26 @@ export const TrailMap: React.FC<TrailMapProps> = ({
               </span>
             </div>
           )}
+
+          {multiStage && (
+            <div className="flex items-center gap-3">
+              <Play className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+              <span className="text-xs font-medium text-muted-foreground w-20">Pauza etap</span>
+              <Slider
+                value={[flythrough.stageOrbitSec]}
+                onValueChange={(value) => flythrough.setStageOrbitSec(value[0])}
+                min={0}
+                max={20}
+                step={1}
+                className="flex-1"
+              />
+              <span className="text-xs text-muted-foreground w-12 text-right">
+                {flythrough.stageOrbitSec} s
+              </span>
+            </div>
+          )}
+
+
 
           {gpxData && (
             <div className="flex items-center gap-3">
