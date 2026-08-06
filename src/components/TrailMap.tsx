@@ -697,7 +697,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         type: 'line',
         source: 'trail',
         layout: { 'line-join': 'round', 'line-cap': 'round' },
-        paint: { 'line-color': trailColor, 'line-width': trailWidth * 2, 'line-opacity': 0.3, 'line-blur': 2 },
+        paint: { 'line-color': lineColorExpr, 'line-width': trailWidth * 2, 'line-opacity': 0.3, 'line-blur': 2 },
       });
 
       map.current.addLayer({
@@ -706,7 +706,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         source: 'trail',
         layout: { 'line-join': 'round', 'line-cap': trailStyle === 'dotted' ? 'round' : 'round' },
         paint: {
-          'line-color': trailColor,
+          'line-color': lineColorExpr,
+
           'line-width': trailWidth,
           'line-opacity': 0.9,
           ...(dash ? { 'line-dasharray': dash } : {}),
