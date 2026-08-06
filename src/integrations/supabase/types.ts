@@ -59,12 +59,14 @@ export type Database = {
         Row: {
           cached_pois: Json | null
           castle_limit: number
+          color: string | null
           created_at: string
           deselected_poi_keys: string[]
           gpx_data: Json
           id: string
           is_public: boolean
           name: string
+          order_index: number
           peak_limit: number
           peak_selection_mode: string
           place_limit: number
@@ -76,6 +78,7 @@ export type Database = {
           selected_peak_keys: Json
           selected_place_keys: Json
           slug: string
+          trip_id: string | null
           updated_at: string
           user_id: string
           viewpoint_limit: number
@@ -83,12 +86,14 @@ export type Database = {
         Insert: {
           cached_pois?: Json | null
           castle_limit?: number
+          color?: string | null
           created_at?: string
           deselected_poi_keys?: string[]
           gpx_data: Json
           id?: string
           is_public?: boolean
           name: string
+          order_index?: number
           peak_limit?: number
           peak_selection_mode?: string
           place_limit?: number
@@ -100,6 +105,7 @@ export type Database = {
           selected_peak_keys?: Json
           selected_place_keys?: Json
           slug: string
+          trip_id?: string | null
           updated_at?: string
           user_id: string
           viewpoint_limit?: number
@@ -107,12 +113,14 @@ export type Database = {
         Update: {
           cached_pois?: Json | null
           castle_limit?: number
+          color?: string | null
           created_at?: string
           deselected_poi_keys?: string[]
           gpx_data?: Json
           id?: string
           is_public?: boolean
           name?: string
+          order_index?: number
           peak_limit?: number
           peak_selection_mode?: string
           place_limit?: number
@@ -124,9 +132,48 @@ export type Database = {
           selected_peak_keys?: Json
           selected_place_keys?: Json
           slug?: string
+          trip_id?: string | null
           updated_at?: string
           user_id?: string
           viewpoint_limit?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trails_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trips: {
+        Row: {
+          created_at: string
+          id: string
+          is_public: boolean
+          name: string
+          slug: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_public?: boolean
+          name: string
+          slug: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_public?: boolean
+          name?: string
+          slug?: string
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
