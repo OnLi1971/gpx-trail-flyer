@@ -763,36 +763,25 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       const inOutroDraw = flythrough.showSummary && outroDrawIndex != null;
 
-      let coords: number[][];
+      let data: GeoJSON.FeatureCollection;
       if (inOutroDraw) {
-        const endIdx = Math.max(0, Math.min(track.points.length, outroDrawIndex!));
-        coords = track.points.slice(0, endIdx).map((p) => [p.lon, p.lat]);
+        data = buildTrailGeoJSON(track.points, { end: Math.max(0, Math.min(track.points.length, outroDrawIndex!)) });
       } else if (showBehind) {
         const idx = flythrough.flyingIndex ?? 0;
-        if (flythrough.flyDirection === 'reverse') {
-          coords = track.points.slice(idx).map((p) => [p.lon, p.lat]);
-        } else {
-          coords = track.points.slice(0, idx + 1).map((p) => [p.lon, p.lat]);
-        }
+        data = flythrough.flyDirection === 'reverse'
+          ? buildTrailGeoJSON(track.points, { start: idx })
+          : buildTrailGeoJSON(track.points, { end: idx + 1 });
       } else {
-        coords = track.points.map((p) => [p.lon, p.lat]);
+        data = buildTrailGeoJSON(track.points);
       }
 
-      src.setData({
-        type: 'FeatureCollection',
-        features: [
-          {
-            type: 'Feature',
-            properties: {},
-            geometry: { type: 'LineString', coordinates: coords },
-          },
-        ],
-      });
+      src.setData(data);
     };
 
     if (m.isStyleLoaded()) apply();
     else m.once('idle', apply);
-  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, flythrough.flyDirection, flythrough.showSummary, outroMode, outroDrawIndex, gpxData]);
+  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, flythrough.flyDirection, flythrough.showSummary, outroMode, outroDrawIndex, gpxData, buildTrailGeoJSON]);
+
 
   // Slider position marker
   useEffect(() => {
