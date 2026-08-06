@@ -41,12 +41,21 @@ export default function SharedTrail() {
   const [fromKm, setFromKm] = useState(0);
   const [toKm, setToKm] = useState(0);
 
+  const [stageSegments, setStageSegments] = useState<any[]>([]);
+
+  const isTrimmed = useMemo(() => {
+    if (!gpxData) return false;
+    const total = totalDistanceKm(gpxData);
+    return fromKm > 0 || toKm < total - 0.05;
+  }, [gpxData, fromKm, toKm]);
+
   const displayGpx = useMemo(() => {
     if (!gpxData) return null;
     const total = totalDistanceKm(gpxData);
     if (fromKm <= 0 && toKm >= total - 0.05) return gpxData;
     return trimGpxByKm(gpxData, fromKm, toKm);
   }, [gpxData, fromKm, toKm]);
+
 
   const isOwner = !!user && !!ownerId && user.id === ownerId;
 
