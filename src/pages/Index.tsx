@@ -248,9 +248,11 @@ const Index = () => {
                   onAnimationSettingsChange={setAnimationSettings}
                 />
 
-                {originalGpxData && (
+                <StageList stages={stages} onChange={handleStagesChange} />
+
+                {singleStage && (
                   <TrailTrimControls
-                    gpxData={originalGpxData}
+                    gpxData={singleStage.gpx}
                     fromKm={trimFrom}
                     toKm={trimTo}
                     onChange={(f, t) => { setTrimFrom(f); setTrimTo(t); setCurrentPosition(0); setIsPlaying(false); }}
@@ -259,6 +261,7 @@ const Index = () => {
 
                 <TrailMap
                   gpxData={gpxData}
+                  stageSegments={stageSegments}
                   currentPosition={currentPosition}
                   animationSettings={animationSettings}
                 />
@@ -268,7 +271,7 @@ const Index = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Nahrát nový GPX soubor</CardTitle>
+                <CardTitle className="text-lg">Přidat další GPX soubor (etapu)</CardTitle>
               </CardHeader>
               <CardContent>
                 <FileUpload onFileUpload={handleFileUpload} />
@@ -283,9 +286,11 @@ const Index = () => {
           open={saveOpen}
           onOpenChange={setSaveOpen}
           gpxData={gpxData}
+          stages={effectiveStages}
           defaultName={gpxFilename}
         />
       )}
+
     </div>
   );
 };
