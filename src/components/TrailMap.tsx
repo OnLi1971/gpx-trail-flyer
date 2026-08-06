@@ -234,6 +234,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   // Progres "překreslení" trasy v závěrečném pohledu (počet bodů k zobrazení; null = plná trasa)
   const [outroDrawIndex, setOutroDrawIndex] = useState<number | null>(null);
 
+  const multiStage = stageSegments.length > 1;
+  const stageBoundaries = useMemo(
+    () => (multiStage ? stageSegments.slice(0, -1).map((s) => s.endIdx) : []),
+    [multiStage, stageSegments]
+  );
+
   const flythrough = useFlythrough(map, gpxData, (reason) => {
     // Po dokončení průletu NEzapínáme outroMode — POI zůstanou viditelné během orbit pohledu
     // Pokud nahráváme, zastav nahrávání a otevři dialog s náhledem
@@ -242,7 +248,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       recorder.stopRecording();
       setTimeout(() => setVideoDialogOpen(true), 300);
     }
-  });
+  }, stageBoundaries);
+
 
   // Zruš outro při novém startu průletu
   useEffect(() => {
