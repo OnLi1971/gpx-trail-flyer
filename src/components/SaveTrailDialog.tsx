@@ -51,7 +51,10 @@ export const SaveTrailDialog = ({ open, onOpenChange, gpxData, stages = [], defa
           user_id: user.id,
           name: name.trim(),
           slug,
-          gpx_data: gpxData as any,
+          gpx_data: (stages.length > 1
+            ? { ...gpxData, stageSegments: mergeStages(stages).segments }
+            : gpxData) as any,
+
           is_public: isPublic,
         })
         .select()
