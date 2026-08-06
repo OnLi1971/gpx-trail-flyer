@@ -637,25 +637,46 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     if (m.isStyleLoaded()) apply();
     else m.once('load', apply);
   }, [basemap]);
+  // Sestaví GeoJSON trasy — při více etapách jedna linie na etapu (vlastní barva)
+  const buildTrailGeoJSON = useCallback(
+    (points: { lat: number; lon: number }[], opts: { start?: number | null; end?: number | null } = {}): GeoJSON.FeatureCollection => {
+      const segs = multiStage
+        ? stageSegments
+        : [{ startIdx: 0, endIdx: points.length, color: trailColor, name: '' }];
+      const features: GeoJSON.Feature[] = [];
+      for (const s of segs) {
+        let a = s.startIdx;
+        let b = Math.min(s.endIdx, points.length);
+        if (opts.end != null) b = Math.min(b, opts.end);
+        if (opts.start != null) a = Math.max(a, opts.start);
+        if (b - a < 2) continue;
+        features.push({
+          type: 'Feature',
+          properties: { color: s.color },
+          geometry: {
+            type: 'LineString',
+            coordinates: points.slice(a, b).map((p) => [p.lon, p.lat]),
+          },
+        });
+      }
+      return { type: 'FeatureCollection', features };
+    },
+    [multiStage, stageSegments, trailColor]
+  );
+
+  const lineColorExpr = useMemo<any>(
+    () => (multiStage ? ['coalesce', ['get', 'color'], trailColor] : trailColor),
+    [multiStage, trailColor]
+  );
+
   useEffect(() => {
     if (!map.current || !gpxData || gpxData.tracks.length === 0) return;
 
     const track = gpxData.tracks[0];
     if (track.points.length === 0) return;
 
-    const geojson: GeoJSON.FeatureCollection = {
-      type: 'FeatureCollection',
-      features: [
-        {
-          type: 'Feature',
-          properties: {},
-          geometry: {
-            type: 'LineString',
-            coordinates: track.points.map((point) => [point.lon, point.lat]),
-          },
-        },
-      ],
-    };
+    const geojson = buildTrailGeoJSON(track.points);
+
 
     const ensureTrailLayers = () => {
       if (!map.current) return;
