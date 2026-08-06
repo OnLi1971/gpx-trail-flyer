@@ -573,5 +573,8 @@ export function useFlythrough(
     setOutroDurationSec,
     outroRotate,
     setOutroRotate,
+    stageOrbitSec,
+    setStageOrbitSec,
+
   };
 }
