@@ -56,6 +56,8 @@ interface TrailMapProps {
   onFlyStateChange?: (state: { isFlying: boolean; flyDurationSec: number; flyStartTimestamp: number | null }) => void;
   /** ID uložené trasy (Supabase) — pokud je, povolí funkci fotek */
   trailId?: string | null;
+  /** Rozdělení sloučené trasy na etapy (více GPX za sebou, každá svou barvou) */
+  stageSegments?: import('@/utils/stages').StageSegment[];
 }
 
 export const TrailMap: React.FC<TrailMapProps> = ({
@@ -69,7 +71,9 @@ export const TrailMap: React.FC<TrailMapProps> = ({
   onPoisFetched,
   onFlyStateChange,
   trailId = null,
+  stageSegments = [],
 }) => {
+
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<Map | null>(null);
   const markerRef = useRef<Marker | null>(null);
