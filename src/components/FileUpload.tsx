@@ -8,20 +8,21 @@ import { cn } from '@/lib/utils';
 interface FileUploadProps {
   onFileUpload: (content: string, filename: string) => void;
   className?: string;
+  multiple?: boolean;
 }
 
-export const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, className }) => {
+export const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, className, multiple = true }) => {
   const onDrop = useCallback((acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (file) {
+    const files = multiple ? acceptedFiles : acceptedFiles.slice(0, 1);
+    files.forEach((file) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const content = e.target?.result as string;
         onFileUpload(content, file.name);
       };
       reader.readAsText(file);
-    }
-  }, [onFileUpload]);
+    });
+  }, [onFileUpload, multiple]);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -30,8 +31,9 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, className 
       'text/xml': ['.gpx'],
       'application/xml': ['.gpx']
     },
-    multiple: false
+    multiple
   });
+
 
   return (
     <Card 
