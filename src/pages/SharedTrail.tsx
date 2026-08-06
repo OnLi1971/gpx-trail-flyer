@@ -285,6 +285,8 @@ export default function SharedTrail() {
 
         <TrailMap
           gpxData={displayGpx!}
+          stageSegments={isTrimmed ? [] : stageSegments}
+
           currentPosition={currentPosition}
           animationSettings={animationSettings}
           readOnly={!isOwner}
