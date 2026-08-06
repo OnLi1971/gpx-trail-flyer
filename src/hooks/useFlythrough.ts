@@ -254,7 +254,12 @@ export function useFlythrough(
       clearTimeout(flyStepTimeoutRef.current);
       flyStepTimeoutRef.current = null;
     }
+    if (orbitAnimationRef.current) {
+      cancelAnimationFrame(orbitAnimationRef.current);
+      orbitAnimationRef.current = null;
+    }
     setIsFlying(false);
+
     setFlyingIndex(null);
     setCurrentGrade(null);
     setFlyStartTimestamp(null);
