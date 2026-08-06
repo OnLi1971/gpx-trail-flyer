@@ -67,10 +67,21 @@ function calculateGrade(start: { lat: number; lon: number; ele?: number }, end: 
 export function useFlythrough(
   map: MutableRefObject<Map | null>,
   gpxData: GPXData | null,
-  onComplete?: (reason: 'finished' | 'stopped') => void
+  onComplete?: (reason: 'finished' | 'stopped') => void,
+  /** Indexy bodů, kde končí jedna etapa a začíná další (pro orbit pauzu mezi trasami) */
+  stageBoundaries: number[] = []
 ) {
   const onCompleteRef = useRef(onComplete);
   onCompleteRef.current = onComplete;
+  const stageBoundariesRef = useRef<number[]>(stageBoundaries);
+  stageBoundariesRef.current = stageBoundaries;
+  const [stageOrbitSec, setStageOrbitSecState] = useState(6);
+  const stageOrbitSecRef = useRef(6);
+  const setStageOrbitSec = useCallback((v: number) => {
+    setStageOrbitSecState(v);
+    stageOrbitSecRef.current = v;
+  }, []);
+
   const [isFlying, setIsFlying] = useState(false);
   const [flySpeed, setFlySpeedState] = useState(93);
   const [flyRotation, setFlyRotationState] = useState(9);
