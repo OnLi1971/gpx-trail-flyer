@@ -310,7 +310,16 @@ const Index = () => {
             </Card>
 
           </div>
-        )}
+      )}
+
+      <PickSavedTrailsDialog
+        open={pickOpen}
+        onOpenChange={setPickOpen}
+        onPick={handlePickStages}
+        startIndex={stages.length}
+      />
+
+
       </div>
 
       {gpxData && (
