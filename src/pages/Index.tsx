@@ -105,6 +105,21 @@ const Index = () => {
     }
   }, []);
 
+  const handlePickStages = useCallback((picked: Stage[]) => {
+    setStages((prev) => {
+      const next = [...prev, ...picked];
+      if (next.length === 1) {
+        setTrimFrom(0);
+        setTrimTo(totalDistanceKm(next[0].gpx));
+        setGpxFilename(next[0].name);
+      }
+      return next;
+    });
+    setCurrentPosition(0);
+    setIsPlaying(false);
+  }, []);
+
+
 
 
 
