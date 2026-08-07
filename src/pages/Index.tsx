@@ -8,6 +8,7 @@ import { TrailTrimControls } from '@/components/TrailTrimControls';
 import { StageList } from '@/components/StageList';
 import { AppHeader } from '@/components/AppHeader';
 import { SaveTrailDialog } from '@/components/SaveTrailDialog';
+import { PickSavedTrailsDialog } from '@/components/PickSavedTrailsDialog';
 import { defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
 import { GPXParser } from '@/utils/gpxParser';
 import { GPXData } from '@/types/gpx';
@@ -17,7 +18,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Mountain, Route, Timer, Loader2, LogIn, Upload, Sliders, Play, Video } from 'lucide-react';
+import { Mountain, Route, Timer, Loader2, LogIn, Upload, Sliders, Play, Video, Layers } from 'lucide-react';
 
 const ANIMATION_DURATION = 10000;
 
@@ -31,6 +32,7 @@ const Index = () => {
   const [currentPosition, setCurrentPosition] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
+  const [pickOpen, setPickOpen] = useState(false);
   const [animationSettings, setAnimationSettings] = useState<AnimationSettings>(defaultAnimationSettings);
   const [trimFrom, setTrimFrom] = useState(0);
   const [trimTo, setTrimTo] = useState(0);
@@ -102,6 +104,21 @@ const Index = () => {
       setTrimTo(totalDistanceKm(next[0].gpx));
     }
   }, []);
+
+  const handlePickStages = useCallback((picked: Stage[]) => {
+    setStages((prev) => {
+      const next = [...prev, ...picked];
+      if (next.length === 1) {
+        setTrimFrom(0);
+        setTrimTo(totalDistanceKm(next[0].gpx));
+        setGpxFilename(next[0].name);
+      }
+      return next;
+    });
+    setCurrentPosition(0);
+    setIsPlaying(false);
+  }, []);
+
 
 
 
@@ -233,7 +250,15 @@ const Index = () => {
             </Card>
 
             <FileUpload onFileUpload={handleFileUpload} />
+
+            {user && (
+              <Button variant="outline" className="w-full gap-2" onClick={() => setPickOpen(true)}>
+                <Layers className="w-4 h-4" />
+                Vybrat z uložených tras
+              </Button>
+            )}
           </div>
+
         ) : (
           <div className="space-y-6">
             <div className="space-y-6">
@@ -271,14 +296,30 @@ const Index = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Přidat další GPX soubor (etapu)</CardTitle>
+                <CardTitle className="text-lg">Přidat další etapu</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
                 <FileUpload onFileUpload={handleFileUpload} />
+                {user && (
+                  <Button variant="outline" className="w-full gap-2" onClick={() => setPickOpen(true)}>
+                    <Layers className="w-4 h-4" />
+                    Vybrat z uložených tras
+                  </Button>
+                )}
               </CardContent>
             </Card>
+
           </div>
-        )}
+      )}
+
+      <PickSavedTrailsDialog
+        open={pickOpen}
+        onOpenChange={setPickOpen}
+        onPick={handlePickStages}
+        startIndex={stages.length}
+      />
+
+
       </div>
 
       {gpxData && (
