@@ -288,12 +288,19 @@ const Index = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Přidat další GPX soubor (etapu)</CardTitle>
+                <CardTitle className="text-lg">Přidat další etapu</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-3">
                 <FileUpload onFileUpload={handleFileUpload} />
+                {user && (
+                  <Button variant="outline" className="w-full gap-2" onClick={() => setPickOpen(true)}>
+                    <Layers className="w-4 h-4" />
+                    Vybrat z uložených tras
+                  </Button>
+                )}
               </CardContent>
             </Card>
+
           </div>
         )}
       </div>
