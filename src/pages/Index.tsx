@@ -8,6 +8,7 @@ import { TrailTrimControls } from '@/components/TrailTrimControls';
 import { StageList } from '@/components/StageList';
 import { AppHeader } from '@/components/AppHeader';
 import { SaveTrailDialog } from '@/components/SaveTrailDialog';
+import { PickSavedTrailsDialog } from '@/components/PickSavedTrailsDialog';
 import { defaultAnimationSettings, AnimationSettings } from '@/types/gpx';
 import { GPXParser } from '@/utils/gpxParser';
 import { GPXData } from '@/types/gpx';
