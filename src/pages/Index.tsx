@@ -32,6 +32,7 @@ const Index = () => {
   const [currentPosition, setCurrentPosition] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
+  const [pickOpen, setPickOpen] = useState(false);
   const [animationSettings, setAnimationSettings] = useState<AnimationSettings>(defaultAnimationSettings);
   const [trimFrom, setTrimFrom] = useState(0);
   const [trimTo, setTrimTo] = useState(0);
