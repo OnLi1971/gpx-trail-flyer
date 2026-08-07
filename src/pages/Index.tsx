@@ -250,7 +250,15 @@ const Index = () => {
             </Card>
 
             <FileUpload onFileUpload={handleFileUpload} />
+
+            {user && (
+              <Button variant="outline" className="w-full gap-2" onClick={() => setPickOpen(true)}>
+                <Layers className="w-4 h-4" />
+                Vybrat z uložených tras
+              </Button>
+            )}
           </div>
+
         ) : (
           <div className="space-y-6">
             <div className="space-y-6">
