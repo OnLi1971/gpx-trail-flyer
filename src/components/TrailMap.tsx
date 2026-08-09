@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { fetchPeaksAndPlaces, fetchWaterwaysAlongTrack, filterPOIsNearTrack } from '@/utils/overpassApi';
 import { fetchSurfaceStats, StatBucket } from '@/utils/trailStats';
+import { prefetchTilesForTrack } from '@/utils/prefetchTiles';
+
 import { useFlythrough } from '@/hooks/useFlythrough';
 import { useStageShow } from '@/hooks/useStageShow';
 import { useElevationData } from '@/hooks/useElevationData';
@@ -424,7 +426,41 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
 
 
-  const handleStartRecording = useCallback(() => {
+  // ---- Přednačtení dlaždic před startem průletu ----
+  const [prefetchPct, setPrefetchPct] = useState<number | null>(null);
+  const prefetchAbortRef = useRef<AbortController | null>(null);
+
+  const startFlythroughWithPrefetch = useCallback(async () => {
+    const points = gpxData?.tracks?.[0]?.points ?? [];
+    if (points.length === 0) {
+      flythrough.startFlythrough();
+      return;
+    }
+    prefetchAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    prefetchAbortRef.current = ctrl;
+    setPrefetchPct(0);
+    try {
+      await prefetchTilesForTrack(points, {
+        zoom: flythrough.flyZoom,
+        basemap,
+        signal: ctrl.signal,
+        onProgress: (done, total) => {
+          if (total > 0) setPrefetchPct(Math.round((done / total) * 100));
+        },
+      });
+    } catch {
+      /* prefetch je jen optimalizace — chyby ignorujeme */
+    }
+    setPrefetchPct(null);
+    if (ctrl.signal.aborted) return;
+    flythrough.startFlythrough();
+  }, [gpxData, flythrough, basemap]);
+
+  useEffect(() => () => prefetchAbortRef.current?.abort(), []);
+
+  const handleStartRecording = useCallback(async () => {
+
     if (!map.current) return;
     if (!recorder.isSupported) {
       toast.error('Tvůj prohlížeč nepodporuje nahrávání videa. Zkus Chrome, Firefox nebo Edge na desktopu.');
@@ -434,6 +470,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       toast.error('Nejdřív zastav probíhající průlet.');
       return;
     }
+    // Nejdřív přednačíst dlaždice, ať se do videa nedostane postupné dokreslování
+    const pts = gpxData?.tracks?.[0]?.points ?? [];
+    if (pts.length > 0) {
+      setPrefetchPct(0);
+      try {
+        await prefetchTilesForTrack(pts, {
+          zoom: flythrough.flyZoom,
+          basemap,
+          onProgress: (done, total) => total > 0 && setPrefetchPct(Math.round((done / total) * 100)),
+        });
+      } catch { /* ignore */ }
+      setPrefetchPct(null);
+    }
     const canvas = map.current.getCanvas();
     const overlay = mapContainer.current;
     if (!overlay) return;
@@ -442,11 +491,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       toast.error('Nahrávání se nepodařilo spustit.');
       return;
     }
+
     isRecordingRef.current = true;
     toast.info('Nahrávám průlet — nepřepínej záložku!', { duration: 4000 });
     // krátká prodleva, ať recorder dostane první frame
     setTimeout(() => flythrough.startFlythrough(), 200);
-  }, [recorder, flythrough]);
+  }, [recorder, flythrough, gpxData, basemap]);
 
   const handleStopRecording = useCallback(() => {
     isRecordingRef.current = false;
@@ -1702,6 +1752,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           />
 
 
+          {/* Přednačítání dlaždic */}
+          {prefetchPct !== null && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/60 backdrop-blur-sm no-video-capture">
+              <div className="flex flex-col items-center gap-3 rounded-lg bg-card/90 px-6 py-4 shadow-lg">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <div className="text-sm font-medium">Přednačítám mapové dlaždice… {prefetchPct}%</div>
+                <div className="h-1.5 w-48 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full bg-primary transition-all" style={{ width: `${prefetchPct}%` }} />
+                </div>
+              </div>
+            </div>
+          )}
+
+
           {/* Presentation-mode controls: start flythrough + record */}
           {presentationMode && gpxData && (
             <div className={cn('absolute top-2 left-2 z-20 flex gap-2 no-video-capture', recorder.isRecording && 'hidden')}>
@@ -1709,7 +1773,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 size="sm"
                 variant="secondary"
                 className="gap-2 shadow-md"
-                onClick={() => flythrough.isFlying ? flythrough.stopFlythrough('stopped') : flythrough.startFlythrough()}
+                onClick={() => flythrough.isFlying ? flythrough.stopFlythrough('stopped') : startFlythroughWithPrefetch()}
               >
                 {flythrough.isFlying ? (
                   <><Square className="w-4 h-4" /> Zastavit průlet</>
@@ -2813,7 +2877,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 <Button
                   size="sm"
                   variant={flythrough.isFlying ? 'destructive' : 'default'}
-                  onClick={() => flythrough.isFlying ? flythrough.stopFlythrough() : flythrough.startFlythrough()}
+                  onClick={() => flythrough.isFlying ? flythrough.stopFlythrough() : startFlythroughWithPrefetch()}
                   className="gap-2"
                 >
                   {flythrough.isFlying ? (
