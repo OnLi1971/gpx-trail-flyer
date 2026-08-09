@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { fetchPeaksAndPlaces, fetchWaterwaysAlongTrack, filterPOIsNearTrack } from '@/utils/overpassApi';
 import { fetchSurfaceStats, StatBucket } from '@/utils/trailStats';
+import { prefetchTilesForTrack } from '@/utils/prefetchTiles';
+
 import { useFlythrough } from '@/hooks/useFlythrough';
 import { useStageShow } from '@/hooks/useStageShow';
 import { useElevationData } from '@/hooks/useElevationData';
