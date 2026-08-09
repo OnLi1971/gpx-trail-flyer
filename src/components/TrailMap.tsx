@@ -1752,6 +1752,20 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           />
 
 
+          {/* Přednačítání dlaždic */}
+          {prefetchPct !== null && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/60 backdrop-blur-sm no-video-capture">
+              <div className="flex flex-col items-center gap-3 rounded-lg bg-card/90 px-6 py-4 shadow-lg">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                <div className="text-sm font-medium">Přednačítám mapové dlaždice… {prefetchPct}%</div>
+                <div className="h-1.5 w-48 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full bg-primary transition-all" style={{ width: `${prefetchPct}%` }} />
+                </div>
+              </div>
+            </div>
+          )}
+
+
           {/* Presentation-mode controls: start flythrough + record */}
           {presentationMode && gpxData && (
             <div className={cn('absolute top-2 left-2 z-20 flex gap-2 no-video-capture', recorder.isRecording && 'hidden')}>
