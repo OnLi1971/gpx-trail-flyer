@@ -240,6 +240,8 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     [multiStage, stageSegments]
   );
 
+  const stageShow = useStageShow(map, gpxData, stageSegments);
+
   const flythrough = useFlythrough(map, gpxData, (reason) => {
     // Po dokončení průletu NEzapínáme outroMode — POI zůstanou viditelné během orbit pohledu
     // Pokud nahráváme, zastav nahrávání a otevři dialog s náhledem
