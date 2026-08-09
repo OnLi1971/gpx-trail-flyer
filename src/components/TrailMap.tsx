@@ -586,6 +586,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             minzoom: 0,
             maxzoom: 19,
             layout: { visibility: 'none' },
+            paint: { 'raster-fade-duration': 0 },
           },
           {
             id: 'cyclosm-layer',
