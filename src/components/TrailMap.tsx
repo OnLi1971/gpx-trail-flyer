@@ -459,7 +459,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
   useEffect(() => () => prefetchAbortRef.current?.abort(), []);
 
-  const handleStartRecording = useCallback(() => {
+  const handleStartRecording = useCallback(async () => {
 
     if (!map.current) return;
     if (!recorder.isSupported) {
@@ -470,6 +470,19 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       toast.error('Nejdřív zastav probíhající průlet.');
       return;
     }
+    // Nejdřív přednačíst dlaždice, ať se do videa nedostane postupné dokreslování
+    const pts = gpxData?.tracks?.[0]?.points ?? [];
+    if (pts.length > 0) {
+      setPrefetchPct(0);
+      try {
+        await prefetchTilesForTrack(pts, {
+          zoom: flythrough.flyZoom,
+          basemap,
+          onProgress: (done, total) => total > 0 && setPrefetchPct(Math.round((done / total) * 100)),
+        });
+      } catch { /* ignore */ }
+      setPrefetchPct(null);
+    }
     const canvas = map.current.getCanvas();
     const overlay = mapContainer.current;
     if (!overlay) return;
@@ -478,6 +491,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       toast.error('Nahrávání se nepodařilo spustit.');
       return;
     }
+
     isRecordingRef.current = true;
     toast.info('Nahrávám průlet — nepřepínej záložku!', { duration: 4000 });
     // krátká prodleva, ať recorder dostane první frame
