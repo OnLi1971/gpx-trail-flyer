@@ -424,7 +424,41 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
 
 
+  // ---- Přednačtení dlaždic před startem průletu ----
+  const [prefetchPct, setPrefetchPct] = useState<number | null>(null);
+  const prefetchAbortRef = useRef<AbortController | null>(null);
+
+  const startFlythroughWithPrefetch = useCallback(async () => {
+    const points = gpxData?.tracks?.[0]?.points ?? [];
+    if (points.length === 0) {
+      flythrough.startFlythrough();
+      return;
+    }
+    prefetchAbortRef.current?.abort();
+    const ctrl = new AbortController();
+    prefetchAbortRef.current = ctrl;
+    setPrefetchPct(0);
+    try {
+      await prefetchTilesForTrack(points, {
+        zoom: flythrough.flyZoom,
+        basemap,
+        signal: ctrl.signal,
+        onProgress: (done, total) => {
+          if (total > 0) setPrefetchPct(Math.round((done / total) * 100));
+        },
+      });
+    } catch {
+      /* prefetch je jen optimalizace — chyby ignorujeme */
+    }
+    setPrefetchPct(null);
+    if (ctrl.signal.aborted) return;
+    flythrough.startFlythrough();
+  }, [gpxData, flythrough, basemap]);
+
+  useEffect(() => () => prefetchAbortRef.current?.abort(), []);
+
   const handleStartRecording = useCallback(() => {
+
     if (!map.current) return;
     if (!recorder.isSupported) {
       toast.error('Tvůj prohlížeč nepodporuje nahrávání videa. Zkus Chrome, Firefox nebo Edge na desktopu.');
