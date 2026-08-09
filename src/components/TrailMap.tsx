@@ -496,7 +496,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     toast.info('Nahrávám průlet — nepřepínej záložku!', { duration: 4000 });
     // krátká prodleva, ať recorder dostane první frame
     setTimeout(() => flythrough.startFlythrough(), 200);
-  }, [recorder, flythrough]);
+  }, [recorder, flythrough, gpxData, basemap]);
 
   const handleStopRecording = useCallback(() => {
     isRecordingRef.current = false;
