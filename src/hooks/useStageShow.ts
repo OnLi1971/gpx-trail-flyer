@@ -100,7 +100,7 @@ export function useStageShow(
       timeoutRef.current = setTimeout(() => {
         if (cancelledRef.current) return;
         const t0 = performance.now();
-        const durMs = Math.max(1000, stageDrawSec * 1000);
+        const durMs = Math.max(1000, (seg.durationSec ?? stageDrawSec) * 1000);
         const totalDeg = showOrbitDeg;
 
         const tick = (now: number) => {

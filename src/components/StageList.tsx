@@ -54,6 +54,25 @@ export const StageList: React.FC<Props> = ({ stages, onChange }) => {
             <span className="text-xs text-muted-foreground whitespace-nowrap">
               {totalDistanceKm(stage.gpx).toFixed(1)} km
             </span>
+            <div className="flex items-center gap-1">
+              <Input
+                type="number"
+                min={1}
+                max={120}
+                step={1}
+                value={stage.durationSec ?? ''}
+                placeholder="10"
+                onChange={(e) =>
+                  update(stage.id, {
+                    durationSec: e.target.value === '' ? undefined : Math.max(1, Number(e.target.value)),
+                  })
+                }
+                className="h-8 w-16"
+                aria-label="Čas vykreslení etapy v sekundách"
+              />
+              <span className="text-xs text-muted-foreground">s</span>
+            </div>
+
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => move(i, -1)} disabled={i === 0}>
               <ArrowUp className="w-3.5 h-3.5" />
             </Button>
@@ -66,8 +85,9 @@ export const StageList: React.FC<Props> = ({ stages, onChange }) => {
           </div>
         ))}
         <p className="text-xs text-muted-foreground">
-          Trasy se přehrají v tomto pořadí, každá svou barvou. Mezi etapami se kamera zastaví a otočí dokola.
+          Trasy se přehrají v tomto pořadí, každá svou barvou. Pole „s“ určuje čas vykreslení dané etapy (prázdné = výchozí ze slideru).
         </p>
+
       </CardContent>
     </Card>
   );
