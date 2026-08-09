@@ -2863,7 +2863,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
                 <Button
                   size="sm"
                   variant={flythrough.isFlying ? 'destructive' : 'default'}
-                  onClick={() => flythrough.isFlying ? flythrough.stopFlythrough() : flythrough.startFlythrough()}
+                  onClick={() => flythrough.isFlying ? flythrough.stopFlythrough() : startFlythroughWithPrefetch()}
                   className="gap-2"
                 >
                   {flythrough.isFlying ? (
