@@ -16,6 +16,7 @@ export interface Stage {
   gpx: GPXData;
   name: string;
   color: string;
+  durationSec?: number;
 }
 
 export interface StageSegment {
@@ -23,6 +24,7 @@ export interface StageSegment {
   endIdx: number; // exclusive
   color: string;
   name: string;
+  durationSec?: number;
 }
 
 export function stageColorAt(index: number) {
@@ -40,7 +42,7 @@ export function mergeStages(stages: Stage[]): { gpx: GPXData | null; segments: S
     const t = valid[0].gpx.tracks[0];
     return {
       gpx: valid[0].gpx,
-      segments: [{ startIdx: 0, endIdx: t.points.length, color: valid[0].color, name: valid[0].name }],
+      segments: [{ startIdx: 0, endIdx: t.points.length, color: valid[0].color, name: valid[0].name, durationSec: valid[0].durationSec }],
     };
   }
 
@@ -64,6 +66,7 @@ export function mergeStages(stages: Stage[]): { gpx: GPXData | null; segments: S
       endIdx: merged.points.length,
       color: stage.color,
       name: stage.name,
+      durationSec: stage.durationSec,
     });
     merged.totalDistance += track.totalDistance || 0;
     merged.elevationGain += track.elevationGain || 0;
