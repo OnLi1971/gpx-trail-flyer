@@ -2275,6 +2275,91 @@ export const TrailMap: React.FC<TrailMapProps> = ({
             </div>
           )}
 
+          {/* Vykreslení etap — postupná animace s pomalou rotací kamery */}
+          {gpxData && (
+            <div className="space-y-2 rounded-lg border border-border/60 p-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold">Vykreslení etap</span>
+                <Button
+                  size="sm"
+                  variant={stageShow.isShowPlaying ? 'destructive' : 'secondary'}
+                  className="gap-2 h-7"
+                  onClick={() => stageShow.isShowPlaying ? stageShow.stopStageShow() : stageShow.startStageShow()}
+                >
+                  {stageShow.isShowPlaying ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                  {stageShow.isShowPlaying ? 'Zastavit' : 'Přehrát'}
+                </Button>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground w-24">Čas na etapu</span>
+                <Slider
+                  value={[stageShow.stageDrawSec]}
+                  onValueChange={(v) => stageShow.setStageDrawSec(v[0])}
+                  min={3}
+                  max={30}
+                  step={1}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-12 text-right">{stageShow.stageDrawSec} s</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground w-24">Rotace kamery</span>
+                <Slider
+                  value={[stageShow.showOrbitDeg]}
+                  onValueChange={(v) => stageShow.setShowOrbitDeg(v[0])}
+                  min={0}
+                  max={360}
+                  step={10}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-12 text-right">{stageShow.showOrbitDeg}°</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground w-24">Pauza mezi</span>
+                <Slider
+                  value={[stageShow.stagePauseSec]}
+                  onValueChange={(v) => stageShow.setStagePauseSec(v[0])}
+                  min={0}
+                  max={8}
+                  step={0.5}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-12 text-right">{stageShow.stagePauseSec.toFixed(1)} s</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground w-24">Náklon</span>
+                <Slider
+                  value={[stageShow.showPitch]}
+                  onValueChange={(v) => stageShow.setShowPitch(v[0])}
+                  min={0}
+                  max={75}
+                  step={1}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-12 text-right">{stageShow.showPitch}°</span>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-medium text-muted-foreground w-24">Přiblížení</span>
+                <Slider
+                  value={[stageShow.showPadding]}
+                  onValueChange={(v) => stageShow.setShowPadding(v[0])}
+                  min={20}
+                  max={200}
+                  step={10}
+                  className="flex-1"
+                />
+                <span className="text-xs text-muted-foreground w-12 text-right">{stageShow.showPadding}</span>
+              </div>
+            </div>
+          )}
+
+
+
 
 
           {gpxData && (
