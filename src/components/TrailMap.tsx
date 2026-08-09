@@ -767,9 +767,12 @@ export const TrailMap: React.FC<TrailMapProps> = ({
         trailBehindOnly && flythrough.isFlying && !outroMode && flythrough.flyingIndex != null;
 
       const inOutroDraw = flythrough.showSummary && outroDrawIndex != null;
+      const inStageShow = stageShow.showDrawIndex != null;
 
       let data: GeoJSON.FeatureCollection;
-      if (inOutroDraw) {
+      if (inStageShow) {
+        data = buildTrailGeoJSON(track.points, { end: Math.max(0, Math.min(track.points.length, stageShow.showDrawIndex!)) });
+      } else if (inOutroDraw) {
         data = buildTrailGeoJSON(track.points, { end: Math.max(0, Math.min(track.points.length, outroDrawIndex!)) });
       } else if (showBehind) {
         const idx = flythrough.flyingIndex ?? 0;
@@ -785,7 +788,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
     if (m.isStyleLoaded()) apply();
     else m.once('idle', apply);
-  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, flythrough.flyDirection, flythrough.showSummary, outroMode, outroDrawIndex, gpxData, buildTrailGeoJSON]);
+  }, [trailBehindOnly, flythrough.isFlying, flythrough.flyingIndex, flythrough.flyDirection, flythrough.showSummary, outroMode, outroDrawIndex, stageShow.showDrawIndex, gpxData, buildTrailGeoJSON]);
 
 
   // Slider position marker
