@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import { fetchPeaksAndPlaces, fetchWaterwaysAlongTrack, filterPOIsNearTrack } from '@/utils/overpassApi';
 import { fetchSurfaceStats, StatBucket } from '@/utils/trailStats';
 import { useFlythrough } from '@/hooks/useFlythrough';
+import { useStageShow } from '@/hooks/useStageShow';
 import { useElevationData } from '@/hooks/useElevationData';
 import { useFlythroughRecorder } from '@/hooks/useFlythroughRecorder';
 import { VideoPreviewDialog } from './VideoPreviewDialog';
