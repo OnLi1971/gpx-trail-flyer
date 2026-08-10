@@ -557,6 +557,46 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     flythrough.elevationExaggeration,
   );
 
+  // Výškový profil aktuální etapy během hromadného průletu (Vykreslení etap)
+  const stageElevation = useMemo(() => {
+    const track = gpxData?.tracks[0];
+    const segIdx = stageShow.activeStageIndex;
+    if (!track || !stageShow.isShowPlaying || segIdx == null || !stageSegments[segIdx]) {
+      return null;
+    }
+    const seg = stageSegments[segIdx];
+    const pts = track.points.slice(seg.startIdx, seg.endIdx);
+    if (pts.length < 2) return null;
+
+    const R = 6371;
+    let dist = 0;
+    const data: { distance: number; elevation: number; originalElevation: number; originalIndex: number }[] = [];
+    for (let i = 0; i < pts.length; i++) {
+      if (i > 0) {
+        const a = pts[i - 1], b = pts[i];
+        const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+        const dLon = ((b.lon - a.lon) * Math.PI) / 180 * Math.cos((a.lat * Math.PI) / 180);
+        dist += Math.sqrt(dLat * dLat + dLon * dLon) * R;
+      }
+      if (pts[i].ele === undefined) continue;
+      data.push({
+        distance: dist,
+        elevation: pts[i].ele!,
+        originalElevation: pts[i].ele!,
+        originalIndex: seg.startIdx + i,
+      });
+    }
+    if (data.length < 2) return null;
+
+    const drawIdx = stageShow.showDrawIndex ?? seg.startIdx;
+    let current = data[0];
+    for (const d of data) {
+      if (d.originalIndex <= drawIdx) current = d; else break;
+    }
+    return { data, current, name: seg.name };
+  }, [gpxData, stageSegments, stageShow.activeStageIndex, stageShow.isShowPlaying, stageShow.showDrawIndex]);
+
+
   // Map initialization
   useEffect(() => {
     if (!mapContainer.current) return;
