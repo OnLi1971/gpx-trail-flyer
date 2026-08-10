@@ -557,6 +557,46 @@ export const TrailMap: React.FC<TrailMapProps> = ({
     flythrough.elevationExaggeration,
   );
 
+  // Výškový profil aktuální etapy během hromadného průletu (Vykreslení etap)
+  const stageElevation = useMemo(() => {
+    const track = gpxData?.tracks[0];
+    const segIdx = stageShow.activeStageIndex;
+    if (!track || !stageShow.isShowPlaying || segIdx == null || !stageSegments[segIdx]) {
+      return null;
+    }
+    const seg = stageSegments[segIdx];
+    const pts = track.points.slice(seg.startIdx, seg.endIdx);
+    if (pts.length < 2) return null;
+
+    const R = 6371;
+    let dist = 0;
+    const data: { distance: number; elevation: number; originalElevation: number; originalIndex: number }[] = [];
+    for (let i = 0; i < pts.length; i++) {
+      if (i > 0) {
+        const a = pts[i - 1], b = pts[i];
+        const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+        const dLon = ((b.lon - a.lon) * Math.PI) / 180 * Math.cos((a.lat * Math.PI) / 180);
+        dist += Math.sqrt(dLat * dLat + dLon * dLon) * R;
+      }
+      if (pts[i].ele === undefined) continue;
+      data.push({
+        distance: dist,
+        elevation: pts[i].ele!,
+        originalElevation: pts[i].ele!,
+        originalIndex: seg.startIdx + i,
+      });
+    }
+    if (data.length < 2) return null;
+
+    const drawIdx = stageShow.showDrawIndex ?? seg.startIdx;
+    let current = data[0];
+    for (const d of data) {
+      if (d.originalIndex <= drawIdx) current = d; else break;
+    }
+    return { data, current, name: seg.name };
+  }, [gpxData, stageSegments, stageShow.activeStageIndex, stageShow.isShowPlaying, stageShow.showDrawIndex]);
+
+
   // Map initialization
   useEffect(() => {
     if (!mapContainer.current) return;
@@ -1599,15 +1639,29 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           {gpxData && (
             <div className={`absolute z-10 pointer-events-none ${presentationMode ? 'bottom-4 left-4 right-4' : 'bottom-2 left-2 right-2'}`}>
               <div className="pointer-events-auto">
+                {stageElevation && (
+                  <div className="mb-1 inline-flex items-center gap-1.5 rounded-md bg-background/85 backdrop-blur-md border border-border/50 px-2 py-0.5 text-xs font-medium shadow">
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-sm"
+                      style={{ backgroundColor: stageSegments[stageShow.activeStageIndex!]?.color }}
+                    />
+                    <span className="truncate max-w-[60vw]">{stageElevation.name}</span>
+                  </div>
+                )}
                 <ElevationChart
-                  chartData={elevationData.chartData}
-                  currentChartPoint={flythrough.showSummary ? null : elevationData.currentChartPoint}
+                  chartData={stageElevation ? stageElevation.data : elevationData.chartData}
+                  currentChartPoint={
+                    stageElevation
+                      ? stageElevation.current
+                      : (flythrough.showSummary ? null : elevationData.currentChartPoint)
+                  }
                   variant="overlay"
-                  trailColor={trailColor}
+                  trailColor={stageElevation ? (stageSegments[stageShow.activeStageIndex!]?.color ?? trailColor) : trailColor}
                   trailStyle={trailStyle}
                   trailWidth={trailWidth}
                 />
               </div>
+
             </div>
           )}
 
