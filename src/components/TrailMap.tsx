@@ -1639,15 +1639,29 @@ export const TrailMap: React.FC<TrailMapProps> = ({
           {gpxData && (
             <div className={`absolute z-10 pointer-events-none ${presentationMode ? 'bottom-4 left-4 right-4' : 'bottom-2 left-2 right-2'}`}>
               <div className="pointer-events-auto">
+                {stageElevation && (
+                  <div className="mb-1 inline-flex items-center gap-1.5 rounded-md bg-background/85 backdrop-blur-md border border-border/50 px-2 py-0.5 text-xs font-medium shadow">
+                    <span
+                      className="inline-block w-2.5 h-2.5 rounded-sm"
+                      style={{ backgroundColor: stageSegments[stageShow.activeStageIndex!]?.color }}
+                    />
+                    <span className="truncate max-w-[60vw]">{stageElevation.name}</span>
+                  </div>
+                )}
                 <ElevationChart
-                  chartData={elevationData.chartData}
-                  currentChartPoint={flythrough.showSummary ? null : elevationData.currentChartPoint}
+                  chartData={stageElevation ? stageElevation.data : elevationData.chartData}
+                  currentChartPoint={
+                    stageElevation
+                      ? stageElevation.current
+                      : (flythrough.showSummary ? null : elevationData.currentChartPoint)
+                  }
                   variant="overlay"
-                  trailColor={trailColor}
+                  trailColor={stageElevation ? (stageSegments[stageShow.activeStageIndex!]?.color ?? trailColor) : trailColor}
                   trailStyle={trailStyle}
                   trailWidth={trailWidth}
                 />
               </div>
+
             </div>
           )}
 
