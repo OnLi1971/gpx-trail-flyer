@@ -1209,12 +1209,17 @@ export const TrailMap: React.FC<TrailMapProps> = ({
       });
 
       // Centrální tyčka pod kartou
+      const isDarkBasemap = basemap === 'darkmatter';
       const pin = document.createElement('div');
-      pin.style.cssText = 'width:2px;height:14px;background:rgba(0,0,0,0.35);margin:0 auto;';
+      pin.style.cssText = isDarkBasemap
+        ? 'width:2px;height:14px;background:#ffffff;margin:0 auto;box-shadow:0 0 4px rgba(0,0,0,0.6);'
+        : 'width:2px;height:14px;background:rgba(0,0,0,0.35);margin:0 auto;';
       el.appendChild(pin);
-      const arrow = document.createElement('div');
-      arrow.style.cssText = 'width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid rgba(0,0,0,0.45);margin:0 auto;';
-      el.appendChild(arrow);
+      const tipEl = document.createElement('div');
+      tipEl.style.cssText = isDarkBasemap
+        ? 'width:7px;height:7px;border-radius:9999px;background:#ffffff;margin:0 auto;box-shadow:0 0 5px rgba(0,0,0,0.6);'
+        : 'width:0;height:0;border-left:4px solid transparent;border-right:4px solid transparent;border-top:5px solid rgba(0,0,0,0.45);margin:0 auto;';
+      el.appendChild(tipEl);
 
       const marker = new Marker({ element: el, anchor: 'bottom', offset: [0, -10] })
         .setLngLat([poi.lon, poi.lat])
@@ -1222,7 +1227,7 @@ export const TrailMap: React.FC<TrailMapProps> = ({
 
       poiMarkersRef.current.push({ marker, lat: poi.lat, lon: poi.lon, type: poi.type });
     });
-  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, riverLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys]);
+  }, [peakLimit, placeLimit, viewpointLimit, castleLimit, saddleLimit, pubLimit, riverLimit, peakSelectionMode, selectedPeakKeys, placeSelectionMode, selectedPlaceKeys, deselectedPoiKeys, basemap]);
 
   // POI fetch — extrahováno, aby šlo zavolat i ručně přes tlačítko reload
   const poiCancelRef = useRef<{ cancelled: boolean } | null>(null);

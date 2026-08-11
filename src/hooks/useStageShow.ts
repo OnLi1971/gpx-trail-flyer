@@ -89,13 +89,29 @@ export function useStageShow(
       pts.forEach((p) => bounds.extend([p.lon, p.lat]));
 
       const startBearing = ((map.current.getBearing() % 360) + 360) % 360;
-      map.current.fitBounds(bounds, {
+      const cam = map.current.cameraForBounds(bounds, {
         padding: showPadding,
         pitch: showPitch,
         bearing: startBearing,
-        duration: 1500,
-        essential: true,
       });
+      if (cam) {
+        map.current.easeTo({
+          center: cam.center as any,
+          zoom: (cam.zoom as number) + (seg.zoomAdjust ?? 0),
+          pitch: showPitch,
+          bearing: startBearing,
+          duration: 1500,
+          essential: true,
+        });
+      } else {
+        map.current.fitBounds(bounds, {
+          padding: showPadding,
+          pitch: showPitch,
+          bearing: startBearing,
+          duration: 1500,
+          essential: true,
+        });
+      }
 
       timeoutRef.current = setTimeout(() => {
         if (cancelledRef.current) return;
