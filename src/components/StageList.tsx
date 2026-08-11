@@ -73,6 +73,26 @@ export const StageList: React.FC<Props> = ({ stages, onChange }) => {
               <span className="text-xs text-muted-foreground">s</span>
             </div>
 
+            <div className="flex items-center gap-1">
+              <Input
+                type="number"
+                min={-3}
+                max={4}
+                step={0.5}
+                value={stage.zoomAdjust ?? ''}
+                placeholder="0"
+                onChange={(e) =>
+                  update(stage.id, {
+                    zoomAdjust: e.target.value === '' ? undefined : Number(e.target.value),
+                  })
+                }
+                className="h-8 w-16"
+                aria-label="Přiblížení etapy"
+              />
+              <span className="text-xs text-muted-foreground">z</span>
+            </div>
+
+
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => move(i, -1)} disabled={i === 0}>
               <ArrowUp className="w-3.5 h-3.5" />
             </Button>
