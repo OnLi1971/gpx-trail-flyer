@@ -105,7 +105,7 @@ export const StageList: React.FC<Props> = ({ stages, onChange }) => {
           </div>
         ))}
         <p className="text-xs text-muted-foreground">
-          Trasy se přehrají v tomto pořadí, každá svou barvou. Pole „s“ určuje čas vykreslení dané etapy (prázdné = výchozí ze slideru).
+          Trasy se přehrají v tomto pořadí, každá svou barvou. Pole „s“ určuje čas vykreslení etapy, pole „z“ přiblížení (+ blíž, − dál). Prázdné = výchozí ze slideru.
         </p>
 
       </CardContent>
